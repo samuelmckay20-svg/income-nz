@@ -563,7 +563,10 @@ body{
       <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="onCSV(this)">
       <div class="shdr-row">
         <span class="shdr">Transactions</span>
-        <button class="shdr-act" id="automatch-btn" onclick="runAutoMatch()" style="display:none">Auto-match</button>
+        <div style="display:flex;gap:8px">
+          <button class="shdr-act" onclick="openScanModal()">📄 Scan</button>
+          <button class="shdr-act" id="automatch-btn" onclick="runAutoMatch()" style="display:none">Auto-match</button>
+        </div>
       </div>
       <div id="bank-list"></div>
     </div>
@@ -848,9 +851,73 @@ body{
           <textarea class="g-input" id="f-notes" placeholder="Optional notes…" rows="2" style="resize:none;line-height:1.45;padding-top:1px"></textarea>
         </div>
       </div>
+      <div class="shdr">Attachment</div>
+      <div class="g-list" style="margin-bottom:8px">
+        <div class="g-row" style="cursor:pointer" onclick="document.getElementById('f-attachment').click()">
+          <div class="g-icon" style="background:rgba(0,122,255,0.12)">📎</div>
+          <span class="g-lbl">Invoice file</span>
+          <span class="g-val" id="f-attach-label" style="color:var(--blue)">Upload PDF / photo</span>
+        </div>
+        <input type="file" id="f-attachment" accept="image/*,application/pdf" style="display:none" onchange="onAttachFile(this)">
+      </div>
     </div>
     <div class="modal-foot" style="padding-top:12px">
       <button class="btn-primary" onclick="saveInvoice()">Save Invoice</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AI SCAN MODAL ══ -->
+<div class="modal-bd" id="modal-scan">
+  <div class="modal-sheet" id="modal-scan-sheet">
+    <div class="modal-hdr">
+      <span class="modal-title">Scan Invoice</span>
+      <button class="modal-close" onclick="closeModal('modal-scan')">✕</button>
+    </div>
+    <div class="modal-scroll" style="padding:16px">
+
+      <!-- Upload zone -->
+      <div class="upload-zone" id="scan-drop" onclick="document.getElementById('scan-file-input').click()" style="margin:0 0 16px">
+        <div class="uz-icon">📄</div>
+        <div class="uz-title" id="scan-zone-title">Upload invoice</div>
+        <div class="uz-sub">PDF or photo · Claude will analyse it</div>
+      </div>
+      <input type="file" id="scan-file-input" accept="image/*,application/pdf" style="display:none" onchange="onScanFile(this)">
+
+      <!-- Status -->
+      <div id="scan-status" style="display:none;text-align:center;padding:20px;color:var(--t3);font-size:14px">🤖 Analysing with Claude…</div>
+
+      <!-- Result -->
+      <div id="scan-result" style="display:none">
+        <div class="shdr" style="padding:0 0 8px">Extracted details</div>
+        <div class="g-list" style="margin:0 0 12px">
+          <div class="g-row"><span class="g-lbl">Client</span><input class="g-input" id="sc-client" type="text" autocapitalize="words"></div>
+          <div class="g-row"><span class="g-lbl">Amount (incl. GST)</span><input class="g-input" id="sc-amount" type="text" inputmode="decimal"></div>
+          <div class="g-row"><span class="g-lbl">Invoice date</span><input class="g-input" id="sc-date" type="date"></div>
+          <div class="g-row"><span class="g-lbl">Invoice #</span><input class="g-input" id="sc-num" type="text"></div>
+          <div class="g-row"><span class="g-lbl">GST</span><select class="g-select" id="sc-gst"><option value="yes">Includes 15% GST</option><option value="no">No GST</option></select></div>
+          <div class="g-row"><span class="g-lbl">W/H rate</span><select class="g-select" id="sc-wht"><option value="0">None</option><option value="20">20%</option><option value="33">33%</option></select></div>
+        </div>
+        <div style="display:flex;gap:10px;padding-bottom:8px">
+          <button class="btn-primary" style="flex:1" onclick="scanCreateNew()">Create new invoice</button>
+          <button class="btn-primary" style="flex:1;background:var(--fill);color:var(--t1)" onclick="scanMatchExisting()">Match existing</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ MATCH EXISTING MODAL ══ -->
+<div class="modal-bd" id="modal-match">
+  <div class="modal-sheet" id="modal-match-sheet">
+    <div class="modal-hdr">
+      <span class="modal-title">Match to invoice</span>
+      <button class="modal-close" onclick="closeModal('modal-match')">✕</button>
+    </div>
+    <div class="modal-scroll">
+      <div class="shdr">Select invoice</div>
+      <div id="match-list"></div>
     </div>
   </div>
 </div>
@@ -880,7 +947,7 @@ var LS_SECRET='nzin_secret', LS_ETOKEN='nzin_etoken';
 var LS_INVOICES='nzin_invoices', LS_BANK='nzin_bank', LS_SETTINGS='nzin_settings';
 
 /* ── State ── */
-var invoices=[], bankTxns=[], settings={};
+var invoices=[], bankTxns=[], settings={}, _pendingMatchTxnId=null, _scanImageData=null, _scanMimeType=null;
 var FY, currentPeriod='fy', statusFilter='all', currentTab='overview', editingId=null;
 var _syncInFlight=false, _syncPending=false, _imgCache=new Map();
 
@@ -1867,7 +1934,32 @@ function saveInvoice(){
   }else{
     invoices.unshift({id:'local_'+Date.now(),client:client,amount:+amount,date:date,due_date:due||null,invoice_number:num||null,gst:gst,wht_rate:+wht,notes:notes||null,status:'unpaid',source:'manual',_localOnly:true,created_at:new Date().toISOString(),updated_at:new Date().toISOString()});
   }
-  save(); closeModal('modal-invoice'); showToast(editingId?'Invoice updated':'Invoice saved'); renderAll();
+  // Handle attachment
+  var attachEl=document.getElementById('f-attachment');
+  if(attachEl&&attachEl._base64){inv2.image=attachEl._base64;inv2.image_type=attachEl._mime;}
+
+  save();
+  // Auto-match to pending bank transaction
+  if(_pendingMatchTxnId&&!editingId){
+    var ptxn=bankTxns.find(function(t){return t.id===_pendingMatchTxnId;});
+    if(ptxn){ptxn.matched_invoice_id=invoices[0].id;}
+    _pendingMatchTxnId=null;
+  }
+  closeModal('modal-invoice'); showToast(editingId?'Invoice updated':'Invoice saved'); renderAll();
+}
+
+/* ── Handle attachment file ── */
+function onAttachFile(input){
+  var file=input.files[0]; if(!file)return;
+  var label=document.getElementById('f-attach-label');
+  label.textContent='Loading…';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var b64=e.target.result.split(',')[1];
+    input._base64=b64; input._mime=file.type;
+    label.textContent=file.name+' ✓';
+  };
+  reader.readAsDataURL(file);
 }
 
 function openInvDetail(id){
@@ -1973,15 +2065,62 @@ function normDate(s){
 function openBankDetail(id){
   var txn=bankTxns.find(function(t){return t.id===id;});
   if(!txn)return;
-  var amt=parseFloat(txn.amount)||0; if(amt<=0){showToast('Debit \u2014 no matching needed');return;}
-  var unpaid=invoices.filter(function(i){return i.status!=='paid';}).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-  var actions=unpaid.slice(0,8).map(function(inv){return{label:'Match \u2192 '+inv.client+' '+fmt(inv.amount),fn:function(){txn.matched_invoice_id=inv.id;inv.status='paid';inv.paid_date=txn.date;inv.paid_amount=txn.amount;save();renderAll();showToast('Matched to '+inv.client);}};});
-  if(!actions.length)actions.push({label:'No unpaid invoices to match',fn:function(){}});
-  if(txn.matched_invoice_id)actions.unshift({label:'Remove match',cls:'danger',fn:function(){var prev=invoices.find(function(i){return i.id===txn.matched_invoice_id;});if(prev){prev.status='unpaid';prev.paid_date=null;prev.paid_amount=null;}txn.matched_invoice_id=null;save();renderAll();showToast('Match removed');}});
-  actions.push({label:'Cancel',cls:'cancel'});
-  showSheet(fmt(Math.abs(amt))+' on '+fmtDate(txn.date),actions);
-}
+  var amt=parseFloat(txn.amount)||0;
+  var actions=[];
 
+  if(txn.matched_invoice_id){
+    actions.push({label:'Remove match',cls:'danger',fn:function(){
+      var prev=invoices.find(function(i){return i.id===txn.matched_invoice_id;});
+      if(prev){prev.status='unpaid';prev.paid_date=null;prev.paid_amount=null;}
+      txn.matched_invoice_id=null; save(); renderAll(); showToast('Match removed');
+    }});
+  } else if(amt>0){
+    actions.push({label:'Mark as approved income',fn:function(){
+      var newInv={
+        id:'approved_'+Date.now(),
+        client:txn.description||'Unknown',
+        amount:amt, date:txn.date, due_date:txn.date,
+        invoice_number:txn.reference||null,
+        gst:settings.defaultGST||'yes', wht_rate:0, wht_amount:0,
+        status:'paid', paid_date:txn.date, paid_amount:amt,
+        source:'bank', notes:'Approved from bank · '+txn.description,
+        _localOnly:true, created_at:new Date().toISOString(), updated_at:new Date().toISOString()
+      };
+      invoices.unshift(newInv);
+      txn.matched_invoice_id=newInv.id;
+      save(); renderAll(); showToast('Approved as income');
+    }});
+    actions.push({label:'Create invoice from this',fn:function(){
+      editingId=null;
+      document.getElementById('inv-modal-title').textContent='New Invoice';
+      document.getElementById('f-client').value=txn.description||'';
+      document.getElementById('f-amount').value=String(Math.abs(amt));
+      document.getElementById('f-date').value=txn.date;
+      document.getElementById('f-due').value=txn.date;
+      document.getElementById('f-num').value=txn.reference||'';
+      document.getElementById('f-gst').value=settings.defaultGST||'yes';
+      document.getElementById('f-wht').value=String(settings.defaultWHT||'0');
+      document.getElementById('f-notes').value='';
+      var al=document.getElementById('f-attach-label'); if(al) al.textContent='Upload PDF / photo';
+      hideErr('inv-err');
+      _pendingMatchTxnId=id;
+      openModal('modal-invoice');
+    }});
+    var unpaid=invoices.filter(function(i){return i.status!=='paid';}).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+    unpaid.slice(0,6).forEach(function(inv){
+      actions.push({label:'Match → '+inv.client+' '+fmt(inv.amount),fn:function(){
+        txn.matched_invoice_id=inv.id; inv.status='paid';
+        inv.paid_date=txn.date; inv.paid_amount=txn.amount;
+        save(); renderAll(); showToast('Matched to '+inv.client);
+      }});
+    });
+  } else {
+    showToast('Debit — no action needed'); return;
+  }
+
+  actions.push({label:'Cancel',cls:'cancel'});
+  showSheet((amt>0?fmt(amt)+' received':'Debit '+fmt(Math.abs(amt)))+' · '+fmtDate(txn.date)+(txn.description?' · '+txn.description:''),actions);
+}
 function runAutoMatch(){
   var matched=0;
   bankTxns.forEach(function(txn){
@@ -2185,6 +2324,142 @@ function toggleTile(name) {
   }
 }
 
+
+/* ── AI Invoice Scanner ── */
+var _pendingMatchTxnId = _pendingMatchTxnId || null;
+var _scanImageData = null, _scanMimeType = null;
+
+function openScanModal(){
+  _scanImageData=null; _scanMimeType=null;
+  document.getElementById('scan-zone-title').textContent='Upload invoice';
+  document.getElementById('scan-status').style.display='none';
+  document.getElementById('scan-result').style.display='none';
+  document.getElementById('scan-file-input').value='';
+  openModal('modal-scan');
+}
+
+function onScanFile(input){
+  var file=input.files[0]; if(!file)return;
+  document.getElementById('scan-zone-title').textContent=file.name;
+  document.getElementById('scan-status').style.display='block';
+  document.getElementById('scan-result').style.display='none';
+
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var dataUrl=e.target.result;
+    _scanMimeType=file.type;
+    _scanImageData=dataUrl.split(',')[1];
+    callClaudeForScan(_scanImageData, _scanMimeType);
+  };
+  reader.readAsDataURL(file);
+}
+
+function callClaudeForScan(b64, mime){
+  var isImage=mime.startsWith('image/');
+  var messages=[{
+    role:'user',
+    content:[
+      isImage
+        ?{type:'image',source:{type:'base64',media_type:mime,data:b64}}
+        :{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+      {type:'text',text:'Extract invoice details from this document. Respond with ONLY a JSON object (no markdown) with these fields: client (string), amount (number, GST-inclusive total), date (YYYY-MM-DD), invoice_number (string or null), gst (yes/no/zero), wht_rate (number: 0, 15, 20, or 33), notes (string or null). If you cannot determine a field, use null.'}
+    ]
+  }];
+
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,messages:messages})
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    document.getElementById('scan-status').style.display='none';
+    try{
+      var text=data.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
+      var clean=text.replace(/```json|```/g,'').trim();
+      var parsed=JSON.parse(clean);
+      document.getElementById('sc-client').value=parsed.client||'';
+      document.getElementById('sc-amount').value=parsed.amount||'';
+      document.getElementById('sc-date').value=parsed.date||today();
+      document.getElementById('sc-num').value=parsed.invoice_number||'';
+      document.getElementById('sc-gst').value=parsed.gst||'yes';
+      document.getElementById('sc-wht').value=String(parsed.wht_rate||0);
+      document.getElementById('scan-result').style.display='block';
+    }catch(e){
+      showToast('Could not parse invoice — check the file');
+      document.getElementById('scan-zone-title').textContent='Upload invoice';
+    }
+  })
+  .catch(function(e){
+    document.getElementById('scan-status').style.display='none';
+    showToast('AI scan failed — '+e.message);
+  });
+}
+
+function scanCreateNew(){
+  var client=document.getElementById('sc-client').value.trim();
+  var amount=document.getElementById('sc-amount').value;
+  var date=document.getElementById('sc-date').value;
+  var num=document.getElementById('sc-num').value.trim();
+  var gst=document.getElementById('sc-gst').value;
+  var wht=document.getElementById('sc-wht').value;
+
+  closeModal('modal-scan');
+  editingId=null;
+  document.getElementById('inv-modal-title').textContent='New Invoice';
+  document.getElementById('f-client').value=client;
+  document.getElementById('f-amount').value=amount;
+  document.getElementById('f-date').value=date;
+  document.getElementById('f-due').value=daysAhead(30);
+  document.getElementById('f-num').value=num;
+  document.getElementById('f-gst').value=gst;
+  document.getElementById('f-wht').value=wht;
+  document.getElementById('f-notes').value='';
+  // Pre-load attachment
+  var al=document.getElementById('f-attach-label');
+  if(al&&_scanImageData){al.textContent='Scanned document attached'; al._b64=_scanImageData; al._mime=_scanMimeType;}
+  hideErr('inv-err');
+  openModal('modal-invoice');
+}
+
+function scanMatchExisting(){
+  var el=document.getElementById('match-list');
+  var unpaid=invoices.filter(function(i){return i.status!=='paid';})
+    .sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  if(!unpaid.length){showToast('No unpaid invoices to match');return;}
+  var html='';
+  unpaid.forEach(function(inv){
+    html+='<div class="r-card" data-invid="'+esc(String(inv.id))+'">'
+      +'<div class="r-bar" style="background:var(--orange)"></div>'
+      +'<div class="r-body"><div class="r-top"><div>'
+      +'<div class="r-title">'+esc(inv.client)+'</div>'
+      +'<div class="r-sub">'+fmtDate(inv.date)+(inv.invoice_number?' · #'+esc(inv.invoice_number):'')+'</div>'
+      +'</div><div class="r-amount c-orange">'+fmt(inv.amount)+'</div></div></div></div>';
+  });
+  el.innerHTML=html;
+  el.onclick=function(e){
+    var card=e.target.closest('.r-card');
+    if(card&&card.dataset.invid) confirmScanMatch(card.dataset.invid);
+  };
+  closeModal('modal-scan');
+  openModal('modal-match');
+}
+function confirmScanMatch(invId){
+  var inv=invoices.find(function(i){return i.id===invId;});
+  if(!inv)return;
+  // Attach scanned image to invoice
+  if(_scanImageData){inv.image=_scanImageData; inv.image_type=_scanMimeType;}
+  // Mark paid if not already
+  if(inv.status!=='paid'){
+    inv.status='paid';
+    inv.paid_date=today();
+    inv.paid_amount=inv.amount;
+  }
+  inv.updated_at=new Date().toISOString();
+  save(); renderAll();
+  closeModal('modal-match');
+  showToast('Invoice updated');
+}
 </script>
 </body>
 </html>
