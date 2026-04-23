@@ -557,8 +557,8 @@ body{
       <div class="shdr">Import statement</div>
       <div class="upload-zone" onclick="document.getElementById('csv-input').click()">
         <div class="uz-icon">🏦</div>
-        <div class="uz-title">Upload ANZ CSV</div>
-        <div class="uz-sub">Tap to select your bank export</div>
+        <div class="uz-title">Upload bank CSV</div>
+        <div class="uz-sub">ANZ and Kiwibank supported</div>
       </div>
       <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="onCSV(this)">
       <div class="shdr-row">
@@ -1902,25 +1902,73 @@ function parseCSV(text){
   var lines=text.trim().split(/\r?\n/); if(lines.length<2){showToast('CSV appears empty');return;}
   var header=lines[0].toLowerCase().replace(/"/g,''); var cols=header.split(',').map(function(c){return c.trim();});
   function ci(n){return cols.indexOf(n);}
-  var iDate=ci('date'),iAmt=ci('amount'),iDesc=ci('description'),iRef=ci('reference'),iCred=ci('credits'),iOther=ci('other party');
+
+  // Detect bank format by checking headers
+  var iDate=ci('date');
+  // Kiwibank: separate credit/debit columns + op name + tp ref
+  var iCredit=ci('amount (credit)'), iDebit=ci('amount (debit)');
+  var iOpName=ci('op name'), iTpRef=ci('tp ref');
+  // ANZ: single amount or credits column
+  var iAmt=ci('amount'), iCred=ci('credits'), iOther=ci('other party');
+  var iDesc=ci('memo/description')>=0?ci('memo/description'):ci('description');
+  var iRef=iTpRef>=0?iTpRef:(ci('reference')>=0?ci('reference'):ci('tp ref'));
+
+  var isKiwibank=iCredit>=0&&iDebit>=0;
   var imported=0,skipped=0;
+
   for(var i=1;i<lines.length;i++){
     var row=csvRow(lines[i]);
-    var rawDate=clean(row[iDate]),rawAmt=iCred>=0?clean(row[iCred]):clean(row[iAmt]);
-    var desc=clean(row[iDesc]||row[iOther]||''),ref=clean(row[iRef]||'');
-    if(!rawDate||!rawAmt){skipped++;continue;}
+    var rawDate=clean(row[iDate]);
+    if(!rawDate){skipped++;continue;}
     var isoDate=normDate(rawDate); if(!isoDate){skipped++;continue;}
-    var amount=parseFloat(rawAmt.replace(/,/g,'')); if(isNaN(amount)){skipped++;continue;}
+
+    var amount, desc, ref;
+
+    if(isKiwibank){
+      // Kiwibank: credits are income, debits are expenses (negative)
+      var creditStr=clean(row[iCredit]||'');
+      var debitStr=clean(row[iDebit]||'');
+      var credit=parseFloat(creditStr.replace(/,/g,''))||0;
+      var debit=parseFloat(debitStr.replace(/,/g,''))||0;
+      amount=credit>0?credit:-debit;
+      // Use OP name if available, fall back to memo
+      var opName=clean(row[iOpName]||'');
+      var memo=clean(row[iDesc]||'');
+      // Clean up the verbose Kiwibank memo — extract the meaningful part
+      var memoClean=memo.replace(/^Direct Credit\s+/i,'').replace(/^Bill Payment\s+/i,'').split(';')[0].trim();
+      desc=opName||memoClean;
+      ref=clean(row[iTpRef]||'');
+    } else {
+      // ANZ format
+      var rawAmt=iCred>=0?clean(row[iCred]):clean(row[iAmt]);
+      if(!rawAmt){skipped++;continue;}
+      amount=parseFloat(rawAmt.replace(/,/g,'')); if(isNaN(amount)){skipped++;continue;}
+      desc=clean(row[iDesc]||row[iOther]||'');
+      ref=clean(row[iRef]||'');
+    }
+
+    if(isNaN(amount)){skipped++;continue;}
     var dup=bankTxns.some(function(t){return t.date===isoDate&&t.amount===amount&&t.description===desc;});
     if(dup){skipped++;continue;}
-    bankTxns.push({id:'bank_'+Date.now()+'_'+i,date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:null,source:'anz',imported_at:new Date().toISOString()});
+    bankTxns.push({id:'bank_'+Date.now()+'_'+i,date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:null,source:isKiwibank?'kiwibank':'anz',imported_at:new Date().toISOString()});
     imported++;
   }
   save();renderAll();showToast(imported+' transactions imported'+(skipped?' ('+skipped+' skipped)':''));
 }
 function csvRow(line){var r=[],cur='',inQ=false;for(var i=0;i<line.length;i++){var ch=line[i];if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){r.push(cur);cur='';}else{cur+=ch;}}r.push(cur);return r;}
 function clean(s){return String(s||'').trim().replace(/^"|"$/g,'');}
-function normDate(s){if(!s)return null;var m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(m)return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;return null;}
+function normDate(s){
+  if(!s)return null;
+  // DD/MM/YYYY (ANZ)
+  var m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m)return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+  // DD-MM-YYYY (Kiwibank)
+  var m2=s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if(m2)return m2[3]+'-'+m2[2].padStart(2,'0')+'-'+m2[1].padStart(2,'0');
+  // Already YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  return null;
+}
 
 function openBankDetail(id){
   var txn=bankTxns.find(function(t){return t.id===id;});
