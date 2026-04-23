@@ -851,12 +851,21 @@ body{
           <textarea class="g-input" id="f-notes" placeholder="Optional notes…" rows="2" style="resize:none;line-height:1.45;padding-top:1px"></textarea>
         </div>
       </div>
-      <div class="shdr">Attachment</div>
+      <div class="shdr">Invoice file</div>
       <div class="g-list" style="margin-bottom:8px">
         <div class="g-row" style="cursor:pointer" onclick="document.getElementById('f-attachment').click()">
           <div class="g-icon" style="background:rgba(0,122,255,0.12)">📎</div>
-          <span class="g-lbl">Invoice file</span>
-          <span class="g-val" id="f-attach-label" style="color:var(--blue)">Upload PDF / photo</span>
+          <span class="g-lbl" id="f-attach-label">Upload PDF / photo</span>
+          <span class="g-val" id="f-attach-action" style="color:var(--blue)">Browse</span>
+        </div>
+        <div class="g-row" id="f-scan-row" style="display:none;cursor:pointer" onclick="scanInvoiceForm()">
+          <div class="g-icon" style="background:rgba(52,199,89,0.12)">AI</div>
+          <span class="g-lbl">Auto-fill from file</span>
+          <span class="g-val" style="color:var(--green)">Scan now</span>
+        </div>
+        <div class="g-row" id="f-scan-status" style="display:none">
+          <div class="g-icon" style="background:rgba(0,122,255,0.12)">...</div>
+          <span class="g-lbl" style="color:var(--t3)">Analysing with Claude...</span>
         </div>
         <input type="file" id="f-attachment" accept="image/*,application/pdf" style="display:none" onchange="onAttachFile(this)">
       </div>
@@ -1952,14 +1961,69 @@ function saveInvoice(){
 function onAttachFile(input){
   var file=input.files[0]; if(!file)return;
   var label=document.getElementById('f-attach-label');
-  label.textContent='Loading…';
+  var action=document.getElementById('f-attach-action');
+  var scanRow=document.getElementById('f-scan-row');
+  label.textContent='Loading...';
   var reader=new FileReader();
   reader.onload=function(e){
     var b64=e.target.result.split(',')[1];
     input._base64=b64; input._mime=file.type;
-    label.textContent=file.name+' ✓';
+    label.textContent=file.name;
+    if(action) action.textContent='Change';
+    if(scanRow) scanRow.style.display='flex';
   };
   reader.readAsDataURL(file);
+}
+
+function scanInvoiceForm(){
+  var input=document.getElementById('f-attachment');
+  if(!input._base64){showToast('Upload a file first');return;}
+  var scanRow=document.getElementById('f-scan-row');
+  var statusRow=document.getElementById('f-scan-status');
+  if(scanRow) scanRow.style.display='none';
+  if(statusRow) statusRow.style.display='flex';
+
+  var isImage=input._mime.startsWith('image/');
+  var messages=[{
+    role:'user',
+    content:[
+      isImage
+        ?{type:'image',source:{type:'base64',media_type:input._mime,data:input._base64}}
+        :{type:'document',source:{type:'base64',media_type:'application/pdf',data:input._base64}},
+      {type:'text',text:'Extract invoice details. Respond with ONLY a JSON object (no markdown, no extra text) with: client (string), amount (number, GST-inclusive total in NZD), date (YYYY-MM-DD), invoice_number (string or null), gst ("yes"/"no"/"zero"), wht_rate (0/15/20/33), notes (string or null). Use null for any field you cannot determine.'}
+    ]
+  }];
+
+  fetch(API_BASE+'/claude',{
+    method:'POST',
+    headers:authHeaders(),
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,messages:messages})
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    if(statusRow) statusRow.style.display='none';
+    if(scanRow) scanRow.style.display='flex';
+    try{
+      var text=data.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
+      var parsed=JSON.parse(text.replace(/```json|```/g,'').trim());
+      // Only fill fields that are empty or if user confirms
+      if(parsed.client) document.getElementById('f-client').value=parsed.client;
+      if(parsed.amount) document.getElementById('f-amount').value=String(parsed.amount);
+      if(parsed.date) document.getElementById('f-date').value=parsed.date;
+      if(parsed.invoice_number) document.getElementById('f-num').value=parsed.invoice_number;
+      if(parsed.gst) document.getElementById('f-gst').value=parsed.gst;
+      if(parsed.wht_rate!=null) document.getElementById('f-wht').value=String(parsed.wht_rate);
+      if(parsed.notes) document.getElementById('f-notes').value=parsed.notes;
+      showToast('Fields filled from invoice');
+    }catch(e){
+      showToast('Could not read invoice — try a clearer image');
+    }
+  })
+  .catch(function(){
+    if(statusRow) statusRow.style.display='none';
+    if(scanRow) scanRow.style.display='flex';
+    showToast('AI scan failed — check connection');
+  });
 }
 
 function openInvDetail(id){
@@ -2366,9 +2430,9 @@ function callClaudeForScan(b64, mime){
     ]
   }];
 
-  fetch('https://api.anthropic.com/v1/messages',{
+  fetch(API_BASE+'/claude',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:authHeaders(),
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,messages:messages})
   })
   .then(function(r){return r.json();})
