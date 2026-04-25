@@ -1117,12 +1117,24 @@ body{
           <div class="g-row">
             <div class="g-icon" style="background:rgba(0,122,255,.12)">&#x1F3E2;</div>
             <span class="g-lbl">Client</span>
-            <input class="g-input" id="paid-client" type="text" placeholder="Client name" autocapitalize="words">
+            <input class="g-input" id="paid-client" type="text" placeholder="Client name" autocapitalize="words"
+              oninput="onClientInput('paid-client','paid-client-hint')" onblur="onClientBlur('paid-client')">
           </div>
+          <div id="paid-client-hint" style="display:none;padding:8px 16px;font-size:12px;color:var(--blue);cursor:pointer;background:rgba(0,122,255,.06);border-top:0.5px solid var(--sep)"></div>
           <div class="g-row">
             <div class="g-icon" style="background:rgba(175,82,222,.12)">#&#xFE0F;&#x20E3;</div>
             <span class="g-lbl">Invoice #</span>
             <input class="g-input" id="paid-inv-num" type="text" placeholder="Optional">
+          </div>
+          <div class="g-row">
+            <div class="g-icon" style="background:rgba(175,82,222,.12)">&#x1F3DB;&#xFE0F;</div>
+            <span class="g-lbl">W/H tax rate</span>
+            <select class="g-select" id="paid-wht-rate" onchange="applyRemittanceWHT()">
+              <option value="0">None</option>
+              <option value="20">20%</option>
+              <option value="33">33%</option>
+              <option value="15">15%</option>
+            </select>
           </div>
           <div class="g-row">
             <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F9EE;</div>
@@ -2012,7 +2024,9 @@ function renderInvoices(){
     });
   }
   fil.sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-  document.getElementById('invoices-list').innerHTML=fil.length?fil.map(invCard).join(''):emptyState('&#x1F9FE;','No invoices',q?'No results for "'+q+'"':'Nothing matches this filter');
+  var listEl=document.getElementById('invoices-list');
+  listEl.innerHTML=fil.length?fil.map(invCard).join(''):emptyState('&#x1F9FE;','No invoices',q?'No results for "'+q+'"':'Nothing matches this filter');
+  listEl.onclick=function(e){var card=e.target.closest('[data-iid]');if(card)openInvDetail(card.dataset.iid);};
 }
 
 function invCard(inv){
@@ -2020,19 +2034,23 @@ function invCard(inv){
   var colors={paid:'var(--green)',unpaid:'var(--orange)',overdue:'var(--red)',draft:'var(--t4)',review:'var(--purple)'};
   var labels={paid:'Paid',unpaid:'Unpaid',overdue:'Overdue',draft:'Draft',review:'Review'};
   var c=colors[status]||'var(--t4)';
-  var wht=''; var wr=parseFloat(inv.wht_rate)||0;
-  if(wr>0){var wa=(parseFloat(inv.amount)||0)*wr/100;wht='<span class="badge" style="background:rgba(175,82,222,0.12);color:var(--purple)">W/H '+wr+'% '+fmt(wa)+'</span>';}
-  return '<div class="r-card" onclick="openInvDetail(\''+esc(String(inv.id))+'\')">'
-    +'<div class="r-bar" style="background:'+c+'"></div>'
-    +'<div class="r-body">'
-    +'<div class="r-top"><div style="min-width:0"><div class="r-title">'+esc(inv.client)+'</div>'
-    +'<div class="r-sub">'+(inv.invoice_number?'#'+esc(inv.invoice_number)+' \u00b7 ':'')+fmtDate(inv.date)+'</div></div>'
-    +'<div class="r-amount" style="color:'+c+'">'+fmt(inv.amount)+'</div></div>'
-    +'<div class="r-meta"><span class="badge b-'+status+'">'+(labels[status]||status)+'</span>'
-    +(inv.due_date?'<span class="r-sub">Due\u00a0'+fmtDate(inv.due_date)+'</span>':'')+wht+'</div>'
-    +'</div></div>';
+  var amt=parseFloat(inv.amount)||0;
+  var wr=parseFloat(inv.wht_rate)||0;
+  var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):Math.round(amt*wr/100*100)/100;
+  var displayAmt=inv.status==='paid'&&inv.paid_amount!=null?parseFloat(inv.paid_amount):(amt-whtAmt);
+  var whtBadge=wr>0?'<span class="badge" style="background:rgba(175,82,222,0.12);color:var(--purple)">W/H '+wr+'%</span>':'';
+  var grossSub=inv.status==='paid'&&whtAmt>0?'<div style="font-size:11px;color:var(--t3);text-align:right">of '+fmt(amt)+'</div>':'';
+  var html='<div class="r-card" data-iid="'+esc(String(inv.id))+'">';
+  html+='<div class="r-bar" style="background:'+c+'"></div>';
+  html+='<div class="r-body">';
+  html+='<div class="r-top"><div style="min-width:0"><div class="r-title">'+esc(inv.client)+'</div>';
+  html+='<div class="r-sub">'+(inv.invoice_number?'#'+esc(inv.invoice_number)+' · ':'')+fmtDate(inv.date)+'</div></div>';
+  html+='<div style="text-align:right;flex-shrink:0"><div class="r-amount" style="color:'+c+'">'+fmt(displayAmt)+'</div>'+grossSub+'</div></div>';
+  html+='<div class="r-meta"><span class="badge b-'+status+'">'+(labels[status]||status)+'</span>';
+  html+=(inv.due_date&&inv.status!=='paid'?'<span class="r-sub">Due '+fmtDate(inv.due_date)+'</span>':'')+whtBadge;
+  html+='</div></div></div>';
+  return html;
 }
-
 /* ── Clients tab ── */
 var clientFilter='all';
 function setClientFilter(f,btn){
@@ -3152,8 +3170,10 @@ function confirmMarkPaid(){
     }
   }
   if(window._paidFileData) inv.remittance_image=window._paidFileData;
+  var _remClient=inv.client; var _isNewRem=isNew;
   save(); renderAll(); closeModal('modal-paid');
   showToast('Saved — '+fmt(inv.paid_amount)+' from '+(inv.client||'client'));
+  if(_isNewRem) checkNewClient(_remClient);
 }
 /* ── Bank CSV ── */
 function onCSV(input){
@@ -3762,6 +3782,26 @@ function checkNewClient(clientName){
     setTimeout(function(){
       showSheet('"'+clientName+'" looks like a new client',[].concat(actions));
     },400);
+  }
+}
+
+function applyRemittanceWHT(){
+  var rateEl=document.getElementById('paid-wht-rate');
+  var netEl=document.getElementById('paid-net');
+  var whtEl=document.getElementById('paid-wht');
+  if(!rateEl) return;
+  var rate=parseFloat(rateEl.value)||0;
+  if(rate>0){
+    // Auto-fill W/H from invoice amount if we know it
+    var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
+    if(inv&&inv.amount){
+      var gross=parseFloat(inv.amount)||0;
+      var wht=Math.round(gross*rate/100*100)/100;
+      var net=Math.round((gross-wht)*100)/100;
+      if(whtEl) whtEl.value=String(wht);
+      if(netEl) netEl.value=String(net);
+      updatePaidSummary();
+    }
   }
 }
 
