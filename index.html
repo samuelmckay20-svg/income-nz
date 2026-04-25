@@ -1014,12 +1014,12 @@ body{
         <div class="g-row">
           <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F4B5;</div>
           <span class="g-lbl">Net received</span>
-          <input class="g-input" id="paid-net" type="text" inputmode="decimal" placeholder="0.00">
+          <input class="g-input" id="paid-net" type="text" inputmode="decimal" placeholder="0.00" oninput="updatePaidSummary()">
         </div>
         <div class="g-row">
           <div class="g-icon" style="background:rgba(175,82,222,.12)">&#x1F3DB;&#xFE0F;</div>
           <span class="g-lbl">W/H tax deducted</span>
-          <input class="g-input" id="paid-wht" type="text" inputmode="decimal" placeholder="0.00">
+          <input class="g-input" id="paid-wht" type="text" inputmode="decimal" placeholder="0.00" oninput="updatePaidSummary()">
         </div>
         <div class="g-row">
           <div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F4C5;</div>
@@ -1027,7 +1027,29 @@ body{
           <input class="g-input" id="paid-date" type="date">
         </div>
       </div>
-      <div id="paid-summary" style="margin:4px 16px 0;padding:12px 14px;background:var(--accent-bg);border-radius:12px;font-size:13px;color:var(--accent-dark);display:none"></div>
+
+      <!-- Breakdown card — shown when amounts are entered -->
+      <div id="paid-summary" style="display:none;margin:8px 16px 0;background:var(--surface);border-radius:14px;overflow:hidden">
+        <div style="background:var(--fill);padding:10px 14px;font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px">Payment breakdown</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <div style="padding:14px 16px;border-bottom:0.5px solid var(--sep);border-right:0.5px solid var(--sep)">
+            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Gross invoice</div>
+            <div id="pd-gross" style="font-size:20px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums">—</div>
+          </div>
+          <div style="padding:14px 16px;border-bottom:0.5px solid var(--sep)">
+            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">GST collected</div>
+            <div id="pd-gst" style="font-size:20px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums">—</div>
+          </div>
+          <div style="padding:14px 16px;border-right:0.5px solid var(--sep)">
+            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">W/H tax</div>
+            <div id="pd-wht" style="font-size:20px;font-weight:700;color:var(--purple);font-variant-numeric:tabular-nums">—</div>
+          </div>
+          <div style="padding:14px 16px">
+            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Net to bank</div>
+            <div id="pd-net" style="font-size:20px;font-weight:700;color:var(--accent-dark);font-variant-numeric:tabular-nums">—</div>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="modal-foot" style="padding-top:12px">
       <button class="btn-primary" onclick="confirmMarkPaid()">Mark as paid</button>
@@ -1039,6 +1061,7 @@ body{
 <div class="sheet-bg" id="sheet-bg" onclick="closeSheet()"></div>
 <div class="action-sheet" id="action-sheet"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 'use strict';
 
@@ -2325,8 +2348,13 @@ function updatePaidSummary(){
   var wht=parseFloat(document.getElementById('paid-wht').value)||0;
   if(net>0||wht>0){
     var gross=net+wht;
+    var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
+    var gstAmt=inv&&inv.gst==='yes'?gross*3/23:0;
     el.style.display='block';
-    el.innerHTML='Gross: <strong>'+fmt(gross)+'</strong> &nbsp;&middot;&nbsp; W/H: <strong>'+fmt(wht)+'</strong> &nbsp;&middot;&nbsp; Net to bank: <strong>'+fmt(net)+'</strong>';
+    document.getElementById('pd-gross').textContent=fmt(gross);
+    document.getElementById('pd-gst').textContent=gstAmt>0?fmt(gstAmt):'N/A';
+    document.getElementById('pd-wht').textContent=wht>0?fmt(wht):'None';
+    document.getElementById('pd-net').textContent=fmt(net);
   } else { el.style.display='none'; }
 }
 
