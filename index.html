@@ -223,6 +223,8 @@ body{
 .empty-sub{font-size:14px;color:var(--t3);line-height:1.55;max-width:240px}
 
 /* ── FAB ── */
+.fab-quick{position:fixed;bottom:calc(var(--safe-bottom) + 90px);right:80px;width:44px;height:44px;border-radius:50%;background:var(--fill);border:none;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.15);z-index:200;-webkit-tap-highlight-color:transparent;}
+.fab-quick:active{opacity:.8;transform:scale(.93)}
 .fab{
   position:fixed;right:20px;bottom:calc(var(--safe-bottom) + 74px);
   width:52px;height:52px;border-radius:26px;
@@ -504,6 +506,12 @@ body{
         <svg id="income-chart" class="chart-svg" viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg"></svg>
       </div>
 
+      <!-- Client donut chart -->
+      <div class="shdr">Income by client</div>
+      <div style="margin:0 16px 4px;background:var(--surface);border-radius:16px;padding:16px" id="overview-donut-wrap">
+        <div id="overview-donut" style="text-align:center;color:var(--t3);font-size:13px;padding:20px 0">No paid invoices yet</div>
+      </div>
+
       <!-- Recent income -->
       <div class="shdr-row">
         <span class="shdr">Recent income</span>
@@ -546,7 +554,22 @@ body{
 
     <!-- ── INVOICES ── -->
     <div id="tab-invoices" class="tab-panel">
-      <div class="chips" id="status-chips" style="padding-top:12px">
+      <!-- Search bar -->
+      <div style="padding:12px 16px 0;display:flex;gap:8px;align-items:center">
+        <div style="flex:1;background:var(--fill);border-radius:12px;display:flex;align-items:center;padding:8px 12px;gap:8px">
+          <span style="font-size:14px;opacity:.5">&#x1F50D;</span>
+          <input id="inv-search" type="text" placeholder="Search invoices&#x2026;" autocomplete="off" autocorrect="off"
+            style="background:none;border:none;outline:none;font-size:15px;color:var(--t1);width:100%;font-family:inherit"
+            oninput="renderInvoiceList()">
+        </div>
+      </div>
+      <!-- Export + Bin row -->
+      <div style="padding:8px 16px 0;display:flex;gap:8px">
+        <button onclick="openExportSheet()" style="display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:20px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x2B06; Export</button>
+        <button onclick="openInvBin()" style="display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:20px;border:none;background:rgba(255,59,48,.08);color:var(--red);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x1F5D1; Bin</button>
+      </div>
+      <!-- Filter chips -->
+      <div class="chips" id="status-chips" style="padding-top:8px">
         <button class="chip on" onclick="setFilter('all',this)">All</button>
         <button class="chip" onclick="setFilter('unpaid',this)">Unpaid</button>
         <button class="chip" onclick="setFilter('overdue',this)">Overdue</button>
@@ -559,6 +582,7 @@ body{
     <!-- ── CLIENTS ── -->
     <div id="tab-clients" class="tab-panel">
       <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center">
+        <button onclick="openClientProfile('')" style="flex-shrink:0;padding:7px 14px;border-radius:20px;border:none;background:rgba(52,199,89,.1);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x2795; Add client</button>
         <div style="flex:1;background:var(--fill);border-radius:12px;display:flex;align-items:center;padding:8px 12px;gap:8px">
           <span style="font-size:14px;opacity:.5">🔍</span>
           <input id="client-search" type="text" placeholder="Search clients…"
@@ -789,6 +813,7 @@ body{
 
   </div><!-- /tab-content -->
 
+  <button class="fab-quick" id="fab-quick" onclick="openQuickAdd()">&#x26A1;</button>
   <button class="fab hidden" id="fab" onclick="onFab()">＋</button>
 
   <div class="tab-bar">
@@ -838,8 +863,78 @@ body{
       <div class="g-list">
         <div class="g-row"><div class="g-icon" style="background:var(--fill)">ℹ️</div><span class="g-lbl">Version</span><span class="g-val">1.0.0</span></div>
       </div>
-      <div style="padding:16px 16px 8px">
+      <div class="shdr">Account</div>
+      <div class="g-list" style="margin-bottom:8px">
+        <div class="g-row" style="cursor:pointer" onclick="openChangePassword()">
+          <div class="g-icon" style="background:rgba(0,122,255,.12)">&#x1F511;</div>
+          <span class="g-lbl">Change password</span>
+          <span class="g-val" style="color:var(--blue)">&#x203A;</span>
+        </div>
+      </div>
+      <div style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px">
         <button class="btn-primary" style="background:var(--red)" onclick="doLogout()">Sign out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CHANGE PASSWORD MODAL ══ -->
+<div class="modal-bd" id="modal-chpw">
+  <div class="modal-sheet">
+    <div class="modal-hdr">
+      <span></span>
+      <span class="modal-title">Change Password</span>
+      <button class="modal-close" onclick="closeModal('modal-chpw')">Done</button>
+    </div>
+    <div class="modal-scroll" style="padding:0 0 16px">
+      <div class="shdr">Password</div>
+      <div class="g-list">
+        <div class="g-row"><div class="g-icon" style="background:rgba(255,59,48,.12)">&#x1F512;</div><span class="g-lbl">Current</span><input class="g-input" type="password" id="chpw-current" placeholder="Current password" autocomplete="current-password"></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F511;</div><span class="g-lbl">New</span><input class="g-input" type="password" id="chpw-new" placeholder="New password" autocomplete="new-password"></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,.12)">&#x2705;</div><span class="g-lbl">Confirm</span><input class="g-input" type="password" id="chpw-confirm" placeholder="Confirm new password" autocomplete="new-password"></div>
+      </div>
+      <div id="chpw-error" style="color:var(--red);font-size:13px;text-align:center;padding:0 16px 8px;min-height:18px"></div>
+      <div style="padding:0 16px">
+        <button class="btn-primary" onclick="doChangePassword()">Update Password</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ QUICK ADD MODAL ══ -->
+<div class="modal-bd" id="modal-quickadd">
+  <div class="modal-sheet">
+    <div class="modal-hdr">
+      <span></span>
+      <span class="modal-title">&#x26A1; Quick Add</span>
+      <button class="modal-close" onclick="closeModal('modal-quickadd')">Cancel</button>
+    </div>
+    <div class="modal-scroll" style="padding:0 0 16px">
+      <div style="text-align:center;padding:20px 16px 12px">
+        <div style="font-size:13px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Amount</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px">
+          <span style="font-size:32px;font-weight:300;color:var(--t3)">$</span>
+          <input type="number" id="qa-amount" inputmode="decimal" step="0.01" min="0" placeholder="0.00"
+            style="font-size:48px;font-weight:700;border:none;background:none;outline:none;font-family:inherit;color:var(--t1);width:180px;text-align:center;letter-spacing:-1px">
+        </div>
+      </div>
+      <div class="g-list">
+        <div class="g-row">
+          <div class="g-icon" style="background:rgba(0,122,255,.12)">&#x1F3E2;</div>
+          <span class="g-lbl">Client</span>
+          <input class="g-input" type="text" id="qa-client" placeholder="Client name" autocapitalize="words"
+            oninput="onClientInput('qa-client','qa-client-hint')" onblur="onClientBlur('qa-client')">
+        </div>
+        <div id="qa-client-hint" style="display:none;padding:8px 16px;font-size:12px;color:var(--blue);cursor:pointer;background:rgba(0,122,255,.06);border-top:0.5px solid var(--sep)"></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F4C5;</div><span class="g-lbl">Date</span><input class="g-input" type="date" id="qa-date"></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F9EE;</div><span class="g-lbl">GST</span><select class="g-select" id="qa-gst"><option value="yes">15% GST included</option><option value="no">No GST</option></select></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(175,82,222,.12)">&#x1F3DB;&#xFE0F;</div><span class="g-lbl">W/H rate</span><select class="g-select" id="qa-wht"><option value="0">None</option><option value="20">20%</option><option value="33">33%</option></select></div>
+      </div>
+      <div style="padding:8px 16px 0">
+        <button class="btn-primary" onclick="saveQuickAdd()">Save Invoice</button>
+      </div>
+      <div style="padding:8px 16px 0">
+        <button onclick="closeModal('modal-quickadd');openNewInvoice()" style="width:100%;padding:13px;border-radius:14px;border:none;background:none;font-family:inherit;font-size:15px;color:var(--blue);cursor:pointer">Add with file / scan instead &#x2192;</button>
       </div>
     </div>
   </div>
@@ -887,7 +982,13 @@ body{
 
       <div class="shdr">Invoice details</div>
       <div class="g-list">
-        <div class="g-row"><div class="g-icon" style="background:rgba(0,122,255,0.12)">🏢</div><span class="g-lbl">Client</span><input class="g-input" id="f-client" type="text" placeholder="Client name" autocapitalize="words"></div>
+        <div class="g-row">
+          <div class="g-icon" style="background:rgba(0,122,255,0.12)">&#x1F3E2;</div>
+          <span class="g-lbl">Client</span>
+          <input class="g-input" id="f-client" type="text" placeholder="Client name" autocapitalize="words"
+            oninput="onClientInput('f-client','f-client-hint')" onblur="onClientBlur('f-client')">
+        </div>
+        <div id="f-client-hint" style="display:none;padding:8px 16px;font-size:12px;color:var(--blue);cursor:pointer;background:rgba(0,122,255,.06);border-top:0.5px solid var(--sep)"></div>
         <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,0.12)">💵</div><span class="g-lbl">Amount (incl. GST)</span><input class="g-input" id="f-amount" type="text" placeholder="0.00" inputmode="decimal"></div>
         <div class="g-row"><div class="g-icon" style="background:rgba(255,149,0,0.12)">📅</div><span class="g-lbl">Invoice date</span><input class="g-input" id="f-date" type="date"></div>
         <div class="g-row"><div class="g-icon" style="background:rgba(255,59,48,0.12)">⏰</div><span class="g-lbl">Due date</span><input class="g-input" id="f-due" type="date"></div>
@@ -1133,11 +1234,117 @@ body{
   </div>
 </div>
 
+<!-- ══ INVOICE BIN MODAL ══ -->
+<div class="modal-bd" id="modal-inv-bin">
+  <div class="modal-sheet" style="max-height:90vh">
+    <div class="modal-hdr">
+      <button onclick="emptyInvBin()" style="font-size:13px;color:var(--red);background:none;border:none;cursor:pointer;font-family:inherit;font-weight:600;min-width:60px">Empty</button>
+      <span class="modal-title">&#x1F5D1; Bin</span>
+      <button class="modal-close" onclick="closeModal('modal-inv-bin')">Back</button>
+    </div>
+    <div class="modal-scroll">
+      <div id="inv-bin-list" style="padding:12px 16px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FULLSCREEN VIEWER ══ -->
+<div id="img-viewer" style="display:none;position:fixed;inset:0;z-index:10000;background:#000;flex-direction:column;align-items:center;justify-content:center;overflow:hidden">
+  <div style="position:absolute;top:0;left:0;right:0;padding:calc(var(--safe-top) + 10px) 16px 14px;display:flex;justify-content:flex-end;background:linear-gradient(rgba(0,0,0,.6),transparent);z-index:2">
+    <button onclick="closeViewer()" style="width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,.18);color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#x2715;</button>
+  </div>
+  <img id="img-viewer-img" style="max-width:100%;max-height:100%;object-fit:contain;touch-action:none;user-select:none;-webkit-user-select:none;transform-origin:center center;cursor:grab" alt="Invoice" draggable="false">
+  <div id="pdf-viewer-wrap" style="display:none;width:100%;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:60px 0 60px">
+    <div id="pdf-viewer-pages" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 8px"></div>
+    <div id="pdf-viewer-loading" style="color:white;font-size:14px;text-align:center;padding:40px">Loading PDF&#x2026;</div>
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;padding:14px 20px calc(var(--safe-bottom) + 14px);background:linear-gradient(transparent,rgba(0,0,0,.6));z-index:2;pointer-events:none">
+    <div id="img-viewer-caption" style="color:rgba(255,255,255,.8);font-size:14px;font-weight:500;text-align:center"></div>
+    <div style="color:rgba(255,255,255,.45);font-size:12px;text-align:center;margin-top:3px">Pinch to zoom &middot; Tap &#x2715; to close</div>
+  </div>
+</div>
+
+<!-- ══ CLIENT PROFILE MODAL ══ -->
+<div class="modal-bd" id="modal-client-profile">
+  <div class="modal-sheet">
+    <div class="modal-hdr">
+      <span></span>
+      <span class="modal-title" id="cp-modal-title">New Client</span>
+      <button class="modal-close" onclick="closeModal('modal-client-profile')">Done</button>
+    </div>
+    <div class="modal-scroll" style="padding:0 0 16px">
+      <div class="shdr">Client details</div>
+      <div class="g-list">
+        <div class="g-row">
+          <div class="g-icon" style="background:rgba(0,122,255,.12)">&#x1F3E2;</div>
+          <span class="g-lbl">Name</span>
+          <input class="g-input" id="cp-name" type="text" placeholder="Client name" autocapitalize="words">
+        </div>
+        <div class="g-row">
+          <div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F4E7;</div>
+          <span class="g-lbl">Email</span>
+          <input class="g-input" id="cp-email" type="email" placeholder="Optional" inputmode="email">
+        </div>
+        <div class="g-row">
+          <div class="g-icon" style="background:rgba(175,82,222,.12)">&#x1F522;</div>
+          <span class="g-lbl">GST number</span>
+          <input class="g-input" id="cp-gst-num" type="text" placeholder="Optional" inputmode="numeric">
+        </div>
+      </div>
+      <div class="shdr">Tax settings</div>
+      <div class="g-list">
+        <div class="g-row">
+          <div class="g-icon" style="background:rgba(175,82,222,.12)">&#x1F3DB;&#xFE0F;</div>
+          <span class="g-lbl">W/H tax rate</span>
+          <select class="g-select" id="cp-wht">
+            <option value="0">None &#x2014; client pays full amount</option>
+            <option value="20">20% &#x2014; standard schedular</option>
+            <option value="33">33% &#x2014; no tax code provided</option>
+            <option value="15">15% &#x2014; other</option>
+          </select>
+        </div>
+        <div class="g-row">
+          <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F9EE;</div>
+          <span class="g-lbl">GST on invoices</span>
+          <select class="g-select" id="cp-gst">
+            <option value="yes">15% GST &#x2014; GST registered</option>
+            <option value="no">No GST</option>
+            <option value="zero">Zero-rated</option>
+          </select>
+        </div>
+        <div class="g-row">
+          <div class="g-icon" style="background:rgba(0,122,255,.12)">&#x1F4C6;</div>
+          <span class="g-lbl">Payment terms</span>
+          <select class="g-select" id="cp-terms">
+            <option value="14">14 days</option>
+            <option value="20">20th of month</option>
+            <option value="30">30 days</option>
+            <option value="0">On receipt</option>
+            <option value="60">60 days</option>
+          </select>
+        </div>
+      </div>
+      <div class="shdr">Notes</div>
+      <div class="g-list" style="margin-bottom:12px">
+        <div class="g-row" style="align-items:flex-start;padding-top:14px;padding-bottom:14px">
+          <div class="g-icon" style="background:var(--fill);margin-top:2px">&#x1F4DD;</div>
+          <textarea class="g-input" id="cp-notes" placeholder="Any notes about this client&#x2026;" rows="2" style="resize:none;line-height:1.45;padding-top:1px"></textarea>
+        </div>
+      </div>
+      <div style="padding:0 16px;display:flex;flex-direction:column;gap:8px">
+        <button class="btn-primary" onclick="saveClientProfile()">Save Client</button>
+        <button id="cp-delete-btn" style="display:none;width:100%;padding:14px;border-radius:14px;border:none;background:rgba(255,59,48,.1);color:var(--red);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer" onclick="deleteClientProfile()">Delete client</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <div class="sheet-bg" id="sheet-bg" onclick="closeSheet()"></div>
 <div class="action-sheet" id="action-sheet"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 'use strict';
 
@@ -1159,7 +1366,7 @@ var LS_SECRET='nzin_secret', LS_ETOKEN='nzin_etoken';
 var LS_INVOICES='nzin_invoices', LS_BANK='nzin_bank', LS_SETTINGS='nzin_settings';
 
 /* ── State ── */
-var invoices=[], bankTxns=[], settings={}, _pendingMatchTxnId=null, _scanImageData=null, _scanMimeType=null;
+var invoices=[], bankTxns=[], invBin=[], clientProfiles={}, settings={}, _pendingMatchTxnId=null, _scanImageData=null, _scanMimeType=null;
 var FY, currentPeriod='fy', statusFilter='all', currentTab='overview', editingId=null;
 var _syncInFlight=false, _syncPending=false, _imgCache=new Map();
 
@@ -1267,6 +1474,7 @@ function switchTab(name){
   var isIncome=name==='overview';
   document.getElementById('summary-bar').style.display=isIncome?'none':'block';
   document.getElementById('fab').classList.toggle('hidden',isIncome||name==='gst');
+  var qf=document.getElementById('fab-quick'); if(qf) qf.style.display=name==='gst'||name==='bank'?'none':'flex';
   refreshFY(); renderAll();
 }
 
@@ -1277,12 +1485,14 @@ function onFab(){ if(currentTab==='invoices')openAddInvoice(); else if(currentTa
 /* ── Storage ── */
 function saveLocal(){
   var slim=invoices.map(function(i){var c=Object.assign({},i);delete c.image;return c;});
-  LS.set(LS_INVOICES,JSON.stringify(slim)); LS.set(LS_BANK,JSON.stringify(bankTxns)); LS.set(LS_SETTINGS,JSON.stringify(settings));
+  LS.set(LS_INVOICES,JSON.stringify(slim)); LS.set(LS_BANK,JSON.stringify(bankTxns)); LS.set(LS_SETTINGS,JSON.stringify(settings)); LS.set('nzin_invbin',JSON.stringify(invBin));
 }
 function loadLocal(){
   try{invoices=JSON.parse(LS.get(LS_INVOICES)||'[]');}catch(e){invoices=[];}
   try{bankTxns=JSON.parse(LS.get(LS_BANK)||'[]');}catch(e){bankTxns=[];}
   try{settings=JSON.parse(LS.get(LS_SETTINGS)||'{}');}catch(e){settings={};}
+  try{invBin=JSON.parse(LS.get('nzin_invbin')||'[]');}catch(e){invBin=[];}
+  try{clientProfiles=JSON.parse(LS.get('nzin_cp')||'{}');}catch(e){clientProfiles={}; }
 }
 function save(){ saveLocal(); syncToServer(); }
 
@@ -1381,6 +1591,7 @@ function renderIncomeTab(){
   var hg=document.getElementById('hero-gross'); if(hg) hg.textContent=fmt(grossInvoiced);
   var hgc=document.getElementById('hero-gst-collected'); if(hgc) hgc.textContent=fmt(gstCollected);
   document.getElementById('hero-period').textContent=FY.range;
+  renderOverviewExtras(fy);
   // ── Income tax on income tab ──
   var grossIncome=fy.filter(function(i){return i.status==='paid';}).reduce(function(s,i){var amt=parseFloat(i.amount)||0;return s+(i.gst==='yes'?amt/1.15:amt);},0);
   var incTax=calcIncomeTax(grossIncome);
@@ -1790,8 +2001,18 @@ function renderInvoices(){
       return i.status===statusFilter;
     });
   }
+  var q=(invSearchQuery||'').toLowerCase().trim();
+  if(q){
+    fil=fil.filter(function(i){
+      return (i.client||'').toLowerCase().includes(q)||
+        (i.invoice_number||'').toLowerCase().includes(q)||
+        (i.notes||'').toLowerCase().includes(q)||
+        String(i.amount).includes(q)||
+        (i.date||'').includes(q);
+    });
+  }
   fil.sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-  document.getElementById('invoices-list').innerHTML=fil.length?fil.map(invCard).join(''):emptyState('🧾','No invoices','Nothing matches this filter');
+  document.getElementById('invoices-list').innerHTML=fil.length?fil.map(invCard).join(''):emptyState('&#x1F9FE;','No invoices',q?'No results for "'+q+'"':'Nothing matches this filter');
 }
 
 function invCard(inv){
@@ -2177,6 +2398,20 @@ function saveInvoice(){
   if(!client){showErr('inv-err','Client name is required');return;}
   if(!amount||isNaN(+amount)||+amount<=0){showErr('inv-err','Enter a valid amount');return;}
   if(!date){showErr('inv-err','Invoice date is required');return;}
+  // Duplicate detection
+  if(!editingId){
+    var dupe=invoices.find(function(i){
+      if((i.client||'').toLowerCase()!==client.toLowerCase()) return false;
+      if(Math.abs((parseFloat(i.amount)||0)-(+amount))>0.01) return false;
+      var diff=Math.abs(new Date(i.date)-new Date(date))/(1000*60*60*24);
+      return diff<=3;
+    });
+    if(dupe){
+      showErr('inv-err','Possible duplicate: '+dupe.client+' '+fmt(dupe.amount)+' on '+fmtDate(dupe.date)+'. Save anyway by tapping Save again.');
+      if(!saveInvoice._dupeOverride){saveInvoice._dupeOverride=true;return;}
+    }
+    saveInvoice._dupeOverride=false;
+  }
   var targetInv;
   if(editingId){
     targetInv=invoices.find(function(i){return i.id===editingId;});
@@ -2196,7 +2431,9 @@ function saveInvoice(){
     if(ptxn){ptxn.matched_invoice_id=invoices[0].id;}
     _pendingMatchTxnId=null;
   }
+  var _newClient=targetInv.client;
   closeModal('modal-invoice'); showToast(editingId?'Invoice updated':'Invoice saved'); renderAll();
+  if(!editingId) checkNewClient(_newClient);
 }
 
 /* ── Handle attachment file ── */
@@ -2308,16 +2545,71 @@ function renderInvPDFPreview(dataUrl){
   }catch(e){}
 }
 
-function viewInvFile(){
-  var data=window._invImgData;
+function viewInvFile(){ openViewer(window._invImgData,'Invoice'); }
+
+function openViewer(data, caption){
   if(!data){showToast('No file attached');return;}
   var viewer=document.getElementById('img-viewer');
-  if(!viewer) return;
   var imgEl=document.getElementById('img-viewer-img');
-  if(!imgEl) return;
-  imgEl.src=data;
+  var pdfWrap=document.getElementById('pdf-viewer-wrap');
+  var cap=document.getElementById('img-viewer-caption');
+  if(!viewer||!imgEl) return;
+  if(cap) cap.textContent=caption||'';
   viewer.style.display='flex';
+  var isPDF=data.startsWith('data:application/pdf');
+  if(isPDF){
+    imgEl.style.display='none';
+    pdfWrap.style.display='block';
+    renderPDFInViewer(data);
+  } else {
+    imgEl.style.display='block';
+    pdfWrap.style.display='none';
+    imgEl.src=data;
+    imgEl.style.transform='scale(1) translate(0px,0px)';
+  }
 }
+
+function closeViewer(){
+  var v=document.getElementById('img-viewer');
+  var img=document.getElementById('img-viewer-img');
+  var pdfWrap=document.getElementById('pdf-viewer-wrap');
+  var pages=document.getElementById('pdf-viewer-pages');
+  if(img){img.src='';img.style.transform='scale(1) translate(0px,0px)';img.style.display='block';}
+  if(pdfWrap) pdfWrap.style.display='none';
+  if(pages) pages.innerHTML='';
+  if(v) v.style.display='none';
+}
+
+async function renderPDFInViewer(dataUrl){
+  var pagesEl=document.getElementById('pdf-viewer-pages');
+  var loadingEl=document.getElementById('pdf-viewer-loading');
+  if(pagesEl) pagesEl.innerHTML='';
+  if(loadingEl){loadingEl.style.display='block';loadingEl.textContent='Loading PDF…';}
+  try{
+    if(!window.pdfjsLib){if(loadingEl)loadingEl.textContent='PDF viewer unavailable';return;}
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    var b64=dataUrl.split(',')[1];
+    var binary=atob(b64); var bytes=new Uint8Array(binary.length);
+    for(var i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    var pdf=await pdfjsLib.getDocument({data:bytes}).promise;
+    if(loadingEl) loadingEl.textContent='Rendering '+pdf.numPages+' page'+(pdf.numPages>1?'s':'')+'…';
+    var viewerW=(document.getElementById('pdf-viewer-wrap')||{}).clientWidth||340;
+    for(var p=1;p<=pdf.numPages;p++){
+      var page=await pdf.getPage(p);
+      var vp=page.getViewport({scale:1});
+      var scale=Math.min((viewerW-16)/vp.width,2);
+      var viewport=page.getViewport({scale:scale});
+      var canvas=document.createElement('canvas');
+      canvas.width=viewport.width; canvas.height=viewport.height;
+      canvas.style.cssText='max-width:100%;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.4);display:block;';
+      await page.render({canvasContext:canvas.getContext('2d'),viewport:viewport}).promise;
+      if(pagesEl) pagesEl.appendChild(canvas);
+    }
+    if(loadingEl) loadingEl.style.display='none';
+  }catch(e){if(loadingEl){loadingEl.style.display='block';loadingEl.textContent='Could not render PDF: '+e.message;}}
+}
+
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeViewer();});
 
 function clearInvFile(){
   window._invImgData=null;
@@ -2456,7 +2748,8 @@ function openInvDetail(id){
 
   // Bottom actions
   var actionsEl=document.getElementById('inv-detail-actions');
-  actionsEl.innerHTML=
+  var viewBtn=inv.image?'<button class="inv-det-view" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">View invoice file</button>':'';
+  actionsEl.innerHTML=viewBtn+
     '<button class="inv-det-edit" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:var(--fill);color:var(--t1);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">Edit invoice</button>'+
     '<button class="inv-det-del" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(255,59,48,.1);color:var(--red);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">Delete invoice</button>';
 
@@ -2475,6 +2768,7 @@ function openInvDetail(id){
     var iid=b.dataset.iid;
     if(b.classList.contains('inv-det-edit')){closeModal('modal-inv-detail');editInvoice(iid);}
     if(b.classList.contains('inv-det-del')){closeModal('modal-inv-detail');deleteInvoice(iid);}
+    if(b.classList.contains('inv-det-view')){var vi=invoices.find(function(i){return String(i.id)===String(iid);});if(vi&&vi.image)openViewer(vi.image,vi.client);}
   };
 
   openModal('modal-inv-detail');
@@ -2505,12 +2799,199 @@ function editInvoice(id){
 
 function deleteInvoice(id){
   showSheet('Delete this invoice?',[
-    {label:'Delete',cls:'danger',fn:function(){
-      invoices=invoices.filter(function(i){return String(i.id)!==String(id);});
-      save(); renderAll(); showToast('Invoice deleted');
+    {label:'Move to bin',cls:'danger',fn:function(){
+      var inv=invoices.find(function(i){return String(i.id)===String(id);});
+      if(inv){
+        invBin.unshift(Object.assign({},inv,{deletedAt:new Date().toISOString()}));
+        invoices=invoices.filter(function(i){return String(i.id)!==String(id);});
+        save(); renderAll(); showToast('Moved to bin');
+      }
     }},
     {label:'Cancel',cls:'cancel'}
   ]);
+}
+
+/* ── Invoice Bin ── */
+function openInvBin(){
+  renderInvBin();
+  openModal('modal-inv-bin');
+}
+
+function renderInvBin(){
+  var el=document.getElementById('inv-bin-list');
+  if(!invBin.length){
+    el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">&#x1F5D1;</div><div style="font-weight:600">Bin is empty</div><div style="font-size:13px;margin-top:6px">Deleted invoices appear here</div></div>';
+    return;
+  }
+  el.innerHTML=invBin.map(function(inv,i){
+    return '<div style="background:var(--surface);border-radius:14px;padding:14px 16px;margin-bottom:10px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+      +'<div><div style="font-size:15px;font-weight:600">'+esc(inv.client)+'</div>'
+      +'<div style="font-size:12px;color:var(--t3);margin-top:2px">'+fmtDate(inv.date)+' &middot; Deleted '+fmtDate(inv.deletedAt)+'</div></div>'
+      +'<div style="font-size:17px;font-weight:700">'+fmt(inv.amount)+'</div></div>'
+      +'<div style="display:flex;gap:8px">'
+      +'<button data-bi="'+i+'" class="bin-restore" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(52,199,89,.12);color:var(--green);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">&#x21A9; Restore</button>'
+      +'<button data-bi="'+i+'" class="bin-perm" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,59,48,.1);color:var(--red);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">Delete forever</button>'
+      +'</div></div>';
+  }).join('');
+  el.onclick=function(e){
+    var btn=e.target.closest('[data-bi]'); if(!btn) return;
+    var i=parseInt(btn.dataset.bi);
+    if(btn.classList.contains('bin-restore')){
+      var r=invBin[i]; delete r.deletedAt; invoices.unshift(r); invBin.splice(i,1);
+      save(); renderAll(); renderInvBin(); showToast('Invoice restored');
+    }
+    if(btn.classList.contains('bin-perm')){
+      if(!confirm('Permanently delete? Cannot be undone.')) return;
+      invBin.splice(i,1); save(); renderInvBin(); showToast('Permanently deleted');
+    }
+  };
+}
+
+function emptyInvBin(){
+  if(!invBin.length){showToast('Bin is already empty');return;}
+  if(!confirm('Permanently delete all '+invBin.length+' invoices? Cannot be undone.')) return;
+  invBin=[]; save(); renderInvBin(); showToast('Bin emptied');
+}
+
+/* ── Export ── */
+function openExportSheet(){
+  showSheet('Export invoices',[
+    {label:'CSV — spreadsheet',fn:function(){exportInvoiceCSV();}},
+    {label:'PDF — full report',fn:function(){exportInvoicePDF();}},
+    {label:'Cancel',cls:'cancel'}
+  ]);
+}
+
+async function exportInvoicePDF(){
+  var fy=invoices.filter(function(i){var d=parseDate(i.date);return d>=FY.start&&d<=FY.end;});
+  if(!fy.length){showToast('No invoices to export');return;}
+  showToast('Building PDF…');
+  try{
+    var jspdf=window.jspdf||window.jsPDF;
+    if(!jspdf){showToast('PDF library not loaded');return;}
+    var doc=new jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var pw=210,mg=16,cw=178,cy=16;
+    var GREEN=[36,138,61],DARK=[22,22,22],MID=[100,100,105],LIGHT=[220,220,220],WHITE=[255,255,255];
+
+    // Header
+    doc.setFillColor(36,138,61); doc.rect(0,0,pw,28,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(18); doc.setFont('helvetica','bold');
+    doc.text('Income Report',mg,12);
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(FY.range,mg,19);
+    doc.text('Generated: '+new Date().toLocaleDateString('en-NZ',{day:'numeric',month:'long',year:'numeric'}),mg,24);
+    cy=36;
+
+    // Summary
+    var totalGross=fy.reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
+    var totalPaid=fy.filter(function(i){return i.status==='paid';}).reduce(function(s,i){
+      var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;
+      return s+(parseFloat(i.amount)||0)-wa;
+    },0);
+    var totalGST=fy.filter(function(i){return i.gst==='yes';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
+    var totalWHT=fy.filter(function(i){return i.status==='paid';}).reduce(function(s,i){
+      return s+(i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100);
+    },0);
+
+    var bw=(cw-12)/4;
+    [['№ Invoices',String(fy.length)],['Net received','$'+totalPaid.toFixed(2)],['GST output','$'+totalGST.toFixed(2)],['W/H tax','$'+totalWHT.toFixed(2)]].forEach(function(item,i){
+      var bx=mg+i*(bw+4);
+      doc.setFillColor(246,246,244); doc.rect(bx,cy,bw,18,'F');
+      doc.setFillColor(36,138,61); doc.rect(bx,cy,2,18,'F');
+      doc.setFontSize(6); doc.setTextColor(100,100,105); doc.setFont('helvetica','bold');
+      doc.text(item[0].toUpperCase(),bx+5,cy+6);
+      doc.setFontSize(11); doc.setTextColor(22,22,22); doc.setFont('helvetica','bold');
+      doc.text(item[1],bx+5,cy+14);
+    });
+    cy+=26;
+
+    // Table header
+    doc.setFillColor(230,230,230); doc.rect(mg,cy,cw,7,'F');
+    doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(100,100,105);
+    var cols=[['Date',mg+2],['Client',mg+20],['Invoice #',mg+72],['Status',mg+102],['Gross',mg+120],['GST',mg+138],['W/H',mg+153],['Net',mg+166]];
+    cols.forEach(function(c){doc.text(c[0],c[1],cy+4.5);});
+    cy+=8;
+
+    // Rows
+    fy.sort(function(a,b){return new Date(b.date)-new Date(a.date);}).forEach(function(inv,idx){
+      if(cy>272){doc.addPage();cy=16;}
+      if(idx%2===0){doc.setFillColor(250,250,248);doc.rect(mg,cy-1,cw,7,'F');}
+      var amt=parseFloat(inv.amount)||0;
+      var gstAmt=inv.gst==='yes'?amt*3/23:0;
+      var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):(amt*(parseFloat(inv.wht_rate)||0)/100);
+      var net=inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):amt-whtAmt;
+      var status=isOverdue(inv)?'Overdue':(inv.status||'unpaid').charAt(0).toUpperCase()+(inv.status||'unpaid').slice(1);
+      var statusC={Paid:[36,138,61],Unpaid:[255,149,0],Overdue:[255,59,48],Review:[175,82,222]}[status]||[100,100,105];
+      doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(22,22,22);
+      doc.text(inv.date,mg+2,cy+4);
+      var clientText=(inv.client||'').slice(0,28);
+      doc.text(clientText,mg+20,cy+4);
+      doc.text((inv.invoice_number||'—').slice(0,14),mg+72,cy+4);
+      doc.setTextColor(...statusC); doc.setFont('helvetica','bold');
+      doc.text(status,mg+102,cy+4);
+      doc.setTextColor(22,22,22); doc.setFont('helvetica','normal');
+      doc.text('$'+amt.toFixed(2),mg+120,cy+4);
+      doc.text(gstAmt>0?'$'+gstAmt.toFixed(2):'—',mg+138,cy+4);
+      doc.text(whtAmt>0?'$'+whtAmt.toFixed(2):'—',mg+153,cy+4);
+      doc.setFont('helvetica','bold');
+      doc.text(inv.status==='paid'?'$'+net.toFixed(2):'—',mg+166,cy+4);
+      cy+=7;
+    });
+
+    // Totals row
+    cy+=2;
+    doc.setFillColor(36,138,61); doc.rect(mg,cy,cw,9,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+    doc.text('TOTALS',mg+2,cy+6);
+    doc.text('$'+totalGross.toFixed(2),mg+120,cy+6);
+    doc.text('$'+totalGST.toFixed(2),mg+138,cy+6);
+    doc.text('$'+totalWHT.toFixed(2),mg+153,cy+6);
+    doc.text('$'+totalPaid.toFixed(2),mg+166,cy+6);
+
+    doc.save('income_nz_'+FY.label.replace(/\s/g,'_')+'.pdf');
+    showToast('PDF saved — '+fy.length+' invoices');
+  }catch(e){showToast('PDF error: '+e.message);console.error(e);}
+}
+
+function exportInvoiceCSV(){
+  var rows=[['Invoice #','Client','Date','Due Date','Status','Paid Date','Amount (GST-incl)','GST Amount','W/H Rate','W/H Amount','Net Received','Notes']];
+  var fy=invoices.filter(function(i){var d=parseDate(i.date);return d>=FY.start&&d<=FY.end;});
+  fy.forEach(function(inv){
+    var amt=parseFloat(inv.amount)||0;
+    var gstAmt=inv.gst==='yes'?+(amt*3/23).toFixed(2):0;
+    var whtRate=parseFloat(inv.wht_rate)||0;
+    var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):+(amt*whtRate/100).toFixed(2);
+    var net=inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):+(amt-whtAmt).toFixed(2);
+    rows.push([
+      inv.invoice_number||'',
+      inv.client,
+      inv.date,
+      inv.due_date||'',
+      inv.status||'unpaid',
+      inv.paid_date||'',
+      amt.toFixed(2),
+      gstAmt.toFixed(2),
+      whtRate+'%',
+      whtAmt.toFixed(2),
+      inv.status==='paid'?net.toFixed(2):'',
+      (inv.notes||'').replace(/"/g,'""')
+    ]);
+  });
+  var csv=rows.map(function(r){return r.map(function(v){return '"'+v+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='income_nz_'+FY.label.replace(/\s/g,'_')+'.csv';
+  a.click();
+  showToast('CSV downloaded — '+fy.length+' invoices');
+}
+
+/* ── Invoice search ── */
+var invSearchQuery='';
+function renderInvoiceList(){
+  var q=(document.getElementById('inv-search')||{}).value||'';
+  invSearchQuery=q.toLowerCase().trim();
+  renderInvoices();
 }
 
 
@@ -2586,11 +3067,7 @@ function renderPaidPDFPreview(dataUrl){
   }catch(e){}
 }
 
-function viewPaidFile(){
-  var data=window._paidFileData; if(!data){showToast('No file');return;}
-  var img=document.getElementById('img-viewer-img');
-  if(img){img.src=data; var v=document.getElementById('img-viewer'); if(v) v.style.display='flex';}
-}
+function viewPaidFile(){ openViewer(window._paidFileData,'Remittance'); }
 
 function clearPaidFile(){
   window._paidFileData=null; window._paidFileMime=null;
@@ -2981,9 +3458,358 @@ function loadDemoData(){
   settings={gstFreq:'2monthly',gstNum:'123-456-789',defaultWHT:'0',studentLoan:'yes',accRate:'0.53'};
 }
 
+
+/* ── Overview donut + cards ── */
+function renderOverviewExtras(fyInvoices){
+  // Cards: GST due + outstanding
+  var cardsEl=document.getElementById('overview-cards');
+  if(cardsEl){
+    var outstanding=fyInvoices.filter(function(i){return i.status!=='paid';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
+    var gstDue=nextGSTDue();
+    cardsEl.innerHTML=
+      '<div style="background:var(--surface);border-radius:14px;padding:14px">'
+        +'<div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Outstanding</div>'
+        +'<div style="font-size:22px;font-weight:700;color:'+(outstanding>0?'var(--orange)':'var(--t3)')+';font-variant-numeric:tabular-nums">'+fmt(outstanding)+'</div>'
+        +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+(outstanding>0?fyInvoices.filter(function(i){return i.status!=='paid';}).length+' unpaid':'All clear')+'</div>'
+      +'</div>'
+      +'<div style="background:var(--surface);border-radius:14px;padding:14px">'
+        +'<div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">GST due</div>'
+        +'<div style="font-size:15px;font-weight:700;color:var(--blue)">'+gstDue.date+'</div>'
+        +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+gstDue.period+'</div>'
+      +'</div>';
+  }
+
+  // Donut chart by client
+  var donutEl=document.getElementById('overview-donut');
+  if(!donutEl) return;
+  var paid=fyInvoices.filter(function(i){return i.status==='paid';});
+  if(!paid.length){donutEl.innerHTML='<div style="color:var(--t3);font-size:13px;padding:20px 0">No paid invoices yet</div>';return;}
+
+  // Group by client
+  var clients={};
+  paid.forEach(function(inv){
+    var c=inv.client||'Unknown';
+    clients[c]=(clients[c]||0)+(parseFloat(inv.amount)||0);
+  });
+  var sorted=Object.entries(clients).sort(function(a,b){return b[1]-a[1];});
+  var total=sorted.reduce(function(s,c){return s+c[1];},0);
+  var colours=['#007AFF','#34C759','#FF9500','#AF52DE','#FF3B30','#5AC8FA','#FF2D55','#FF6B35'];
+
+  // Build SVG donut
+  var cx=80,cy2=80,outerR=70,innerR=54,startAngle=-Math.PI/2;
+  var slices='',legend='';
+  sorted.forEach(function(pair,i){
+    var col=colours[i%colours.length];
+    var pct=pair[1]/total;
+    var angle=pct*Math.PI*2;
+    var endAngle=startAngle+angle;
+    var x1=cx+outerR*Math.cos(startAngle),y1=cy2+outerR*Math.sin(startAngle);
+    var x2=cx+outerR*Math.cos(endAngle),y2=cy2+outerR*Math.sin(endAngle);
+    var ix1=cx+innerR*Math.cos(endAngle),iy1=cy2+innerR*Math.sin(endAngle);
+    var ix2=cx+innerR*Math.cos(startAngle),iy2=cy2+innerR*Math.sin(startAngle);
+    var large=angle>Math.PI?1:0;
+    if(sorted.length===1){
+      slices+='<path d="M'+cx+','+(cy2-outerR)+' A'+outerR+','+outerR+' 0 1,1 '+(cx-0.01)+','+(cy2-outerR)+' Z" fill="'+col+'"/>'
+        +'<circle cx="'+cx+'" cy="'+cy2+'" r="'+innerR+'" fill="var(--surface)"/>';
+    } else {
+      slices+='<path d="M'+x1+','+y1+' A'+outerR+','+outerR+' 0 '+large+',1 '+x2+','+y2
+        +' L'+ix1+','+iy1+' A'+innerR+','+innerR+' 0 '+large+',0 '+ix2+','+iy2+' Z"'
+        +' fill="'+col+'" stroke="var(--surface)" stroke-width="2"/>';
+    }
+    legend+='<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid var(--sep)">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<div style="width:8px;height:8px;border-radius:2px;background:'+col+';flex-shrink:0"></div>'
+      +'<span style="font-size:13px;color:var(--t1)">'+esc(pair[0])+'</span></div>'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<span style="font-size:11px;color:var(--t3)">'+Math.round(pct*100)+'%</span>'
+      +'<span style="font-size:13px;font-weight:600;color:var(--t1)">'+fmt(pair[1])+'</span>'
+      +'</div></div>';
+    startAngle=endAngle;
+  });
+
+  var centreLabel='<text x="'+cx+'" y="'+(cy2-8)+'" text-anchor="middle" font-size="9" fill="var(--t3)" font-family="system-ui" font-weight="600" letter-spacing="1">NET</text>'
+    +'<text x="'+cx+'" y="'+(cy2+8)+'" text-anchor="middle" font-size="16" font-weight="700" fill="var(--t1)" font-family="system-ui">'+fmtShort(total)+'</text>';
+
+  donutEl.innerHTML='<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">'
+    +'<svg width="160" height="160" viewBox="0 0 160 160" style="flex-shrink:0">'+slices+centreLabel+'</svg>'
+    +'<div style="flex:1;min-width:0">'+legend+'</div>'
+    +'</div>';
+}
+
+/* ── Change password ── */
+function openChangePassword(){
+  document.getElementById('chpw-current').value='';
+  document.getElementById('chpw-new').value='';
+  document.getElementById('chpw-confirm').value='';
+  document.getElementById('chpw-error').textContent='';
+  closeModal('modal-account');
+  setTimeout(function(){openModal('modal-chpw');},350);
+}
+
+async function doChangePassword(){
+  var cur=document.getElementById('chpw-current').value;
+  var nw=document.getElementById('chpw-new').value;
+  var conf=document.getElementById('chpw-confirm').value;
+  var errEl=document.getElementById('chpw-error');
+  errEl.textContent='';
+  if(!cur||!nw||!conf){errEl.textContent='Please fill in all fields';return;}
+  if(nw.length<8){errEl.textContent='New password must be at least 8 characters';return;}
+  if(nw!==conf){errEl.textContent='New passwords do not match';return;}
+  try{
+    var r=await fetch(API_BASE+'/change-password',{
+      method:'POST',headers:authHeaders(),
+      body:JSON.stringify({currentPassword:cur,newPassword:nw})
+    });
+    var d=await r.json();
+    if(r.ok){showToast('Password updated');closeModal('modal-chpw');}
+    else errEl.textContent=d.error||'Failed to update password';
+  }catch(e){errEl.textContent='Could not reach server';}
+}
+
+/* ── Quick add ── */
+function openQuickAdd(){
+  document.getElementById('qa-amount').value='';
+  document.getElementById('qa-client').value='';
+  document.getElementById('qa-date').value=today();
+  document.getElementById('qa-gst').value='yes';
+  document.getElementById('qa-wht').value=String(settings.defaultWHT||'0');
+  openModal('modal-quickadd');
+  setTimeout(function(){document.getElementById('qa-amount').focus();},400);
+}
+
+function saveQuickAdd(){
+  var amount=parseFloat(document.getElementById('qa-amount').value)||0;
+  var client=(document.getElementById('qa-client').value||'').trim();
+  var date=document.getElementById('qa-date').value;
+  var gst=document.getElementById('qa-gst').value;
+  var wht=parseFloat(document.getElementById('qa-wht').value)||0;
+  if(!client){showToast('Enter a client name');document.getElementById('qa-client').focus();return;}
+  if(!amount){showToast('Enter an amount');document.getElementById('qa-amount').focus();return;}
+  if(!date){showToast('Enter a date');return;}
+  var whtAmt=Math.round(amount*wht/100*100)/100;
+  var netAmt=amount-whtAmt;
+  var inv={
+    id:'local_'+Date.now(),client:client,amount:amount,date:date,due_date:null,
+    invoice_number:null,gst:gst,wht_rate:wht,wht_amount:whtAmt,
+    status:'paid',paid_date:date,paid_amount:netAmt,
+    source:'manual',_localOnly:true,
+    created_at:new Date().toISOString(),updated_at:new Date().toISOString()
+  };
+  invoices.unshift(inv);
+  save(); renderAll(); closeModal('modal-quickadd');
+  showToast('Saved — '+client+' '+fmt(amount));
+}
+
+
+/* ── Client Profiles ── */
+function getClientProfile(name){
+  if(!name) return null;
+  return clientProfiles[name.toLowerCase().trim()]||null;
+}
+
+function setClientProfile(name, profile){
+  if(!name) return;
+  clientProfiles[name.toLowerCase().trim()]=profile;
+  save();
+}
+
+function openClientProfile(name){
+  var existing=getClientProfile(name);
+  document.getElementById('cp-modal-title').textContent=existing?esc(name):'New Client';
+  document.getElementById('cp-name').value=name||'';
+  document.getElementById('cp-email').value=(existing&&existing.email)||'';
+  document.getElementById('cp-gst-num').value=(existing&&existing.gstNum)||'';
+  document.getElementById('cp-wht').value=String((existing&&existing.whtRate!=null)?existing.whtRate:0);
+  document.getElementById('cp-gst').value=(existing&&existing.gst)||'yes';
+  document.getElementById('cp-terms').value=String((existing&&existing.terms!=null)?existing.terms:30);
+  document.getElementById('cp-notes').value=(existing&&existing.notes)||'';
+  document.getElementById('cp-delete-btn').style.display=existing?'block':'none';
+  openModal('modal-client-profile');
+}
+
+function saveClientProfile(){
+  var name=document.getElementById('cp-name').value.trim();
+  if(!name){showToast('Enter a client name');return;}
+  var profile={
+    name:name,
+    email:document.getElementById('cp-email').value.trim()||null,
+    gstNum:document.getElementById('cp-gst-num').value.trim()||null,
+    whtRate:parseFloat(document.getElementById('cp-wht').value)||0,
+    gst:document.getElementById('cp-gst').value,
+    terms:parseInt(document.getElementById('cp-terms').value)||30,
+    notes:document.getElementById('cp-notes').value.trim()||null,
+    updatedAt:new Date().toISOString()
+  };
+  setClientProfile(name, profile);
+  closeModal('modal-client-profile');
+  renderClientsTab();
+  showToast('Client saved');
+}
+
+function deleteClientProfile(){
+  var name=document.getElementById('cp-name').value.trim();
+  if(!name) return;
+  showSheet('Delete '+name+'?',[
+    {label:'Delete',cls:'danger',fn:function(){
+      delete clientProfiles[name.toLowerCase().trim()];
+      save(); closeModal('modal-client-profile'); renderClientsTab();
+      showToast('Client deleted');
+    }},
+    {label:'Cancel',cls:'cancel'}
+  ]);
+}
+
+// Called when user types in a client name field
+function onClientInput(inputId, hintId){
+  var input=document.getElementById(inputId);
+  var hint=document.getElementById(hintId);
+  if(!input||!hint) return;
+  var name=(input.value||'').trim();
+  if(!name){hint.style.display='none';return;}
+
+  // Check if this is a known client
+  var profile=getClientProfile(name);
+  // Check if it matches an existing invoice client (case-insensitive)
+  var knownNames=Array.from(new Set(invoices.map(function(i){return i.client||'';})));
+  var match=knownNames.find(function(n){return n.toLowerCase()===name.toLowerCase();});
+
+  if(profile){
+    // Known client with profile — show their settings
+    hint.style.display='block';
+    hint.textContent='&#x2713; '+name+' · W/H: '+(profile.whtRate||0)+'% · '+profile.gst.toUpperCase()+' · Tap to edit';
+    hint.innerHTML='<span style="color:var(--green)">&#x2713; '+esc(name)+'</span> &nbsp;&middot;&nbsp; W/H: '+(profile.whtRate||0)+'% &nbsp;&middot;&nbsp; '+profile.gst.toUpperCase()+' &nbsp;&middot;&nbsp; <span style="color:var(--blue)">Edit client &rsaquo;</span>';
+    hint.onclick=function(){openClientProfile(name);};
+    // Auto-apply profile to form
+    applyClientProfile(name, inputId);
+  } else if(!match){
+    // Completely new client name
+    hint.style.display='block';
+    // Show existing clients as suggestions too
+    var existingClients=Array.from(new Set(
+      invoices.map(function(i){return i.client||'';}).concat(Object.values(clientProfiles).map(function(p){return p.name||'';}))
+    )).filter(function(n){return n&&n.toLowerCase()!==name.toLowerCase()&&n.toLowerCase().includes(name.toLowerCase());}).slice(0,3);
+    var suggestHtml=existingClients.length
+      ?'&nbsp;&nbsp;<span style="color:var(--t3)">|</span>&nbsp;&nbsp;Did you mean: '+existingClients.map(function(n){return '<span style="color:var(--blue);text-decoration:underline" data-suggest="'+esc(n)+'">'+esc(n)+'</span>';}).join(', ')
+      :'';
+    hint.innerHTML='&#x2795; New client: <strong>'+esc(name)+'</strong> &nbsp;&middot;&nbsp; <span style="color:var(--blue)">Set up profile &rsaquo;</span>'+suggestHtml;
+    hint.onclick=function(e){
+      var s=e.target.dataset.suggest;
+      if(s){
+        // User tapped a suggestion — fill the input with it
+        var inp=document.getElementById(inputId);
+        if(inp){inp.value=s;onClientInput(inputId,hintId);applyClientProfile(s,inputId);}
+      } else {
+        openClientProfile(name);
+      }
+    };
+  } else {
+    // Existing client from invoices but no profile
+    hint.style.display='block';
+    hint.innerHTML='&#x1F4CB; Existing client &nbsp;&middot;&nbsp; <span style="color:var(--blue)">Add W/H tax settings &rsaquo;</span>';
+    hint.onclick=function(){openClientProfile(name);};
+  }
+}
+
+// Auto-apply client profile settings to the form when client is confirmed
+function onClientBlur(inputId){
+  var input=document.getElementById(inputId);
+  if(!input) return;
+  var name=(input.value||'').trim();
+  applyClientProfile(name, inputId);
+}
+
+function applyClientProfile(name, inputId){
+  var profile=getClientProfile(name);
+  if(!profile) return;
+  // Apply to invoice form
+  if(inputId==='f-client'||inputId.startsWith('f-')){
+    var whtEl=document.getElementById('f-wht');
+    var gstEl=document.getElementById('f-gst');
+    var dueEl=document.getElementById('f-due');
+    if(whtEl) whtEl.value=String(profile.whtRate||0);
+    if(gstEl) gstEl.value=profile.gst||'yes';
+    if(dueEl&&!dueEl.value){
+      var terms=profile.terms||30;
+      dueEl.value=daysAhead(terms);
+    }
+  }
+  // Apply to quick-add
+  if(inputId==='qa-client'||inputId.startsWith('qa-')){
+    var qwht=document.getElementById('qa-wht');
+    var qgst=document.getElementById('qa-gst');
+    if(qwht) qwht.value=String(profile.whtRate||0);
+    if(qgst) qgst.value=profile.gst||'yes';
+  }
+}
+
+// After saving an invoice with a new client, prompt to create profile
+function checkNewClient(clientName){
+  if(!clientName) return;
+  var profile=getClientProfile(clientName);
+  // Get all known client names from invoices + profiles
+  var allClients=Array.from(new Set(
+    invoices.map(function(i){return i.client||'';}).concat(Object.values(clientProfiles).map(function(p){return p.name||'';}))
+  )).filter(function(n){return n&&n.toLowerCase()!==clientName.toLowerCase();}).sort();
+  var isNew=!invoices.slice(1).some(function(i){return (i.client||'').toLowerCase()===clientName.toLowerCase();});
+  if(!profile&&isNew){
+    var actions=[
+      {label:'Set up client profile',fn:function(){openClientProfile(clientName);}}
+    ];
+    if(allClients.length){
+      actions.push({label:'Use existing client instead',fn:function(){pickExistingClient(clientName);}});
+    }
+    actions.push({label:'Skip',cls:'cancel'});
+    setTimeout(function(){
+      showSheet('"'+clientName+'" looks like a new client',[].concat(actions));
+    },400);
+  }
+}
+
+function pickExistingClient(wrongName){
+  // Show existing clients to reassign the last saved invoice
+  var allClients=Array.from(new Set(
+    invoices.map(function(i){return i.client||'';}).concat(Object.values(clientProfiles).map(function(p){return p.name||'';}))
+  )).filter(function(n){return n&&n.toLowerCase()!==wrongName.toLowerCase();}).sort();
+  var actions=allClients.slice(0,8).map(function(name){
+    return {label:name,fn:function(){
+      // Rename the most recent invoice with wrongName to the chosen client
+      var inv=invoices.find(function(i){return (i.client||'').toLowerCase()===wrongName.toLowerCase();});
+      if(inv){inv.client=name;inv.updated_at=new Date().toISOString();save();renderAll();showToast('Updated to '+name);}
+    }};
+  });
+  actions.push({label:'Cancel',cls:'cancel'});
+  showSheet('Which client is this?',actions);
+}
+
+/* ── Init pinch zoom on viewer ── */
+function initPinchZoom(){
+  var viewer=document.getElementById('img-viewer');
+  var img=document.getElementById('img-viewer-img');
+  if(!viewer||!img) return;
+  var scale=1,panX=0,panY=0,startDist=0,startScale=1,lastTX=0,lastTY=0;
+  function apply(){img.style.transform='scale('+scale+') translate('+(panX/scale)+'px,'+(panY/scale)+'px)';}
+  function dist(t){return Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);}
+  viewer.addEventListener('touchstart',function(e){
+    if(e.touches.length===2){e.preventDefault();startDist=dist(e.touches);startScale=scale;}
+    else if(e.touches.length===1){lastTX=e.touches[0].clientX;lastTY=e.touches[0].clientY;}
+  },{passive:false});
+  viewer.addEventListener('touchmove',function(e){
+    if(e.touches.length===2){e.preventDefault();scale=Math.max(1,Math.min(5,startScale*(dist(e.touches)/startDist)));apply();}
+    else if(e.touches.length===1&&scale>1){e.preventDefault();panX+=e.touches[0].clientX-lastTX;panY+=e.touches[0].clientY-lastTY;lastTX=e.touches[0].clientX;lastTY=e.touches[0].clientY;apply();}
+  },{passive:false});
+  viewer.addEventListener('touchend',function(e){if(e.touches.length===0&&scale<1.05){scale=1;panX=0;panY=0;apply();}});
+  var lastTap=0;
+  viewer.addEventListener('touchend',function(){var now=Date.now();if(now-lastTap<300){scale=1;panX=0;panY=0;apply();}lastTap=now;});
+}
+
 /* ══ BOOT ══ */
 (function(){
   refreshFY();
+  initPinchZoom();
+  // Register service worker
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/income-nz/sw.js').catch(function(){});
+  }
   var isPreview=window.location.hostname==='claude.ai'||
     window.location.hostname.includes('artifacts')||
     window.location.protocol==='blob:'||
