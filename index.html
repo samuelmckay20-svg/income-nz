@@ -1523,7 +1523,21 @@ function syncToServer(){
   };
   fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
   .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
-  .then(function(data){if(!data)return;(data.imageLengths||[]).forEach(function(e){_imgCache.set(e.id,e.len);});})
+  .then(function(data){
+    if(!data)return;
+    (data.imageLengths||[]).forEach(function(e){_imgCache.set(e.id,e.len);});
+    // Update local IDs if server returned an ID map
+    if(data.idMap){
+      invoices.forEach(function(inv){
+        if(data.idMap[inv.id]){
+          inv.id=data.idMap[inv.id];
+        }
+      });
+    }
+    // Clear _localOnly once successfully synced — prevents duplication on next load
+    invoices.forEach(function(inv){delete inv._localOnly;});
+    saveLocal();
+  })
   .catch(function(e){console.warn('Sync:',e);})
   .finally(function(){_syncInFlight=false;if(_syncPending){_syncPending=false;syncToServer();}});
 }
@@ -1538,7 +1552,18 @@ function loadFromServer(){
     var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
     // Only keep local-only items the server doesn't have yet (truly offline/unsynced)
-    var unsyncedLocal=invoices.filter(function(i){return i._localOnly&&!serverIds.has(String(i.id));});
+    // Only keep local items the server doesn't have — match by ID or by content
+    var unsyncedLocal=invoices.filter(function(i){
+      if(!i._localOnly) return false;
+      if(serverIds.has(String(i.id))) return false;
+      // Also check if server already has this invoice by content (synced with new ID)
+      var alreadySynced=serverInvoices.some(function(s){
+        return s.client===i.client &&
+          Math.abs((parseFloat(s.amount)||0)-(parseFloat(i.amount)||0))<0.01 &&
+          s.date===i.date;
+      });
+      return !alreadySynced;
+    });
     invoices=serverInvoices.concat(unsyncedLocal);
     bankTxns=data.bankTxns||bankTxns; settings=data.settings||settings;
     saveLocal(); renderAll(); if(unsyncedLocal.length||binnedIds.size)syncToServer();
