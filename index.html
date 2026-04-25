@@ -2064,15 +2064,17 @@ function saveInvoice(){
   if(!client){showErr('inv-err','Client name is required');return;}
   if(!amount||isNaN(+amount)||+amount<=0){showErr('inv-err','Enter a valid amount');return;}
   if(!date){showErr('inv-err','Invoice date is required');return;}
+  var targetInv;
   if(editingId){
-    var inv=invoices.find(function(i){return i.id===editingId;});
-    if(inv){inv.client=client;inv.amount=+amount;inv.date=date;inv.due_date=due||null;inv.invoice_number=num||null;inv.gst=gst;inv.wht_rate=+wht;inv.notes=notes||null;inv.updated_at=new Date().toISOString();}
+    targetInv=invoices.find(function(i){return i.id===editingId;});
+    if(targetInv){targetInv.client=client;targetInv.amount=+amount;targetInv.date=date;targetInv.due_date=due||null;targetInv.invoice_number=num||null;targetInv.gst=gst;targetInv.wht_rate=+wht;targetInv.notes=notes||null;targetInv.updated_at=new Date().toISOString();}
   }else{
-    invoices.unshift({id:'local_'+Date.now(),client:client,amount:+amount,date:date,due_date:due||null,invoice_number:num||null,gst:gst,wht_rate:+wht,notes:notes||null,status:'unpaid',source:'manual',_localOnly:true,created_at:new Date().toISOString(),updated_at:new Date().toISOString()});
+    targetInv={id:'local_'+Date.now(),client:client,amount:+amount,date:date,due_date:due||null,invoice_number:num||null,gst:gst,wht_rate:+wht,notes:notes||null,status:'unpaid',source:'manual',_localOnly:true,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+    invoices.unshift(targetInv);
   }
   // Handle attachment
   var invImg=getInvImageData();
-  if(invImg){inv2.image=invImg;}
+  if(invImg&&targetInv) targetInv.image=invImg;
 
   save();
   // Auto-match to pending bank transaction
