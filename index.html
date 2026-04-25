@@ -1274,29 +1274,32 @@ function renderSummary(){
 /* ── Render Income Tab ── */
 function renderIncomeTab(){
   var fy=invoices.filter(function(i){var d=parseDate(i.date);return d>=FY.start&&d<=FY.end;});
-  var received=fy.filter(function(i){return i.status==='paid';}).reduce(function(s,i){return s+(parseFloat(i.paid_amount||i.amount)||0);},0);
-  var gstOwed=fy.filter(function(i){return i.gst==='yes';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
-  var whtPaid=fy.filter(function(i){return i.status==='paid';}).reduce(function(s,i){var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;return s+wa;},0);
-  var taxOwed=Math.max(0,gstOwed-whtPaid);
+  var paid=fy.filter(function(i){return i.status==='paid';});
 
-  // Gross received = full amount of paid invoices before W/H deduction
-  var grossInvoiced=fy.filter(function(i){return i.status==='paid';})
-    .reduce(function(s,i){ return s+(parseFloat(i.amount)||0); },0);
+  // Gross received = face value of paid invoices (GST-inclusive, before W/H)
+  var grossInvoiced=paid.reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
 
-  // GST collected = GST portion of paid invoices
-  var gstCollected=fy.filter(function(i){return i.status==='paid'&&i.gst==='yes';})
-    .reduce(function(s,i){ return s+(parseFloat(i.amount)||0)*3/23; },0);
+  // W/H withheld = actual W/H deducted (use stored amount, fall back to rate calc)
+  var whtTotal=paid.reduce(function(s,i){
+    var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;
+    return s+wa;
+  },0);
 
-  // GST collected = GST on paid invoices only
-  var gstCollected=fy.filter(function(i){return i.status==='paid'&&i.gst==='yes';})
+  // Net received = what actually hit the bank (gross minus W/H)
+  // Use paid_amount if set (most accurate), otherwise derive from gross - W/H
+  var received=paid.reduce(function(s,i){
+    if(i.paid_amount!=null&&i.paid_amount!=='') return s+(parseFloat(i.paid_amount)||0);
+    var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;
+    return s+(parseFloat(i.amount)||0)-wa;
+  },0);
+
+  // GST collected = GST portion of paid invoice face values
+  var gstCollected=paid.filter(function(i){return i.gst==='yes';})
     .reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
 
-  // W/H withheld on paid invoices
-  var whtTotal=fy.filter(function(i){return i.status==='paid';})
-    .reduce(function(s,i){
-      var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;
-      return s+wa;
-    },0);
+  var gstOwed=gstCollected; // alias used below
+  var whtPaid=whtTotal;     // alias used below
+  var taxOwed=Math.max(0,gstOwed-whtPaid);
 
   document.getElementById('hero-amount').textContent=fmt(received);
   var hg=document.getElementById('hero-gross'); if(hg) hg.textContent=fmt(grossInvoiced);
