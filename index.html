@@ -1009,6 +1009,35 @@ body{
       </div>
       <div id="paid-ai-result" style="display:none"></div>
 
+      <!-- Extra fields for new remittance (hidden when marking existing invoice) -->
+      <div id="paid-extra-fields" style="display:none">
+        <div class="shdr">Client details</div>
+        <div class="g-list">
+          <div class="g-row">
+            <div class="g-icon" style="background:rgba(0,122,255,.12)">&#x1F3E2;</div>
+            <span class="g-lbl">Client</span>
+            <input class="g-input" id="paid-client" type="text" placeholder="Client name" autocapitalize="words">
+          </div>
+          <div class="g-row">
+            <div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F4C5;</div>
+            <span class="g-lbl">Invoice date</span>
+            <input class="g-input" id="paid-inv-date" type="date">
+          </div>
+          <div class="g-row">
+            <div class="g-icon" style="background:rgba(175,82,222,.12)">#&#xFE0F;&#x20E3;</div>
+            <span class="g-lbl">Invoice #</span>
+            <input class="g-input" id="paid-inv-num" type="text" placeholder="Optional">
+          </div>
+          <div class="g-row">
+            <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F9EE;</div>
+            <span class="g-lbl">GST</span>
+            <select class="g-select" id="paid-gst">
+              <option value="yes">15% GST included</option>
+              <option value="no">No GST</option>
+            </select>
+          </div>
+        </div>
+      </div>
       <div class="shdr">Payment details</div>
       <div class="g-list">
         <div class="g-row">
@@ -1053,6 +1082,66 @@ body{
     </div>
     <div class="modal-foot" style="padding-top:12px">
       <button class="btn-primary" onclick="confirmMarkPaid()">Mark as paid</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ INVOICE DETAIL MODAL ══ -->
+<div class="modal-bd" id="modal-inv-detail">
+  <div class="modal-sheet" style="max-height:92vh">
+    <div class="modal-hdr">
+      <button class="modal-close" style="text-align:left;min-width:60px;color:var(--t2)" onclick="closeModal('modal-inv-detail')">Back</button>
+      <span class="modal-title" id="inv-detail-title">Invoice</span>
+      <button class="modal-close" id="inv-detail-edit-btn" style="color:var(--blue)">Edit</button>
+    </div>
+    <div class="modal-scroll" style="padding:0 0 16px">
+
+      <!-- Status banner -->
+      <div id="inv-detail-banner" style="margin:12px 16px 0;padding:14px 16px;border-radius:14px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div id="inv-detail-status-label" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px"></div>
+          <div id="inv-detail-status-sub" style="font-size:13px;font-weight:500"></div>
+        </div>
+        <div id="inv-detail-action-btn"></div>
+      </div>
+
+      <!-- Breakdown card -->
+      <div id="inv-detail-breakdown" style="margin:8px 16px 0;background:var(--surface);border-radius:14px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <div style="padding:14px 16px;border-bottom:0.5px solid var(--sep);border-right:0.5px solid var(--sep)">
+            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Gross invoice</div>
+            <div id="id-gross" style="font-size:22px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums">—</div>
+          </div>
+          <div style="padding:14px 16px;border-bottom:0.5px solid var(--sep)">
+            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">GST collected</div>
+            <div id="id-gst" style="font-size:22px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums">—</div>
+          </div>
+          <div style="padding:14px 16px;border-right:0.5px solid var(--sep)">
+            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">W/H tax</div>
+            <div id="id-wht" style="font-size:22px;font-weight:700;color:var(--purple);font-variant-numeric:tabular-nums">—</div>
+          </div>
+          <div style="padding:14px 16px">
+            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Net to bank</div>
+            <div id="id-net" style="font-size:22px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Details list -->
+      <div class="shdr">Details</div>
+      <div class="g-list">
+        <div class="g-row"><div class="g-icon" style="background:rgba(0,122,255,.12)">&#x1F3E2;</div><span class="g-lbl">Client</span><span class="g-val" id="id-client"></span></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F4C5;</div><span class="g-lbl">Invoice date</span><span class="g-val" id="id-date"></span></div>
+        <div class="g-row" id="id-due-row"><div class="g-icon" style="background:rgba(255,59,48,.12)">&#x23F0;</div><span class="g-lbl">Due date</span><span class="g-val" id="id-due"></span></div>
+        <div class="g-row" id="id-num-row"><div class="g-icon" style="background:rgba(175,82,222,.12)">#&#xFE0F;&#x20E3;</div><span class="g-lbl">Invoice #</span><span class="g-val" id="id-num"></span></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F9EE;</div><span class="g-lbl">GST</span><span class="g-val" id="id-gst-label"></span></div>
+        <div class="g-row" id="id-paid-date-row" style="display:none"><div class="g-icon" style="background:rgba(52,199,89,.12)">&#x2705;</div><span class="g-lbl">Paid on</span><span class="g-val" id="id-paid-date"></span></div>
+        <div class="g-row" id="id-notes-row" style="display:none"><div class="g-icon" style="background:var(--fill)">&#x1F4DD;</div><span class="g-lbl">Notes</span><span class="g-val" id="id-notes" style="text-align:right;white-space:normal;font-size:13px"></span></div>
+      </div>
+
+      <!-- Actions -->
+      <div style="padding:8px 16px;display:flex;flex-direction:column;gap:8px" id="inv-detail-actions"></div>
+
     </div>
   </div>
 </div>
@@ -2048,6 +2137,14 @@ function setBadge(id,n){var el=document.getElementById(id);el.textContent=n>99?'
 
 /* ── Invoice CRUD ── */
 function openAddInvoice(){
+  showSheet('What are you adding?',[
+    {label:'Invoice — I sent an invoice to a client',fn:function(){openNewInvoice();}},
+    {label:'Remittance — I received a payment advice',fn:function(){openNewRemittance();}},
+    {label:'Cancel',cls:'cancel'}
+  ]);
+}
+
+function openNewInvoice(){
   editingId=null;
   document.getElementById('inv-modal-title').textContent='New Invoice';
   document.getElementById('f-client').value=''; document.getElementById('f-amount').value='';
@@ -2055,6 +2152,32 @@ function openAddInvoice(){
   document.getElementById('f-num').value=''; document.getElementById('f-gst').value='yes';
   document.getElementById('f-wht').value=String(settings.defaultWHT||'0');
   document.getElementById('f-notes').value=''; clearInvFile(); hideErr('inv-err'); openModal('modal-invoice');
+}
+
+function openNewRemittance(){
+  // Open a blank invoice pre-set to "paid" with the mark-paid modal ready
+  editingId=null;
+  // First create a stub invoice, then open mark-paid on it
+  var stub={
+    id:'local_'+Date.now(),client:'',amount:0,date:today(),due_date:null,
+    invoice_number:null,gst:'yes',wht_rate:0,wht_amount:0,
+    status:'unpaid',source:'manual',_localOnly:true,
+    created_at:new Date().toISOString(),updated_at:new Date().toISOString()
+  };
+  invoices.unshift(stub);
+  // Open mark paid modal straight away — user fills in details + uploads remittance
+  _paidInvId=stub.id;
+  clearPaidFile();
+  document.getElementById('paid-modal-title').textContent='New remittance';
+  document.getElementById('paid-ai-result').style.display='none';
+  document.getElementById('paid-net').value='';
+  document.getElementById('paid-wht').value='';
+  document.getElementById('paid-date').value=today();
+  updatePaidSummary();
+  // Add client/amount fields to the modal dynamically
+  var extraFields=document.getElementById('paid-extra-fields');
+  if(extraFields) extraFields.style.display='block';
+  openModal('modal-paid');
 }
 
 function saveInvoice(){
@@ -2285,51 +2408,124 @@ function getInvImageData(){return window._invImgData||null;}
 
 
 var _paidInvId = null;
+var _detailInvId = null;
 
 function openInvDetail(id){
   var inv=invoices.find(function(i){return String(i.id)===String(id);});
-  if(!inv)return;
-  var actions=[];
+  if(!inv) return;
+  _detailInvId=id;
 
-  if(inv.status!=='paid'){
-    actions.push({label:'Mark as paid',fn:function(){ openMarkPaid(id); }});
+  var status=isOverdue(inv)?'overdue':(inv.status||'unpaid');
+  var amt=parseFloat(inv.amount)||0;
+  var gstAmt=inv.gst==='yes'?amt*3/23:0;
+  var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):(amt*(parseFloat(inv.wht_rate)||0)/100);
+  var netAmt=inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):amt-whtAmt;
+
+  // Title
+  document.getElementById('inv-detail-title').textContent=inv.client;
+
+  // Breakdown
+  document.getElementById('id-gross').textContent=fmt(amt);
+  document.getElementById('id-gst').textContent=gstAmt>0?fmt(gstAmt):'N/A';
+  document.getElementById('id-wht').textContent=whtAmt>0?fmt(whtAmt):'None';
+  document.getElementById('id-net').textContent=fmt(netAmt);
+
+  // Details
+  document.getElementById('id-client').textContent=inv.client;
+  document.getElementById('id-date').textContent=fmtDate(inv.date);
+  var dueRow=document.getElementById('id-due-row');
+  if(inv.due_date){dueRow.style.display='flex';document.getElementById('id-due').textContent=fmtDate(inv.due_date);}
+  else dueRow.style.display='none';
+  var numRow=document.getElementById('id-num-row');
+  if(inv.invoice_number){numRow.style.display='flex';document.getElementById('id-num').textContent='#'+inv.invoice_number;}
+  else numRow.style.display='none';
+  document.getElementById('id-gst-label').textContent=inv.gst==='yes'?'15% GST included':inv.gst==='zero'?'Zero-rated':'No GST';
+  var paidDateRow=document.getElementById('id-paid-date-row');
+  if(inv.paid_date){paidDateRow.style.display='flex';document.getElementById('id-paid-date').textContent=fmtDate(inv.paid_date);}
+  else paidDateRow.style.display='none';
+  var notesRow=document.getElementById('id-notes-row');
+  if(inv.notes){notesRow.style.display='flex';document.getElementById('id-notes').textContent=inv.notes;}
+  else notesRow.style.display='none';
+
+  // Status banner
+  var banner=document.getElementById('inv-detail-banner');
+  var bannerColors={paid:'rgba(52,199,89,.12)',unpaid:'rgba(255,149,0,.12)',overdue:'rgba(255,59,48,.12)',review:'rgba(175,82,222,.12)',draft:'rgba(120,120,128,.1)'};
+  var bannerTextColors={paid:'var(--green)',unpaid:'var(--orange)',overdue:'var(--red)',review:'var(--purple)',draft:'var(--t3)'};
+  banner.style.background=bannerColors[status]||'var(--fill)';
+  document.getElementById('inv-detail-status-label').style.color=bannerTextColors[status]||'var(--t2)';
+  document.getElementById('inv-detail-status-label').textContent=status.charAt(0).toUpperCase()+status.slice(1);
+  document.getElementById('inv-detail-status-sub').textContent=
+    status==='paid'?'Paid '+fmtDate(inv.paid_date)+' · Net '+fmt(netAmt):
+    isOverdue(inv)?'Was due '+fmtDate(inv.due_date):
+    inv.due_date?'Due '+fmtDate(inv.due_date):'';
+
+  // Action button in banner — use data-iid to avoid quote hell
+  var actionBtn=document.getElementById('inv-detail-action-btn');
+  if(status!=='paid'){
+    actionBtn.innerHTML='<button class="inv-det-mark-paid" data-iid="'+esc(String(id))+'" style="padding:8px 16px;border-radius:20px;border:none;background:var(--green);color:white;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Mark paid</button>';
   } else {
-    actions.push({label:'Mark as unpaid',fn:function(){
-      inv.status='unpaid'; inv.paid_date=null; inv.paid_amount=null;
-      save(); renderAll(); showToast('Marked as unpaid');
-    }});
+    actionBtn.innerHTML='<button class="inv-det-undo" data-iid="'+esc(String(id))+'" style="padding:8px 16px;border-radius:20px;border:none;background:var(--fill);color:var(--t2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">Undo</button>';
   }
 
-  actions.push({label:'Edit invoice',fn:function(){
-    editingId=inv.id;
-    document.getElementById('inv-modal-title').textContent='Edit Invoice';
-    document.getElementById('f-client').value=inv.client||'';
-    document.getElementById('f-amount').value=inv.amount||'';
-    document.getElementById('f-date').value=inv.date||'';
-    document.getElementById('f-due').value=inv.due_date||'';
-    document.getElementById('f-num').value=inv.invoice_number||'';
-    document.getElementById('f-gst').value=inv.gst||'yes';
-    document.getElementById('f-wht').value=String(inv.wht_rate||'0');
-    document.getElementById('f-notes').value=inv.notes||'';
-    clearInvFile(); hideErr('inv-err'); openModal('modal-invoice');
-  }});
+  // Bottom actions
+  var actionsEl=document.getElementById('inv-detail-actions');
+  actionsEl.innerHTML=
+    '<button class="inv-det-edit" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:var(--fill);color:var(--t1);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">Edit invoice</button>'+
+    '<button class="inv-det-del" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(255,59,48,.1);color:var(--red);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">Delete invoice</button>';
 
-  actions.push({label:'Delete invoice',cls:'danger',fn:function(){
-    showSheet('Delete '+inv.client+' invoice?',[
-      {label:'Delete',cls:'danger',fn:function(){
-        invoices=invoices.filter(function(i){return i.id!==inv.id;});
-        save(); renderAll(); showToast('Invoice deleted');
-      }},
-      {label:'Cancel',cls:'cancel'}
-    ]);
-  }});
+  // Edit btn in header
+  document.getElementById('inv-detail-edit-btn').onclick=function(){closeModal('modal-inv-detail');editInvoice(id);};
 
-  actions.push({label:'Cancel',cls:'cancel'});
-  var statusLabel=inv.status==='paid'
-    ?'Paid '+fmtDate(inv.paid_date)+' — Net '+fmt(inv.paid_amount)
-    :inv.status.charAt(0).toUpperCase()+inv.status.slice(1);
-  showSheet(inv.client+' — '+fmt(inv.amount)+' · '+statusLabel, actions);
+  // Delegated clicks for dynamically injected buttons
+  document.getElementById('inv-detail-banner').onclick=function(e){
+    var b=e.target.closest('[data-iid]'); if(!b) return;
+    var iid=b.dataset.iid;
+    if(b.classList.contains('inv-det-mark-paid')){closeModal('modal-inv-detail');openMarkPaid(iid);}
+    if(b.classList.contains('inv-det-undo')){closeModal('modal-inv-detail');markInvUnpaid(iid);}
+  };
+  document.getElementById('inv-detail-actions').onclick=function(e){
+    var b=e.target.closest('[data-iid]'); if(!b) return;
+    var iid=b.dataset.iid;
+    if(b.classList.contains('inv-det-edit')){closeModal('modal-inv-detail');editInvoice(iid);}
+    if(b.classList.contains('inv-det-del')){closeModal('modal-inv-detail');deleteInvoice(iid);}
+  };
+
+  openModal('modal-inv-detail');
 }
+
+function markInvUnpaid(id){
+  var inv=invoices.find(function(i){return String(i.id)===String(id);});
+  if(!inv) return;
+  inv.status='unpaid'; inv.paid_date=null; inv.paid_amount=null;
+  save(); renderAll(); showToast('Marked as unpaid');
+}
+
+function editInvoice(id){
+  var inv=invoices.find(function(i){return String(i.id)===String(id);});
+  if(!inv) return;
+  editingId=inv.id;
+  document.getElementById('inv-modal-title').textContent='Edit Invoice';
+  document.getElementById('f-client').value=inv.client||'';
+  document.getElementById('f-amount').value=inv.amount||'';
+  document.getElementById('f-date').value=inv.date||'';
+  document.getElementById('f-due').value=inv.due_date||'';
+  document.getElementById('f-num').value=inv.invoice_number||'';
+  document.getElementById('f-gst').value=inv.gst||'yes';
+  document.getElementById('f-wht').value=String(inv.wht_rate||'0');
+  document.getElementById('f-notes').value=inv.notes||'';
+  clearInvFile(); hideErr('inv-err'); openModal('modal-invoice');
+}
+
+function deleteInvoice(id){
+  showSheet('Delete this invoice?',[
+    {label:'Delete',cls:'danger',fn:function(){
+      invoices=invoices.filter(function(i){return String(i.id)!==String(id);});
+      save(); renderAll(); showToast('Invoice deleted');
+    }},
+    {label:'Cancel',cls:'cancel'}
+  ]);
+}
+
 
 function openMarkPaid(id){
   var inv=invoices.find(function(i){return String(i.id)===String(id);});
@@ -2428,7 +2624,7 @@ function scanRemittance(){
   var b64=data.split(',')[1];
   var messages=[{role:'user',content:[
     isImage?{type:'image',source:{type:'base64',media_type:mime,data:b64}}:{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
-    {type:'text',text:'This is a NZ remittance advice or payment notification. Extract payment details. Reply ONLY with JSON: {"net_paid":1656.00,"wht_amount":414.00,"wht_rate":20,"payment_date":"YYYY-MM-DD","reference":"string or null"}. net_paid=actual amount transferred to bank. wht_amount=withholding tax deducted. Use null for missing fields.'}
+    {type:'text',text:'This is a NZ remittance advice or payment notification. Extract payment details. Reply ONLY with JSON: {"net_paid":1656.00,"wht_amount":414.00,"wht_rate":20,"payment_date":"YYYY-MM-DD","invoice_number":"string or null","payer":"company name paying you or null","reference":"string or null"}. net_paid=actual amount transferred to bank. wht_amount=withholding tax deducted. Use null for missing fields.'}
   ]}];
   fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:messages})})
   .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
@@ -2438,6 +2634,9 @@ function scanRemittance(){
     if(parsed.net_paid!=null) document.getElementById('paid-net').value=String(parsed.net_paid);
     if(parsed.wht_amount!=null) document.getElementById('paid-wht').value=String(parsed.wht_amount);
     if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
+    // Fill extra fields if new remittance
+    if(parsed.payer){var pc=document.getElementById('paid-client');if(pc&&!pc.value)pc.value=parsed.payer;}
+    if(parsed.invoice_number){var pn=document.getElementById('paid-inv-num');if(pn&&!pn.value)pn.value=parsed.invoice_number;}
     updatePaidSummary();
     resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
     resultEl.innerHTML='&#x2713; Net: <strong>'+fmt(parsed.net_paid||0)+'</strong> &nbsp;&middot;&nbsp; W/H: <strong>'+fmt(parsed.wht_amount||0)+'</strong>';
@@ -2454,22 +2653,41 @@ function scanRemittance(){
 function confirmMarkPaid(){
   var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
   if(!inv){closeModal('modal-paid');return;}
+
   var net=parseFloat(document.getElementById('paid-net').value)||0;
   var wht=parseFloat(document.getElementById('paid-wht').value)||0;
   var dateVal=document.getElementById('paid-date').value;
+  var extraFields=document.getElementById('paid-extra-fields');
+  var isNew=extraFields&&extraFields.style.display!=='none';
+
+  // If new remittance — fill in stub invoice details
+  if(isNew){
+    var client=(document.getElementById('paid-client').value||'').trim();
+    if(!client){showToast('Enter a client name');return;}
+    var gross=net+wht;
+    if(gross<=0&&net<=0){showToast('Enter the net received amount');return;}
+    inv.client=client;
+    inv.amount=gross>0?gross:net;
+    inv.date=(document.getElementById('paid-inv-date').value)||dateVal||today();
+    inv.invoice_number=document.getElementById('paid-inv-num').value.trim()||null;
+    inv.gst=document.getElementById('paid-gst').value;
+    inv.wht_rate=gross>0?Math.round(wht/gross*100):0;
+    extraFields.style.display='none';
+  }
+
   inv.status='paid';
   inv.paid_date=dateVal||today();
   inv.paid_amount=net>0?net:(parseFloat(inv.amount)||0);
   if(wht>0){
     inv.wht_amount=wht;
     if(!inv.wht_rate||inv.wht_rate===0){
-      var gross=net+wht;
-      inv.wht_rate=gross>0?Math.round(wht/gross*100):0;
+      var gross2=net+wht;
+      inv.wht_rate=gross2>0?Math.round(wht/gross2*100):0;
     }
   }
   if(window._paidFileData) inv.remittance_image=window._paidFileData;
   save(); renderAll(); closeModal('modal-paid');
-  showToast('Paid '+fmt(inv.paid_amount)+' on '+fmtDate(inv.paid_date));
+  showToast('Saved — '+fmt(inv.paid_amount)+' from '+(inv.client||'client'));
 }
 /* ── Bank CSV ── */
 function onCSV(input){
