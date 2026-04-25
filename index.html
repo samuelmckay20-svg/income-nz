@@ -1019,11 +1019,6 @@ body{
             <input class="g-input" id="paid-client" type="text" placeholder="Client name" autocapitalize="words">
           </div>
           <div class="g-row">
-            <div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F4C5;</div>
-            <span class="g-lbl">Invoice date</span>
-            <input class="g-input" id="paid-inv-date" type="date">
-          </div>
-          <div class="g-row">
             <div class="g-icon" style="background:rgba(175,82,222,.12)">#&#xFE0F;&#x20E3;</div>
             <span class="g-lbl">Invoice #</span>
             <input class="g-input" id="paid-inv-num" type="text" placeholder="Optional">
@@ -1038,44 +1033,36 @@ body{
           </div>
         </div>
       </div>
-      <div class="shdr">Payment details</div>
-      <div class="g-list">
-        <div class="g-row">
+
+      <!-- Single combined breakdown + input card -->
+      <div class="shdr" id="paid-details-shdr">Payment received</div>
+      <div style="margin:0 16px 0;background:var(--surface);border-radius:14px;overflow:hidden">
+        <div class="g-row" style="border-bottom:0.5px solid var(--sep)">
           <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F4B5;</div>
           <span class="g-lbl">Net received</span>
           <input class="g-input" id="paid-net" type="text" inputmode="decimal" placeholder="0.00" oninput="updatePaidSummary()">
         </div>
-        <div class="g-row">
+        <div class="g-row" style="border-bottom:0.5px solid var(--sep)">
           <div class="g-icon" style="background:rgba(175,82,222,.12)">&#x1F3DB;&#xFE0F;</div>
           <span class="g-lbl">W/H tax deducted</span>
           <input class="g-input" id="paid-wht" type="text" inputmode="decimal" placeholder="0.00" oninput="updatePaidSummary()">
         </div>
-        <div class="g-row">
+        <div class="g-row" style="border-bottom:0.5px solid var(--sep)">
           <div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F4C5;</div>
-          <span class="g-lbl">Payment date</span>
+          <span class="g-lbl" id="paid-date-lbl">Payment date</span>
           <input class="g-input" id="paid-date" type="date">
         </div>
-      </div>
-
-      <!-- Breakdown card — shown when amounts are entered -->
-      <div id="paid-summary" style="display:none;margin:8px 16px 0;background:var(--surface);border-radius:14px;overflow:hidden">
-        <div style="background:var(--fill);padding:10px 14px;font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px">Payment breakdown</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-          <div style="padding:14px 16px;border-bottom:0.5px solid var(--sep);border-right:0.5px solid var(--sep)">
-            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Gross invoice</div>
-            <div id="pd-gross" style="font-size:20px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums">—</div>
-          </div>
-          <div style="padding:14px 16px;border-bottom:0.5px solid var(--sep)">
-            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">GST collected</div>
-            <div id="pd-gst" style="font-size:20px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums">—</div>
-          </div>
-          <div style="padding:14px 16px;border-right:0.5px solid var(--sep)">
-            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">W/H tax</div>
-            <div id="pd-wht" style="font-size:20px;font-weight:700;color:var(--purple);font-variant-numeric:tabular-nums">—</div>
-          </div>
-          <div style="padding:14px 16px">
-            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Net to bank</div>
-            <div id="pd-net" style="font-size:20px;font-weight:700;color:var(--accent-dark);font-variant-numeric:tabular-nums">—</div>
+        <!-- Breakdown rows — shown when amounts entered -->
+        <div id="paid-summary" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;border-top:0.5px solid var(--sep)">
+            <div style="padding:12px 16px;border-right:0.5px solid var(--sep)">
+              <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px">Gross invoice</div>
+              <div id="pd-gross" style="font-size:18px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums">—</div>
+            </div>
+            <div style="padding:12px 16px">
+              <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px">GST collected</div>
+              <div id="pd-gst" style="font-size:18px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums">—</div>
+            </div>
           </div>
         </div>
       </div>
@@ -2173,8 +2160,8 @@ function openNewRemittance(){
   document.getElementById('paid-net').value='';
   document.getElementById('paid-wht').value='';
   document.getElementById('paid-date').value=today();
+  var dateLbl=document.getElementById('paid-date-lbl'); if(dateLbl) dateLbl.textContent='Payment date';
   updatePaidSummary();
-  // Add client/amount fields to the modal dynamically
   var extraFields=document.getElementById('paid-extra-fields');
   if(extraFields) extraFields.style.display='block';
   openModal('modal-paid');
@@ -2539,6 +2526,8 @@ function openMarkPaid(id){
   document.getElementById('paid-net').value=whtAmt>0?String(net):'';
   document.getElementById('paid-wht').value=whtAmt>0?String(whtAmt):'';
   document.getElementById('paid-date').value=today();
+  var dateLbl=document.getElementById('paid-date-lbl'); if(dateLbl) dateLbl.textContent='Payment date';
+  var extraFields=document.getElementById('paid-extra-fields'); if(extraFields) extraFields.style.display='none';
   updatePaidSummary();
   openModal('modal-paid');
 }
@@ -2550,12 +2539,12 @@ function updatePaidSummary(){
   if(net>0||wht>0){
     var gross=net+wht;
     var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
-    var gstAmt=inv&&inv.gst==='yes'?gross*3/23:0;
+    var gstEl=document.getElementById('paid-gst');
+    var gstMode=gstEl?gstEl.value:(inv&&inv.gst?inv.gst:'yes');
+    var gstAmt=gstMode==='yes'?gross*3/23:0;
     el.style.display='block';
     document.getElementById('pd-gross').textContent=fmt(gross);
     document.getElementById('pd-gst').textContent=gstAmt>0?fmt(gstAmt):'N/A';
-    document.getElementById('pd-wht').textContent=wht>0?fmt(wht):'None';
-    document.getElementById('pd-net').textContent=fmt(net);
   } else { el.style.display='none'; }
 }
 
@@ -2668,7 +2657,7 @@ function confirmMarkPaid(){
     if(gross<=0&&net<=0){showToast('Enter the net received amount');return;}
     inv.client=client;
     inv.amount=gross>0?gross:net;
-    inv.date=(document.getElementById('paid-inv-date').value)||dateVal||today();
+    inv.date=dateVal||today();
     inv.invoice_number=document.getElementById('paid-inv-num').value.trim()||null;
     inv.gst=document.getElementById('paid-gst').value;
     inv.wht_rate=gross>0?Math.round(wht/gross*100):0;
