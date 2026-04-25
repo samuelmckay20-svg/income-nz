@@ -188,6 +188,29 @@ body{
 
 /* ── Upload zone ── */
 .upload-zone{margin:0 16px 12px;border:1.5px dashed var(--sep);border-radius:18px;padding:36px 16px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+/* ── Capture card (matches Receipts NZ exactly) ── */
+.capture-card{margin:0 16px 8px;background:var(--surface);border-radius:16px;overflow:hidden}
+.photo-prev-wrap{position:relative}
+.photo-prev{width:100%;height:200px;object-fit:cover;display:block;cursor:pointer}
+.photo-expand-btn{position:absolute;bottom:10px;right:10px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.55);border:none;color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cap-btns{display:grid;grid-template-columns:1fr 1fr 1fr}
+.cap-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:18px;border:none;background:none;cursor:pointer;font-family:inherit;position:relative;overflow:hidden;transition:background .15s;-webkit-tap-highlight-color:transparent}
+.cap-btn:active{background:var(--fill)}
+.cap-btn+.cap-btn{border-left:0.5px solid var(--sep)}
+.cap-btn input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.cap-btn-ico{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px}
+.cap-btn-name{font-size:13px;font-weight:600;color:var(--t1)}
+.cap-btn-sub{font-size:11px;color:var(--t3)}
+.retake-row{border-top:0.5px solid var(--sep)}
+.retake-btn{width:100%;padding:14px;border:none;background:none;font-family:inherit;font-size:14px;font-weight:600;color:var(--red);cursor:pointer}
+.ai-inv-btn{display:block;width:calc(100% - 32px);margin:0 16px 8px;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#5856D6,#007AFF);color:white;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s;-webkit-tap-highlight-color:transparent}
+.ai-inv-btn:active{opacity:.8}
+.ai-inv-btn:disabled{opacity:.45}
+.ai-inv-result-ok{margin:0 16px 8px;padding:12px 14px;border-radius:12px;background:var(--accent-bg);color:var(--accent-dark);font-size:13px;line-height:1.5}
+.ai-inv-result-err{margin:0 16px 8px;padding:12px 14px;border-radius:12px;background:rgba(255,59,48,.1);color:var(--red);font-size:13px;line-height:1.5}
+.spinner{display:inline-block;width:15px;height:15px;border:2.5px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .65s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 .upload-zone:active,.upload-zone.drag{border-color:var(--blue);background:rgba(0,122,255,0.04)}
 .uz-icon{font-size:38px;margin-bottom:12px;opacity:.6}
 .uz-title{font-size:16px;font-weight:600;margin-bottom:5px}
@@ -830,6 +853,38 @@ body{
       <button class="modal-close" onclick="closeModal('modal-invoice')">✕</button>
     </div>
     <div class="modal-scroll">
+      <!-- File upload at top -->
+      <div class="capture-card" style="margin:12px 16px 0">
+        <div class="photo-prev-wrap" id="inv-prev-wrap" style="display:none">
+          <img id="inv-prev-img" class="photo-prev" alt="Invoice">
+          <button class="photo-expand-btn" onclick="viewInvFile()">&#x26F6;</button>
+        </div>
+        <div id="inv-pdf-wrap" style="display:none;position:relative;cursor:pointer" onclick="viewInvFile()">
+          <canvas id="inv-pdf-canvas" style="width:100%;display:block;max-height:200px;background:#f5f5f0"></canvas>
+          <div style="position:absolute;bottom:10px;right:10px;background:rgba(255,59,48,.9);border-radius:8px;padding:4px 10px">
+            <span style="font-size:11px;color:white;font-weight:700">PDF</span>
+          </div>
+          <div id="inv-pdf-name" style="padding:8px 14px;font-size:12px;color:var(--t3);border-top:0.5px solid var(--sep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--surface)">invoice.pdf</div>
+        </div>
+        <div class="cap-btns" style="grid-template-columns:1fr">
+          <button class="cap-btn" style="padding:20px">
+            <input type="file" accept="image/*,application/pdf,.pdf" id="inv-file-input" onchange="onInvAnyFile(event)">
+            <div class="cap-btn-ico" style="background:rgba(0,122,255,.1)">&#x1F4CE;</div>
+            <div class="cap-btn-name">Upload invoice or photo</div>
+            <div class="cap-btn-sub">Image or PDF &middot; Claude will scan it</div>
+          </button>
+        </div>
+        <div class="retake-row" id="inv-retake-row" style="display:none">
+          <button class="retake-btn" onclick="clearInvFile()">Remove file</button>
+        </div>
+      </div>
+      <div id="inv-ai-wrap" style="display:none;padding:4px 0 0">
+        <button class="ai-inv-btn" id="inv-ai-btn" onclick="scanInvoiceForm()">
+          <span>&#x2736;</span> Scan with AI
+        </button>
+      </div>
+      <div id="inv-ai-result" style="display:none"></div>
+
       <div class="shdr">Invoice details</div>
       <div class="g-list">
         <div class="g-row"><div class="g-icon" style="background:rgba(0,122,255,0.12)">🏢</div><span class="g-lbl">Client</span><input class="g-input" id="f-client" type="text" placeholder="Client name" autocapitalize="words"></div>
@@ -850,15 +905,6 @@ body{
           <div class="g-icon" style="background:var(--fill);margin-top:2px">📝</div>
           <textarea class="g-input" id="f-notes" placeholder="Optional notes…" rows="2" style="resize:none;line-height:1.45;padding-top:1px"></textarea>
         </div>
-      </div>
-      <div class="shdr">Invoice file</div>
-      <div style="padding:0 16px 16px">
-        <div id="inv-upload-zone" class="upload-zone" onclick="document.getElementById('f-attachment').click()" style="padding:28px 16px">
-          <div id="inv-uz-icon" class="uz-icon">📄</div>
-          <div id="inv-uz-title" class="uz-title">Upload invoice or receipt</div>
-          <div id="inv-uz-sub" class="uz-sub">PDF or photo · Claude will scan it</div>
-        </div>
-        <input type="file" id="f-attachment" accept="image/*,application/pdf" style="display:none" onchange="onAttachFile(this)">
       </div>
     </div>
     <div class="modal-foot" style="padding-top:12px">
@@ -918,6 +964,73 @@ body{
     <div class="modal-scroll">
       <div class="shdr">Select invoice</div>
       <div id="match-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MARK AS PAID MODAL ══ -->
+<div class="modal-bd" id="modal-paid">
+  <div class="modal-sheet" style="max-height:85vh">
+    <div class="modal-hdr">
+      <span class="modal-title" id="paid-modal-title">Mark as paid</span>
+      <button class="modal-close" onclick="closeModal('modal-paid')">&#x2715;</button>
+    </div>
+    <div class="modal-scroll" style="padding:0 0 16px">
+
+      <!-- Remittance upload -->
+      <div class="capture-card" style="margin:12px 16px 0">
+        <div class="photo-prev-wrap" id="paid-prev-wrap" style="display:none">
+          <img id="paid-prev-img" class="photo-prev" alt="Remittance">
+          <button class="photo-expand-btn" onclick="viewPaidFile()">&#x26F6;</button>
+        </div>
+        <div id="paid-pdf-wrap" style="display:none;position:relative;cursor:pointer" onclick="viewPaidFile()">
+          <canvas id="paid-pdf-canvas" style="width:100%;display:block;max-height:160px;background:#f5f5f0"></canvas>
+          <div style="position:absolute;bottom:8px;right:8px;background:rgba(255,59,48,.9);border-radius:6px;padding:3px 8px">
+            <span style="font-size:10px;color:white;font-weight:700">PDF</span>
+          </div>
+          <div id="paid-pdf-name" style="padding:6px 14px;font-size:11px;color:var(--t3);border-top:0.5px solid var(--sep);background:var(--surface)">remittance.pdf</div>
+        </div>
+        <div class="cap-btns" style="grid-template-columns:1fr">
+          <button class="cap-btn" style="padding:16px">
+            <input type="file" accept="image/*,application/pdf,.pdf" id="paid-file-input" onchange="onPaidFile(event)">
+            <div class="cap-btn-ico" style="background:rgba(175,82,222,.1)">&#x1F4C4;</div>
+            <div class="cap-btn-name">Upload remittance</div>
+            <div class="cap-btn-sub">PDF or photo &middot; Claude reads W/H tax automatically</div>
+          </button>
+        </div>
+        <div class="retake-row" id="paid-retake-row" style="display:none">
+          <button class="retake-btn" onclick="clearPaidFile()">Remove file</button>
+        </div>
+      </div>
+      <div id="paid-ai-wrap" style="display:none;padding:4px 0 0">
+        <button class="ai-inv-btn" id="paid-ai-btn" onclick="scanRemittance()" style="background:linear-gradient(135deg,#AF52DE,#5856D6)">
+          <span>&#x2736;</span> Read remittance
+        </button>
+      </div>
+      <div id="paid-ai-result" style="display:none"></div>
+
+      <div class="shdr">Payment details</div>
+      <div class="g-list">
+        <div class="g-row">
+          <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F4B5;</div>
+          <span class="g-lbl">Net received</span>
+          <input class="g-input" id="paid-net" type="text" inputmode="decimal" placeholder="0.00">
+        </div>
+        <div class="g-row">
+          <div class="g-icon" style="background:rgba(175,82,222,.12)">&#x1F3DB;&#xFE0F;</div>
+          <span class="g-lbl">W/H tax deducted</span>
+          <input class="g-input" id="paid-wht" type="text" inputmode="decimal" placeholder="0.00">
+        </div>
+        <div class="g-row">
+          <div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F4C5;</div>
+          <span class="g-lbl">Payment date</span>
+          <input class="g-input" id="paid-date" type="date">
+        </div>
+      </div>
+      <div id="paid-summary" style="margin:4px 16px 0;padding:12px 14px;background:var(--accent-bg);border-radius:12px;font-size:13px;color:var(--accent-dark);display:none"></div>
+    </div>
+    <div class="modal-foot" style="padding-top:12px">
+      <button class="btn-primary" onclick="confirmMarkPaid()">Mark as paid</button>
     </div>
   </div>
 </div>
@@ -1915,7 +2028,7 @@ function openAddInvoice(){
   document.getElementById('f-date').value=today(); document.getElementById('f-due').value=daysAhead(30);
   document.getElementById('f-num').value=''; document.getElementById('f-gst').value='yes';
   document.getElementById('f-wht').value=String(settings.defaultWHT||'0');
-  document.getElementById('f-notes').value=''; hideErr('inv-err'); openModal('modal-invoice');
+  document.getElementById('f-notes').value=''; clearInvFile(); hideErr('inv-err'); openModal('modal-invoice');
 }
 
 function saveInvoice(){
@@ -1935,8 +2048,8 @@ function saveInvoice(){
     invoices.unshift({id:'local_'+Date.now(),client:client,amount:+amount,date:date,due_date:due||null,invoice_number:num||null,gst:gst,wht_rate:+wht,notes:notes||null,status:'unpaid',source:'manual',_localOnly:true,created_at:new Date().toISOString(),updated_at:new Date().toISOString()});
   }
   // Handle attachment
-  var attachEl=document.getElementById('f-attachment');
-  if(attachEl&&attachEl._base64){inv2.image=attachEl._base64;inv2.image_type=attachEl._mime;}
+  var invImg=getInvImageData();
+  if(invImg){inv2.image=invImg;}
 
   save();
   // Auto-match to pending bank transaction
@@ -1949,50 +2062,157 @@ function saveInvoice(){
 }
 
 /* ── Handle attachment file ── */
-function onAttachFile(input){
-  var file=input.files[0]; if(!file)return;
-  var zone=document.getElementById('inv-upload-zone');
-  var icon=document.getElementById('inv-uz-icon');
-  var title=document.getElementById('inv-uz-title');
-  var sub=document.getElementById('inv-uz-sub');
+function onInvAnyFile(e){
+  var f=e.target.files[0]; if(!f) return;
+  e.target.value='';
+  if(f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf')){
+    var r=new FileReader();
+    r.onload=function(ev){
+      window._invImgData=ev.target.result;
+      window._invImgMime='application/pdf';
+      document.getElementById('inv-prev-wrap').style.display='none';
+      document.getElementById('inv-pdf-wrap').style.display='block';
+      document.getElementById('inv-pdf-name').textContent=f.name+' · '+(f.size/1024).toFixed(0)+' KB';
+      document.getElementById('inv-retake-row').style.display='block';
+      document.getElementById('inv-ai-wrap').style.display='block';
+      document.getElementById('inv-ai-result').style.display='none';
+      renderInvPDFPreview(ev.target.result);
+    };
+    r.readAsDataURL(f);
+  } else {
+    var r=new FileReader();
+    r.onload=function(ev){
+      window._invImgData=ev.target.result;
+      window._invImgMime=f.type||'image/jpeg';
+      document.getElementById('inv-prev-wrap').style.display='block';
+      document.getElementById('inv-pdf-wrap').style.display='none';
+      document.getElementById('inv-prev-img').src=ev.target.result;
+      document.getElementById('inv-retake-row').style.display='block';
+      document.getElementById('inv-ai-wrap').style.display='block';
+      document.getElementById('inv-ai-result').style.display='none';
+    };
+    r.readAsDataURL(f);
+  }
+}
 
-  // Show loading state
-  if(icon) icon.textContent='...';
-  if(title) title.textContent='Reading file...';
-  if(sub) sub.textContent='';
+function openInvCamera(){
+  var isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  var input=document.getElementById('inv-cam-input');
+  if(isMobile){
+    // On mobile, capture attribute triggers camera
+    input.setAttribute('capture','environment');
+  } else {
+    input.removeAttribute('capture');
+  }
+  input.click();
+}
 
+function onInvFile(e){
+  var f=e.target.files[0]; if(!f)return;
+  e.target.value='';
   var reader=new FileReader();
-  reader.onload=function(e){
-    var b64=e.target.result.split(',')[1];
-    input._base64=b64; input._mime=file.type;
-
-    // Show scanning state then auto-scan
-    if(icon) icon.textContent='AI';
-    if(title) title.textContent='Scanning with Claude...';
-    if(sub) sub.textContent=file.name;
-
-    // Auto-scan immediately
-    scanInvoiceForm();
+  reader.onload=function(ev){
+    var data=ev.target.result;
+    // Store globally
+    window._invImgData=data;
+    window._invImgMime=f.type;
+    // Show image preview
+    document.getElementById('inv-prev-wrap').style.display='block';
+    document.getElementById('inv-pdf-wrap').style.display='none';
+    document.getElementById('inv-prev-img').src=data;
+    document.getElementById('inv-retake-row').style.display='block';
+    document.getElementById('inv-ai-wrap').style.display='block';
+    document.getElementById('inv-ai-result').style.display='none';
   };
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(f);
+}
+
+function onInvPDF(e){
+  var f=e.target.files[0]; if(!f)return;
+  e.target.value='';
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var data=ev.target.result;
+    window._invImgData=data;
+    window._invImgMime='application/pdf';
+    // Show PDF preview
+    document.getElementById('inv-prev-wrap').style.display='none';
+    document.getElementById('inv-pdf-wrap').style.display='block';
+    document.getElementById('inv-pdf-name').textContent=f.name+' · '+(f.size/1024).toFixed(0)+' KB';
+    document.getElementById('inv-retake-row').style.display='block';
+    document.getElementById('inv-ai-wrap').style.display='block';
+    document.getElementById('inv-ai-result').style.display='none';
+    renderInvPDFPreview(data);
+  };
+  reader.readAsDataURL(f);
+}
+
+function renderInvPDFPreview(dataUrl){
+  try{
+    if(!window.pdfjsLib) return;
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    var b64=dataUrl.split(',')[1];
+    var binary=atob(b64);
+    var bytes=new Uint8Array(binary.length);
+    for(var i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
+      return pdf.getPage(1);
+    }).then(function(page){
+      var canvas=document.getElementById('inv-pdf-canvas');
+      if(!canvas) return;
+      var vp=page.getViewport({scale:1});
+      var scale=Math.min((canvas.parentElement.clientWidth||340)/vp.width, 200/vp.height);
+      var viewport=page.getViewport({scale:scale});
+      canvas.width=viewport.width;
+      canvas.height=viewport.height;
+      page.render({canvasContext:canvas.getContext('2d'),viewport:viewport});
+    }).catch(function(){});
+  }catch(e){}
+}
+
+function viewInvFile(){
+  var data=window._invImgData;
+  if(!data){showToast('No file attached');return;}
+  var viewer=document.getElementById('img-viewer');
+  if(!viewer) return;
+  var imgEl=document.getElementById('img-viewer-img');
+  if(!imgEl) return;
+  imgEl.src=data;
+  viewer.style.display='flex';
+}
+
+function clearInvFile(){
+  window._invImgData=null;
+  window._invImgMime=null;
+  document.getElementById('inv-prev-wrap').style.display='none';
+  document.getElementById('inv-pdf-wrap').style.display='none';
+  document.getElementById('inv-retake-row').style.display='none';
+  document.getElementById('inv-ai-wrap').style.display='none';
+  document.getElementById('inv-ai-result').style.display='none';
+  var fi=document.getElementById('inv-file-input'); if(fi) fi.value='';
 }
 
 function scanInvoiceForm(){
-  var input=document.getElementById('f-attachment');
-  if(!input||!input._base64){showToast('No file loaded');return;}
+  var data=window._invImgData;
+  var mime=window._invImgMime||'image/jpeg';
+  if(!data){showToast('Upload a file first');return;}
 
-  var icon=document.getElementById('inv-uz-icon');
-  var title=document.getElementById('inv-uz-title');
-  var sub=document.getElementById('inv-uz-sub');
+  var btn=document.getElementById('inv-ai-btn');
+  var resultEl=document.getElementById('inv-ai-result');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span> Reading invoice...';
+  resultEl.style.display='none';
 
-  var isImage=input._mime.startsWith('image/');
+  var isImage=mime.startsWith('image/');
+  var b64=data.split(',')[1];
+
   var messages=[{
     role:'user',
     content:[
       isImage
-        ?{type:'image',source:{type:'base64',media_type:input._mime,data:input._base64}}
-        :{type:'document',source:{type:'base64',media_type:'application/pdf',data:input._base64}},
-      {type:'text',text:'Extract invoice details. Respond with ONLY a JSON object (no markdown, no extra text) with these exact fields: client (string - who issued the invoice), amount (number - GST-inclusive total in NZD), date (YYYY-MM-DD - invoice date), invoice_number (string or null), gst ("yes" if GST registered invoice, "no" otherwise), wht_rate (number: 0, 20, or 33 - withholding tax rate if shown, else 0), notes (string or null). Use null for anything not found.'}
+        ?{type:'image',source:{type:'base64',media_type:mime,data:b64}}
+        :{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+      {type:'text',text:'Extract invoice details. Reply ONLY with a JSON object, no markdown: {"client":"string","amount":123.45,"date":"YYYY-MM-DD","invoice_number":"string or null","gst":"yes or no","wht_rate":0,"notes":"string or null"}. amount=GST-inclusive NZD total. gst=yes if NZ GST invoice. wht_rate=withholding tax % (0/20/33). null for missing fields.'}
     ]
   }];
 
@@ -2002,66 +2222,222 @@ function scanInvoiceForm(){
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,messages:messages})
   })
   .then(function(r){
-    if(r.status===401){showToast('Session expired — please log in again');return null;}
+    if(r.status===401){showToast('Session expired — please log in again');throw new Error('401');}
     return r.json();
   })
   .then(function(data){
-    if(!data)return;
-    if(data.error){
-      if(icon) icon.textContent='📄';
-      if(title) title.textContent='Scan failed';
-      if(sub) sub.textContent=data.error;
-      return;
-    }
-    try{
-      var text=(data.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
-      var parsed=JSON.parse(text.replace(/```json|```/gi,'').trim());
-      if(parsed.client) document.getElementById('f-client').value=parsed.client;
-      if(parsed.amount) document.getElementById('f-amount').value=String(parsed.amount);
-      if(parsed.date) document.getElementById('f-date').value=parsed.date;
-      if(parsed.invoice_number) document.getElementById('f-num').value=parsed.invoice_number;
-      if(parsed.gst) document.getElementById('f-gst').value=parsed.gst;
-      if(parsed.wht_rate!=null) document.getElementById('f-wht').value=String(parsed.wht_rate);
-      if(parsed.notes) document.getElementById('f-notes').value=parsed.notes;
-      if(icon) icon.textContent='OK';
-      if(title) title.textContent='Scanned — review fields above';
-      if(sub) sub.textContent='Tap to change file';
-    }catch(e){
-      if(icon) icon.textContent='📄';
-      if(title) title.textContent='Could not read — try a clearer photo';
-      if(sub) sub.textContent='Tap to try again';
-    }
+    var text=(data.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
+    var parsed=JSON.parse(text.replace(/```json|```/gi,'').trim());
+    if(parsed.client) document.getElementById('f-client').value=parsed.client;
+    if(parsed.amount) document.getElementById('f-amount').value=String(parsed.amount);
+    if(parsed.date) document.getElementById('f-date').value=parsed.date;
+    if(parsed.invoice_number) document.getElementById('f-num').value=parsed.invoice_number;
+    if(parsed.gst) document.getElementById('f-gst').value=parsed.gst;
+    if(parsed.wht_rate!=null) document.getElementById('f-wht').value=String(parsed.wht_rate);
+    if(parsed.notes) document.getElementById('f-notes').value=parsed.notes;
+    resultEl.className='ai-inv-result-ok';
+    resultEl.style.display='block';
+    resultEl.innerHTML='&#x2713; Found: <strong>'+(parsed.client||'invoice')+'</strong>'+(parsed.amount?' &middot; $'+parsed.amount:'')+(parsed.invoice_number?' &middot; #'+parsed.invoice_number:'');
   })
   .catch(function(e){
-    if(icon) icon.textContent='📄';
-    if(title) title.textContent='Scan failed — server unreachable';
-    if(sub) sub.textContent='Tap to retry';
+    if(e.message!=='401'){
+      resultEl.className='ai-inv-result-err';
+      resultEl.style.display='block';
+      resultEl.textContent='Could not read invoice &mdash; fill in details manually. ('+e.message+')';
+    }
+  })
+  .finally(function(){
+    btn.disabled=false;
+    btn.innerHTML='<span>&#x2736;</span> Scan with AI';
   });
 }
+
+// Attach the scanned image when saving
+function getInvImageData(){return window._invImgData||null;}
+
+
+var _paidInvId = null;
 
 function openInvDetail(id){
   var inv=invoices.find(function(i){return String(i.id)===String(id);});
   if(!inv)return;
   var actions=[];
-  if(inv.status!=='paid') actions.push({label:'Mark as paid',fn:function(){inv.status='paid';inv.paid_date=today();inv.paid_amount=inv.amount;save();renderAll();showToast('Marked as paid');}});
+
+  if(inv.status!=='paid'){
+    actions.push({label:'Mark as paid',fn:function(){ openMarkPaid(id); }});
+  } else {
+    actions.push({label:'Mark as unpaid',fn:function(){
+      inv.status='unpaid'; inv.paid_date=null; inv.paid_amount=null;
+      save(); renderAll(); showToast('Marked as unpaid');
+    }});
+  }
+
   actions.push({label:'Edit invoice',fn:function(){
-    editingId=inv.id; document.getElementById('inv-modal-title').textContent='Edit Invoice';
-    document.getElementById('f-client').value=inv.client||''; document.getElementById('f-amount').value=inv.amount||'';
-    document.getElementById('f-date').value=inv.date||''; document.getElementById('f-due').value=inv.due_date||'';
-    document.getElementById('f-num').value=inv.invoice_number||''; document.getElementById('f-gst').value=inv.gst||'yes';
-    document.getElementById('f-wht').value=String(inv.wht_rate||'0'); document.getElementById('f-notes').value=inv.notes||'';
-    hideErr('inv-err'); openModal('modal-invoice');
+    editingId=inv.id;
+    document.getElementById('inv-modal-title').textContent='Edit Invoice';
+    document.getElementById('f-client').value=inv.client||'';
+    document.getElementById('f-amount').value=inv.amount||'';
+    document.getElementById('f-date').value=inv.date||'';
+    document.getElementById('f-due').value=inv.due_date||'';
+    document.getElementById('f-num').value=inv.invoice_number||'';
+    document.getElementById('f-gst').value=inv.gst||'yes';
+    document.getElementById('f-wht').value=String(inv.wht_rate||'0');
+    document.getElementById('f-notes').value=inv.notes||'';
+    clearInvFile(); hideErr('inv-err'); openModal('modal-invoice');
   }});
+
   actions.push({label:'Delete invoice',cls:'danger',fn:function(){
-    showSheet('Delete invoice for '+inv.client+'?',[
-      {label:'Delete',cls:'danger',fn:function(){invoices=invoices.filter(function(i){return i.id!==inv.id;});save();renderAll();showToast('Invoice deleted');}},
+    showSheet('Delete '+inv.client+' invoice?',[
+      {label:'Delete',cls:'danger',fn:function(){
+        invoices=invoices.filter(function(i){return i.id!==inv.id;});
+        save(); renderAll(); showToast('Invoice deleted');
+      }},
       {label:'Cancel',cls:'cancel'}
     ]);
   }});
+
   actions.push({label:'Cancel',cls:'cancel'});
-  showSheet(inv.client+' \u2014 '+fmt(inv.amount),actions);
+  var statusLabel=inv.status==='paid'
+    ?'Paid '+fmtDate(inv.paid_date)+' — Net '+fmt(inv.paid_amount)
+    :inv.status.charAt(0).toUpperCase()+inv.status.slice(1);
+  showSheet(inv.client+' — '+fmt(inv.amount)+' · '+statusLabel, actions);
 }
 
+function openMarkPaid(id){
+  var inv=invoices.find(function(i){return String(i.id)===String(id);});
+  if(!inv) return;
+  _paidInvId=id;
+  clearPaidFile();
+  document.getElementById('paid-modal-title').textContent='Mark paid — '+inv.client;
+  document.getElementById('paid-ai-result').style.display='none';
+  var whtAmt=Math.round((parseFloat(inv.amount)||0)*(parseFloat(inv.wht_rate)||0)/100*100)/100;
+  var net=Math.round(((parseFloat(inv.amount)||0)-whtAmt)*100)/100;
+  document.getElementById('paid-net').value=whtAmt>0?String(net):'';
+  document.getElementById('paid-wht').value=whtAmt>0?String(whtAmt):'';
+  document.getElementById('paid-date').value=today();
+  updatePaidSummary();
+  openModal('modal-paid');
+}
+
+function updatePaidSummary(){
+  var el=document.getElementById('paid-summary');
+  var net=parseFloat(document.getElementById('paid-net').value)||0;
+  var wht=parseFloat(document.getElementById('paid-wht').value)||0;
+  if(net>0||wht>0){
+    var gross=net+wht;
+    el.style.display='block';
+    el.innerHTML='Gross: <strong>'+fmt(gross)+'</strong> &nbsp;&middot;&nbsp; W/H: <strong>'+fmt(wht)+'</strong> &nbsp;&middot;&nbsp; Net to bank: <strong>'+fmt(net)+'</strong>';
+  } else { el.style.display='none'; }
+}
+
+function onPaidFile(e){
+  var f=e.target.files[0]; if(!f) return;
+  e.target.value='';
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var data=ev.target.result;
+    var isPDF=f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf');
+    window._paidFileData=data;
+    window._paidFileMime=isPDF?'application/pdf':(f.type||'image/jpeg');
+    document.getElementById('paid-prev-wrap').style.display=isPDF?'none':'block';
+    document.getElementById('paid-pdf-wrap').style.display=isPDF?'block':'none';
+    if(!isPDF) document.getElementById('paid-prev-img').src=data;
+    else{ document.getElementById('paid-pdf-name').textContent=f.name; renderPaidPDFPreview(data); }
+    document.getElementById('paid-retake-row').style.display='block';
+    document.getElementById('paid-ai-wrap').style.display='block';
+    document.getElementById('paid-ai-result').style.display='none';
+  };
+  reader.readAsDataURL(f);
+}
+
+function renderPaidPDFPreview(dataUrl){
+  try{
+    if(!window.pdfjsLib) return;
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    var b64=dataUrl.split(',')[1];
+    var binary=atob(b64); var bytes=new Uint8Array(binary.length);
+    for(var i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){return pdf.getPage(1);}).then(function(page){
+      var canvas=document.getElementById('paid-pdf-canvas'); if(!canvas) return;
+      var vp=page.getViewport({scale:1});
+      var scale=Math.min((canvas.parentElement.clientWidth||340)/vp.width,160/vp.height);
+      var viewport=page.getViewport({scale:scale});
+      canvas.width=viewport.width; canvas.height=viewport.height;
+      page.render({canvasContext:canvas.getContext('2d'),viewport:viewport});
+    });
+  }catch(e){}
+}
+
+function viewPaidFile(){
+  var data=window._paidFileData; if(!data){showToast('No file');return;}
+  var img=document.getElementById('img-viewer-img');
+  if(img){img.src=data; var v=document.getElementById('img-viewer'); if(v) v.style.display='flex';}
+}
+
+function clearPaidFile(){
+  window._paidFileData=null; window._paidFileMime=null;
+  document.getElementById('paid-prev-wrap').style.display='none';
+  document.getElementById('paid-pdf-wrap').style.display='none';
+  document.getElementById('paid-retake-row').style.display='none';
+  document.getElementById('paid-ai-wrap').style.display='none';
+  var fi=document.getElementById('paid-file-input'); if(fi) fi.value='';
+}
+
+function scanRemittance(){
+  var data=window._paidFileData; var mime=window._paidFileMime||'image/jpeg';
+  if(!data){showToast('Upload a remittance first');return;}
+  var btn=document.getElementById('paid-ai-btn');
+  var resultEl=document.getElementById('paid-ai-result');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span> Reading remittance...';
+  resultEl.style.display='none';
+  var isImage=mime.startsWith('image/');
+  var b64=data.split(',')[1];
+  var messages=[{role:'user',content:[
+    isImage?{type:'image',source:{type:'base64',media_type:mime,data:b64}}:{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+    {type:'text',text:'This is a NZ remittance advice or payment notification. Extract payment details. Reply ONLY with JSON: {"net_paid":1656.00,"wht_amount":414.00,"wht_rate":20,"payment_date":"YYYY-MM-DD","reference":"string or null"}. net_paid=actual amount transferred to bank. wht_amount=withholding tax deducted. Use null for missing fields.'}
+  ]}];
+  fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:messages})})
+  .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
+  .then(function(resp){
+    var text=(resp.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
+    var parsed=JSON.parse(text.replace(/```json|```/gi,'').trim());
+    if(parsed.net_paid!=null) document.getElementById('paid-net').value=String(parsed.net_paid);
+    if(parsed.wht_amount!=null) document.getElementById('paid-wht').value=String(parsed.wht_amount);
+    if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
+    updatePaidSummary();
+    resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
+    resultEl.innerHTML='&#x2713; Net: <strong>'+fmt(parsed.net_paid||0)+'</strong> &nbsp;&middot;&nbsp; W/H: <strong>'+fmt(parsed.wht_amount||0)+'</strong>';
+  })
+  .catch(function(e){
+    if(e.message!=='401'){
+      resultEl.className='ai-inv-result-err'; resultEl.style.display='block';
+      resultEl.textContent='Could not read — enter amounts manually above.';
+    }
+  })
+  .finally(function(){btn.disabled=false; btn.innerHTML='<span>&#x2736;</span> Read remittance';});
+}
+
+function confirmMarkPaid(){
+  var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
+  if(!inv){closeModal('modal-paid');return;}
+  var net=parseFloat(document.getElementById('paid-net').value)||0;
+  var wht=parseFloat(document.getElementById('paid-wht').value)||0;
+  var dateVal=document.getElementById('paid-date').value;
+  inv.status='paid';
+  inv.paid_date=dateVal||today();
+  inv.paid_amount=net>0?net:(parseFloat(inv.amount)||0);
+  if(wht>0){
+    inv.wht_amount=wht;
+    if(!inv.wht_rate||inv.wht_rate===0){
+      var gross=net+wht;
+      inv.wht_rate=gross>0?Math.round(wht/gross*100):0;
+    }
+  }
+  if(window._paidFileData) inv.remittance_image=window._paidFileData;
+  save(); renderAll(); closeModal('modal-paid');
+  showToast('Paid '+fmt(inv.paid_amount)+' on '+fmtDate(inv.paid_date));
+}
 /* ── Bank CSV ── */
 function onCSV(input){
   var file=input.files[0]; if(!file)return;
@@ -2368,7 +2744,16 @@ function loadDemoData(){
 /* ══ BOOT ══ */
 (function(){
   refreshFY();
-  if(LS.get(LS_TOKEN)){
+  var isPreview=window.location.hostname==='claude.ai'||
+    window.location.hostname.includes('artifacts')||
+    window.location.protocol==='blob:'||
+    window.location.hostname==='';
+  if(isPreview){
+    document.getElementById('nav-avatar').textContent='S';
+    document.getElementById('acct-name').textContent='Sam';
+    document.getElementById('acct-email').textContent='sam@mckaysmedia.co.nz';
+    loadDemoData(); showScreen('main-screen'); renderAll();
+  } else if(LS.get(LS_TOKEN)){
     var u=LS.get(LS_USER)||'?';
     document.getElementById('nav-avatar').textContent=u.charAt(0).toUpperCase();
     document.getElementById('acct-name').textContent=u;
