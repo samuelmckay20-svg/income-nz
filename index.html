@@ -1285,6 +1285,7 @@ body{
       <button class="modal-close" onclick="closeModal('modal-client-profile')">Done</button>
     </div>
     <div class="modal-scroll" style="padding:0 0 16px">
+      <div id="cp-scan-hint" style="display:none;margin:8px 16px 0;padding:10px 14px;background:rgba(175,82,222,.1);border-radius:10px;font-size:13px;color:var(--purple);font-weight:500"></div>
       <div class="shdr">Client details</div>
       <div class="g-list">
         <div class="g-row">
@@ -3121,6 +3122,13 @@ function scanRemittance(){
     // Fill extra fields if new remittance
     if(parsed.payer){var pc=document.getElementById('paid-client');if(pc&&!pc.value)pc.value=parsed.payer;}
     if(parsed.invoice_number){var pn=document.getElementById('paid-inv-num');if(pn&&!pn.value)pn.value=parsed.invoice_number;}
+    // Store scan data for client profile pre-fill
+    window._lastRemittanceScan={
+      payer:parsed.payer||null,
+      whtRate:parsed.wht_rate||0,
+      invoiceNumber:parsed.invoice_number||null,
+      reference:parsed.reference||null
+    };
     updatePaidSummary();
     resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
     resultEl.innerHTML='&#x2713; Net: <strong>'+fmt(parsed.net_paid||0)+'</strong> &nbsp;&middot;&nbsp; W/H: <strong>'+fmt(parsed.wht_amount||0)+'</strong>';
@@ -3196,7 +3204,7 @@ function parseCSV(text){
   var iRef=iTpRef>=0?iTpRef:(ci('reference')>=0?ci('reference'):ci('tp ref'));
 
   var isKiwibank=iCredit>=0&&iDebit>=0;
-  var imported=0,skipped=0;
+  var imported=0,skipped=0,matched=0;
 
   for(var i=1;i<lines.length;i++){
     var row=csvRow(lines[i]);
@@ -3230,12 +3238,37 @@ function parseCSV(text){
     }
 
     if(isNaN(amount)){skipped++;continue;}
+    // Skip exact duplicates already in bank list
     var dup=bankTxns.some(function(t){return t.date===isoDate&&t.amount===amount&&t.description===desc;});
     if(dup){skipped++;continue;}
-    bankTxns.push({id:'bank_'+Date.now()+'_'+i,date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:null,source:isKiwibank?'kiwibank':'anz',imported_at:new Date().toISOString()});
-    imported++;
+    // Auto-match against paid invoices — avoids duplicating remittances already logged
+    var autoMatchId=null;
+    if(amount>0){
+      var txnD=new Date(isoDate);
+      var bestMatch=null,bestScore=Infinity;
+      invoices.forEach(function(inv){
+        if(inv.status!=='paid') return;
+        // Already linked to a bank txn?
+        if(bankTxns.some(function(t){return t.matched_invoice_id===inv.id;})) return;
+        var netPaid=inv.paid_amount!=null?parseFloat(inv.paid_amount):(parseFloat(inv.amount)||0)*(1-(parseFloat(inv.wht_rate)||0)/100);
+        var diff=Math.abs(amount-netPaid);
+        if(diff>Math.max(netPaid*0.02,0.10)) return; // within 2% or 10c
+        var daysDiff=Math.abs((txnD-new Date(inv.paid_date||inv.date))/86400000);
+        if(daysDiff>14) return; // within 14 days
+        var score=diff+daysDiff*0.5;
+        if(score<bestScore){bestScore=score;bestMatch=inv;}
+      });
+      if(bestMatch) autoMatchId=bestMatch.id;
+    }
+    bankTxns.push({id:'bank_'+Date.now()+'_'+i,date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:autoMatchId,source:isKiwibank?'kiwibank':'anz',imported_at:new Date().toISOString()});
+    if(autoMatchId) matched++;
+    else imported++;
   }
-  save();renderAll();showToast(imported+' transactions imported'+(skipped?' ('+skipped+' skipped)':''));
+  save();renderAll();
+  var msg=imported+' imported';
+  if(matched) msg+=', '+matched+' auto-matched to existing invoices';
+  if(skipped) msg+=' ('+skipped+' skipped)';
+  showToast(msg);
 }
 function csvRow(line){var r=[],cur='',inQ=false;for(var i=0;i<line.length;i++){var ch=line[i];if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){r.push(cur);cur='';}else{cur+=ch;}}r.push(cur);return r;}
 function clean(s){return String(s||'').trim().replace(/^"|"$/g,'');}
@@ -3314,22 +3347,50 @@ function openBankDetail(id){
 function runAutoMatch(){
   var matched=0;
   bankTxns.forEach(function(txn){
-    if(txn.matched_invoice_id)return; var credit=parseFloat(txn.amount)||0; if(credit<=0)return;
-    var txnDate=new Date(txn.date),best=null,bestScore=Infinity;
+    if(txn.matched_invoice_id) return;
+    var credit=parseFloat(txn.amount)||0; if(credit<=0) return;
+    var txnDate=new Date(txn.date);
+    var best=null,bestScore=Infinity;
+
     invoices.forEach(function(inv){
-      if(inv.status==='paid')return;
-      var invAmt=parseFloat(inv.amount)||0, whtRate=parseFloat(inv.wht_rate)||0;
-      var expectedNet=invAmt*(1-whtRate/100);
-      var diff=Math.min(Math.abs(credit-expectedNet),Math.abs(credit-invAmt));
-      if(diff>invAmt*0.05)return;
-      var daysDiff=(txnDate-new Date(inv.date))/86400000;
-      if(daysDiff<0||daysDiff>120)return;
-      var score=diff+daysDiff*0.3;
-      if(score<bestScore){bestScore=score;best=inv;}
+      var invAmt=parseFloat(inv.amount)||0;
+      var whtRate=parseFloat(inv.wht_rate)||0;
+      var netPaid=inv.paid_amount!=null?parseFloat(inv.paid_amount):invAmt*(1-whtRate/100);
+
+      if(inv.status==='paid'){
+        // Already paid — match bank txn to it if amounts align and not already bank-linked
+        var alreadyLinked=bankTxns.some(function(t){return t!==txn&&t.matched_invoice_id===inv.id;});
+        if(alreadyLinked) return;
+        var diff=Math.abs(credit-netPaid);
+        if(diff>Math.max(netPaid*0.02,0.10)) return;
+        var daysDiff=Math.abs((txnDate-new Date(inv.paid_date||inv.date))/86400000);
+        if(daysDiff>14) return;
+        var score=diff+daysDiff*0.5+1; // slight penalty vs unpaid match
+        if(score<bestScore){bestScore=score;best=inv;}
+      } else {
+        // Unpaid — match and mark paid
+        var expectedNet=invAmt*(1-whtRate/100);
+        var diff=Math.min(Math.abs(credit-expectedNet),Math.abs(credit-invAmt));
+        if(diff>invAmt*0.05) return;
+        var daysDiff=(txnDate-new Date(inv.date))/86400000;
+        if(daysDiff<0||daysDiff>120) return;
+        var score=diff+daysDiff*0.3;
+        if(score<bestScore){bestScore=score;best=inv;}
+      }
     });
-    if(best){txn.matched_invoice_id=best.id;best.status='paid';best.paid_date=txn.date;best.paid_amount=txn.amount;matched++;}
+
+    if(best){
+      txn.matched_invoice_id=best.id;
+      if(best.status!=='paid'){
+        best.status='paid';
+        best.paid_date=txn.date;
+        best.paid_amount=txn.amount;
+      }
+      matched++;
+    }
   });
-  save();renderAll();showToast(matched?matched+' invoice'+(matched>1?'s':'')+' auto-matched':'No confident matches found');
+  save();renderAll();
+  showToast(matched?matched+' transaction'+(matched>1?'s':'')+' matched':'No confident matches found');
 }
 
 /* ── GST Settings ── */
@@ -3633,17 +3694,32 @@ function setClientProfile(name, profile){
   save();
 }
 
-function openClientProfile(name){
+function openClientProfile(name, prefill){
   var existing=getClientProfile(name);
+  // prefill can come from remittance scan or invoice scan
+  var scan=prefill||window._lastRemittanceScan||null;
   document.getElementById('cp-modal-title').textContent=existing?esc(name):'New Client';
   document.getElementById('cp-name').value=name||'';
   document.getElementById('cp-email').value=(existing&&existing.email)||'';
   document.getElementById('cp-gst-num').value=(existing&&existing.gstNum)||'';
-  document.getElementById('cp-wht').value=String((existing&&existing.whtRate!=null)?existing.whtRate:0);
+  // W/H: use existing profile, then scan, then 0
+  var whtRate=(existing&&existing.whtRate!=null)?existing.whtRate
+    :(scan&&scan.whtRate!=null)?scan.whtRate:0;
+  document.getElementById('cp-wht').value=String(whtRate);
   document.getElementById('cp-gst').value=(existing&&existing.gst)||'yes';
   document.getElementById('cp-terms').value=String((existing&&existing.terms!=null)?existing.terms:30);
-  document.getElementById('cp-notes').value=(existing&&existing.notes)||'';
+  // Notes: include scan reference if available
+  var notes=(existing&&existing.notes)||'';
+  if(!existing&&scan&&scan.reference&&!notes) notes='Ref: '+scan.reference;
+  document.getElementById('cp-notes').value=notes;
   document.getElementById('cp-delete-btn').style.display=existing?'block':'none';
+  // Show a hint if pre-filled from scan
+  var hint='';
+  if(!existing&&scan&&scan.whtRate>0){
+    hint='Pre-filled from remittance: '+scan.whtRate+'% W/H tax detected';
+  }
+  var hintEl=document.getElementById('cp-scan-hint');
+  if(hintEl){hintEl.textContent=hint;hintEl.style.display=hint?'block':'none';}
   openModal('modal-client-profile');
 }
 
@@ -3661,6 +3737,7 @@ function saveClientProfile(){
     updatedAt:new Date().toISOString()
   };
   setClientProfile(name, profile);
+  window._lastRemittanceScan=null;
   closeModal('modal-client-profile');
   renderClientsTab();
   showToast('Client saved');
@@ -3773,7 +3850,7 @@ function checkNewClient(clientName){
   var isNew=!invoices.slice(1).some(function(i){return (i.client||'').toLowerCase()===clientName.toLowerCase();});
   if(!profile&&isNew){
     var actions=[
-      {label:'Set up client profile',fn:function(){openClientProfile(clientName);}}
+      {label:'Set up client profile',fn:function(){openClientProfile(clientName,window._lastRemittanceScan);}}
     ];
     if(allClients.length){
       actions.push({label:'Use existing client instead',fn:function(){pickExistingClient(clientName);}});
