@@ -1533,13 +1533,15 @@ function loadFromServer(){
   .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
   .then(function(data){
     if(!data)return;
-    var local=invoices.filter(function(i){return i._localOnly;});
-    // Filter out any invoices the user has binned locally
+    // Filter out binned invoices
     var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
     var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
-    invoices=serverInvoices.concat(local);
+    var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
+    // Only keep local-only items the server doesn't have yet (truly offline/unsynced)
+    var unsyncedLocal=invoices.filter(function(i){return i._localOnly&&!serverIds.has(String(i.id));});
+    invoices=serverInvoices.concat(unsyncedLocal);
     bankTxns=data.bankTxns||bankTxns; settings=data.settings||settings;
-    saveLocal(); renderAll(); if(local.length||binnedIds.size)syncToServer();
+    saveLocal(); renderAll(); if(unsyncedLocal.length||binnedIds.size)syncToServer();
   })
   .catch(function(e){console.warn('Load:',e);});
 }
