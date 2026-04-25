@@ -1514,9 +1514,12 @@ function syncToServer(){
   if(_syncInFlight){_syncPending=true;return;}
   if(!LS.get(LS_TOKEN))return;
   _syncInFlight=true;
+  // Include bin IDs so server knows what to delete
+  var deletedIds=invBin.map(function(i){return i.id;}).filter(function(id){return !String(id).startsWith('local_');});
   var payload={
     invoices:invoices.map(function(inv){var out=Object.assign({},inv);if(inv.image&&_imgCache.get(inv.id)===inv.image.length)delete out.image;return out;}),
-    bankTxns:bankTxns, settings:settings
+    bankTxns:bankTxns, settings:settings,
+    deletedInvoiceIds:deletedIds
   };
   fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
   .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
@@ -1531,8 +1534,12 @@ function loadFromServer(){
   .then(function(data){
     if(!data)return;
     var local=invoices.filter(function(i){return i._localOnly;});
-    invoices=(data.invoices||[]).concat(local); bankTxns=data.bankTxns||bankTxns; settings=data.settings||settings;
-    saveLocal(); renderAll(); if(local.length)syncToServer();
+    // Filter out any invoices the user has binned locally
+    var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
+    var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
+    invoices=serverInvoices.concat(local);
+    bankTxns=data.bankTxns||bankTxns; settings=data.settings||settings;
+    saveLocal(); renderAll(); if(local.length||binnedIds.size)syncToServer();
   })
   .catch(function(e){console.warn('Load:',e);});
 }
