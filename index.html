@@ -601,21 +601,26 @@ body{
 
     <!-- ── BANK ── -->
     <div id="tab-bank" class="tab-panel">
-      <div class="shdr">Import statement</div>
-      <div class="upload-zone" onclick="document.getElementById('csv-input').click()">
-        <div class="uz-icon">🏦</div>
-        <div class="uz-title">Upload bank CSV</div>
-        <div class="uz-sub">ANZ and Kiwibank supported</div>
-      </div>
-      <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="onCSV(this)">
-      <div class="shdr-row">
-        <span class="shdr">Transactions</span>
-        <div style="display:flex;gap:8px">
-          <button class="shdr-act" onclick="openScanModal()">📄 Scan</button>
-          <button class="shdr-act" id="automatch-btn" onclick="runAutoMatch()" style="display:none">Auto-match</button>
+      <!-- Hero -->
+      <div class="hero-wrap" style="padding-bottom:4px">
+        <div class="hero-card" style="border-image:linear-gradient(90deg,var(--orange),var(--red)) 1;padding:18px 20px">
+          <div class="hero-lbl">Unverified transactions</div>
+          <div class="hero-amount c-orange" id="bank-unverified-count">0</div>
+          <div class="hero-period" id="bank-unverified-sub">No transactions imported</div>
         </div>
       </div>
+      <!-- Upload + auto-match row -->
+      <div style="padding:8px 16px 0;display:flex;gap:8px;align-items:center">
+        <button onclick="document.getElementById('csv-input').click()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x1F3E6; Import CSV</button>
+        <button id="automatch-btn" onclick="runAutoMatch()" style="display:none;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:rgba(52,199,89,.12);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;margin-left:auto">&#x2728; Auto-match</button>
+      </div>
+      <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="onCSV(this)">
+      <div class="shdr" style="margin-top:4px">Needs review</div>
       <div id="bank-list"></div>
+      <div id="bank-approved-section" style="display:none">
+        <div class="shdr" style="margin-top:8px">Approved</div>
+        <div id="bank-approved-list"></div>
+      </div>
     </div>
 
     <!-- ── TAX ── -->
@@ -2207,22 +2212,59 @@ function renderClientsTab(){
 }
 
 /* ── Render Bank ── */
+function bankTxnCard(txn){
+  var amt=parseFloat(txn.amount)||0, isC=amt>0;
+  var matched=!!txn.matched_invoice_id, excluded=!!txn.excluded;
+  var barC=excluded?'var(--t4)':matched?'var(--green)':isC?'var(--orange)':'var(--t4)';
+  var amtC=excluded?'var(--t3)':matched?'var(--green)':isC?'var(--orange)':'var(--t4)';
+  var badge=excluded
+    ?'<span class="badge" style="background:rgba(120,120,128,.12);color:var(--t3)">Excluded</span>'
+    :matched?'<span class="badge b-matched">Matched</span>'
+    :isC?'<span class="badge b-unmatched">Unmatched</span>'
+    :'<span class="badge b-debit">Debit</span>';
+  var html='<div class="r-card" style="'+(excluded?'opacity:.45;':'')+'" data-bid="'+esc(txn.id)+'">';
+  html+='<div class="r-bar" style="background:'+barC+'"></div>';
+  html+='<div class="r-body"><div class="r-top"><div style="min-width:0">';
+  html+='<div class="r-title">'+esc(txn.description||'—')+'</div>';
+  html+='<div class="r-sub">'+fmtDate(txn.date)+(txn.reference?' · '+esc(txn.reference):'')+'</div>';
+  html+='</div><div class="r-amount" style="color:'+amtC+'">'+fmt(Math.abs(amt))+'</div></div>';
+  html+='<div class="r-meta">'+badge+'</div></div></div>';
+  return html;
+}
+
 function renderBank(){
   var el=document.getElementById('bank-list');
+  var approvedEl=document.getElementById('bank-approved-list');
+  var approvedSection=document.getElementById('bank-approved-section');
   var btn=document.getElementById('automatch-btn');
-  if(!bankTxns.length){el.innerHTML=emptyState('🏦','No transactions','Upload your ANZ CSV to match payments');btn.style.display='none';return;}
-  btn.style.display='block';
-  el.innerHTML=bankTxns.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).map(function(txn){
-    var amt=parseFloat(txn.amount)||0, isC=amt>0, matched=!!txn.matched_invoice_id;
-    var c=matched?'var(--green)':isC?'var(--orange)':'var(--t4)';
-    var badge=matched?'<span class="badge b-matched">Matched</span>':isC?'<span class="badge b-unmatched">Unmatched</span>':'<span class="badge b-debit">Debit</span>';
-    return '<div class="r-card" onclick="openBankDetail(\''+esc(txn.id)+'\')">'
-      +'<div class="r-bar" style="background:'+c+'"></div>'
-      +'<div class="r-body"><div class="r-top"><div style="min-width:0"><div class="r-title">'+esc(txn.description||'\u2014')+'</div>'
-      +'<div class="r-sub">'+fmtDate(txn.date)+(txn.reference?' \u00b7 '+esc(txn.reference):'')+'</div></div>'
-      +'<div class="r-amount" style="color:'+c+'">'+fmt(Math.abs(amt))+'</div></div>'
-      +'<div class="r-meta">'+badge+'</div></div></div>';
-  }).join('');
+  if(!bankTxns.length){
+    el.innerHTML=emptyState('&#x1F3E6;','No transactions','Upload your ANZ or Kiwibank CSV');
+    if(btn) btn.style.display='none';
+    if(approvedSection) approvedSection.style.display='none';
+    var uc=document.getElementById('bank-unverified-count'); if(uc) uc.textContent='0';
+    var us=document.getElementById('bank-unverified-sub'); if(us) us.textContent='No transactions imported';
+    return;
+  }
+  if(btn) btn.style.display='flex';
+  var sorted=bankTxns.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  var unverified=sorted.filter(function(t){return !t.matched_invoice_id&&!t.excluded;});
+  var approved=sorted.filter(function(t){return t.matched_invoice_id||t.excluded;});
+  var credits=sorted.filter(function(t){return parseFloat(t.amount)>0&&!t.excluded;});
+  var totalCredits=credits.reduce(function(s,t){return s+(parseFloat(t.amount)||0);},0);
+  var verifiedCredits=credits.filter(function(t){return !!t.matched_invoice_id;}).reduce(function(s,t){return s+(parseFloat(t.amount)||0);},0);
+  var unverifiedCount=credits.filter(function(t){return !t.matched_invoice_id;}).length;
+  var uc=document.getElementById('bank-unverified-count'); if(uc) uc.textContent=String(unverifiedCount);
+  var us=document.getElementById('bank-unverified-sub'); if(us) us.textContent=unverifiedCount===0?'All credits verified':unverifiedCount+' credit'+(unverifiedCount===1?'':' s')+' need attention';
+  var tc=document.getElementById('bank-total-credits'); if(tc) tc.textContent=fmt(totalCredits);
+  var vt=document.getElementById('bank-verified-total'); if(vt) vt.textContent=fmt(verifiedCredits);
+  var ut=document.getElementById('bank-unverified-total'); if(ut) ut.textContent=fmt(totalCredits-verifiedCredits);
+  el.innerHTML=unverified.length?unverified.map(bankTxnCard).join(''):'<div style="padding:16px;text-align:center;color:var(--t3);font-size:13px">All transactions verified</div>';
+  el.onclick=function(e){var card=e.target.closest('[data-bid]');if(card)openBankDetail(card.dataset.bid);};
+  if(approved.length){
+    approvedSection.style.display='block';
+    approvedEl.innerHTML=approved.map(bankTxnCard).join('');
+    approvedEl.onclick=function(e){var card=e.target.closest('[data-bid]');if(card)openBankDetail(card.dataset.bid);};
+  } else { approvedSection.style.display='none'; }
 }
 
 /* ── NZ Income Tax Calculation (2025/26 rates) ── */
