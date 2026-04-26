@@ -621,11 +621,11 @@ body{
     <!-- ── TAX ── -->
     <div id="tab-gst" class="tab-panel">
 
-      <!-- Hero: Gross income tax owed -->
+      <!-- ── INCOME TAX (combined hero + detail) ── -->
       <div class="hero-wrap" style="padding-bottom:4px">
         <div class="hero-card" style="border-image:linear-gradient(90deg,var(--red),var(--orange)) 1">
-          <div class="hero-lbl">Gross tax owed</div>
-          <div class="hero-amount c-red" id="tax-total-all">$0</div>
+          <div class="hero-lbl">Tax still owed</div>
+          <div class="hero-amount c-red" id="tax-still-owe">$0</div>
           <div class="hero-period" id="tax-total-sub">This financial year</div>
           <div class="hero-divider"></div>
           <div class="hero-stats">
@@ -635,56 +635,45 @@ body{
             </div>
             <div class="hero-stat-sep"></div>
             <div class="hero-stat" style="padding-left:16px">
-              <div class="hs-lbl">W/H paid</div>
-              <div class="hs-val c-green" id="tax-wht-paid">$0</div>
+              <div class="hs-lbl">Total tax</div>
+              <div class="hs-val c-red" id="tax-total-all">$0</div>
             </div>
             <div class="hero-stat-sep"></div>
             <div class="hero-stat" style="padding-left:16px">
-              <div class="hs-lbl">Income tax residual</div>
-              <div class="hs-val c-red" id="tax-still-owe">$0</div>
+              <div class="hs-lbl">W/H paid</div>
+              <div class="hs-val c-green" id="tax-wht-paid">$0</div>
             </div>
+          </div>
+          <div class="hero-divider" style="margin-top:16px"></div>
+          <!-- hidden elements still needed by JS -->
+          <span id="tax-on-income" style="display:none"></span>
+          <span id="tax-monthly" style="display:none"></span>
+          <span id="tax-residual" style="display:none"></span>
+          <!-- Bracket breakdown -->
+          <div style="padding:8px 0 4px">
+            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">Bracket breakdown</div>
+            <div id="tax-brackets-mini"></div>
+          </div>
+          <div class="hero-divider" style="margin-top:8px"></div>
+          <!-- Provisional tax toggle -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+            <div style="font-size:12px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px">Provisional tax</div>
+            <select class="g-select" id="prov-toggle" style="font-size:12px;width:auto" onchange="saveSettings();renderTaxTab()">
+              <option value="no">Off</option>
+              <option value="yes">On · Estimation method</option>
+            </select>
+          </div>
+          <div id="prov-section" style="display:none">
+            <div class="tax-prov-row"><span class="tax-prov-date">28 Aug <span id="prov-yr1"></span></span><span class="tax-prov-lbl">Instalment 1</span><span class="tax-prov-val c-orange" id="prov-1">—</span></div>
+            <div class="tax-prov-row" style="border-top:0.5px solid var(--sep)"><span class="tax-prov-date">15 Jan <span id="prov-yr2"></span></span><span class="tax-prov-lbl">Instalment 2</span><span class="tax-prov-val c-orange" id="prov-2">—</span></div>
+            <div class="tax-prov-row" style="border-top:0.5px solid var(--sep)"><span class="tax-prov-date">7 May <span id="prov-yr3"></span></span><span class="tax-prov-lbl">Instalment 3</span><span class="tax-prov-val c-orange" id="prov-3">—</span></div>
           </div>
         </div>
       </div>
 
-      <!-- ── INCOME TAX ── -->
-      <div class="shdr">Income tax</div>
-      <div class="tax-section-card">
-        <div class="tax-sc-header">
-          <div class="tax-sc-icon" style="background:rgba(255,59,48,0.12)">🧾</div>
-          <div class="tax-sc-info">
-            <div class="tax-sc-lbl">IRD income tax</div>
-            <div class="tax-sc-sub" id="tax-income-sub">Based on gross income this FY</div>
-          </div>
-          <div class="tax-sc-amount c-red" id="tax-income-total">$0</div>
-        </div>
-        <div class="tax-sc-divider"></div>
-        <div class="tax-sc-stats">
-          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Tax on income</div><div class="tax-sc-stat-val c-red" id="tax-on-income">$0</div></div>
-          <div class="tax-sc-stat-sep"></div>
-          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Residual income tax</div><div class="tax-sc-stat-val c-orange" id="tax-residual">$0</div></div>
-          <div class="tax-sc-stat-sep"></div>
-          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Set aside/mo</div><div class="tax-sc-stat-val c-red" id="tax-monthly">$0</div></div>
-        </div>
-        <div class="tax-sc-divider"></div>
-        <div style="padding:2px 0 4px">
-          <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">Bracket breakdown</div>
-          <div id="tax-brackets-mini"></div>
-        </div>
-        <div class="tax-sc-divider"></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 0 4px">
-          <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.6px">Provisional tax</div>
-          <select class="g-select" id="prov-toggle" style="font-size:12px;width:auto" onchange="saveSettings();renderTaxTab()">
-            <option value="no">Off</option>
-            <option value="yes">On · Estimation method</option>
-          </select>
-        </div>
-        <div id="prov-section" style="display:none">
-          <div class="tax-prov-row"><span class="tax-prov-date">28 Aug <span id="prov-yr1"></span></span><span class="tax-prov-lbl">Instalment 1</span><span class="tax-prov-val c-orange" id="prov-1">—</span></div>
-          <div class="tax-prov-row" style="border-top:0.5px solid var(--sep)"><span class="tax-prov-date">15 Jan <span id="prov-yr2"></span></span><span class="tax-prov-lbl">Instalment 2</span><span class="tax-prov-val c-orange" id="prov-2">—</span></div>
-          <div class="tax-prov-row" style="border-top:0.5px solid var(--sep)"><span class="tax-prov-date">7 May <span id="prov-yr3"></span></span><span class="tax-prov-lbl">Instalment 3</span><span class="tax-prov-val c-orange" id="prov-3">—</span></div>
-        </div>
-      </div>
+      <!-- hidden elements still needed by JS -->
+      <span id="tax-income-total" style="display:none"></span>
+      <span id="tax-income-sub" style="display:none"></span>
 
       <!-- ── GST ── -->
       <div class="shdr">GST</div>
@@ -1886,6 +1875,24 @@ function renderSources(fyInvoices){
 }
 
 /* ── Next GST due ── */
+function currentGSTPeriod(){
+  var freq=settings.gstFreq||'2monthly';
+  var now=new Date(), m=now.getMonth(), y=now.getFullYear();
+  var months=freq==='1monthly'?1:freq==='6monthly'?6:2;
+  var periodEnds=freq==='1monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:freq==='6monthly'?[3,9]:[0,2,4,6,8,10];
+  for(var i=0;i<24;i++){
+    var pm=(m+i)%12, py=y+Math.floor((m+i)/12);
+    if(periodEnds.indexOf(pm)!==-1){
+      var end=new Date(py,pm+1,0);
+      if(end>=now){
+        var start=new Date(py,pm+1-months,1);
+        return{start:start,end:end};
+      }
+    }
+  }
+  return{start:FY.start,end:FY.end};
+}
+
 function nextGSTDue(){
   var freq=settings.gstFreq||'2monthly';
   var now=new Date(), m=now.getMonth(), y=now.getFullYear();
@@ -2340,19 +2347,20 @@ function renderTaxTab(){
     if(sel){for(var o=0;o<sel.options.length;o++){if(parseFloat(sel.options[o].value)===parseFloat(settings.accRate)){sel.selectedIndex=o;break;}}}
   }
 
-  // ── GST ──
-  // Collected = GST on paid invoices (money you've actually received from clients)
-  var gstCollectedTax=fy.filter(function(i){return i.status==='paid'&&i.gst==='yes';})
+  // ── GST — current filing period only ──
+  var gstPer=currentGSTPeriod();
+  var periodInv=invoices.filter(function(i){var d=parseDate(i.date);return d>=gstPer.start&&d<=gstPer.end;});
+  var gstCollectedTax=periodInv.filter(function(i){return i.status==='paid'&&i.gst==='yes';})
     .reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
-  // Owed = GST on all FY invoices (what IRD expects you to have collected)
-  var gstOwedTax=fy.filter(function(i){return i.gst==='yes';})
+  var gstOwedTax=periodInv.filter(function(i){return i.gst==='yes';})
     .reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
   document.getElementById('gst-box5').textContent=fmt(gstCollectedTax);
   document.getElementById('gst-box7').textContent=fmt(gstOwedTax);
   var b7=document.getElementById('gst-box7b'); if(b7) b7.textContent=fmt(gstOwedTax);
   var due=nextGSTDue();
-  document.getElementById('gst-period-lbl').textContent='Next due: '+due.date;
-  var cp=document.getElementById('gst-current-period'); if(cp) cp.textContent=due.period.split('·')[0].trim();
+  var periodLabel=gstPer.start.toLocaleDateString('en-NZ',{day:'numeric',month:'short'})+' – '+gstPer.end.toLocaleDateString('en-NZ',{day:'numeric',month:'short'});
+  document.getElementById('gst-period-lbl').textContent=periodLabel+' · Due: '+due.date;
+  var cp=document.getElementById('gst-current-period'); if(cp) cp.textContent=periodLabel;
   var gi=document.getElementById('gst-input'); if(gi) gi.textContent='Not linked';
   if(settings.gstFreq)document.getElementById('gst-freq').value=settings.gstFreq;
   if(settings.gstNum)document.getElementById('gst-num').value=settings.gstNum;
@@ -2375,9 +2383,8 @@ function renderTaxTab(){
   document.getElementById('sl-monthly').textContent=hasLoan2?fmt(slMonthly)+'/mo':'—';
 
   // ── Tile values ──
-  var totalAll=tax.total+gstOwedTax+accTotal+(hasLoan2?slTotal:0);
-  document.getElementById('tax-total-all').textContent=fmt(totalAll);
-  document.getElementById('tax-total-sub').textContent=FY.label+' · Income tax + GST + ACC'+(hasLoan2?' + Loan':'');
+  document.getElementById('tax-total-all').textContent=fmt(tax.total);
+  document.getElementById('tax-total-sub').textContent=FY.label;
 
 }
 
@@ -3143,7 +3150,7 @@ function scanRemittance(){
   var b64=data.split(',')[1];
   var messages=[{role:'user',content:[
     isImage?{type:'image',source:{type:'base64',media_type:mime,data:b64}}:{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
-    {type:'text',text:'This is a NZ remittance advice or payment notification. Extract payment details. Reply ONLY with JSON: {"net_paid":1656.00,"wht_amount":414.00,"wht_rate":20,"payment_date":"YYYY-MM-DD","invoice_number":"string or null","payer":"company name paying you or null","reference":"string or null"}. net_paid=actual amount transferred to bank. wht_amount=withholding tax deducted. Use null for missing fields.'}
+    {type:'text',text:'Analyse this NZ payment document (remittance, payslip, invoice, or advice note) and extract the payment details. Reply ONLY with a JSON object, no markdown, no explanation.\n\nFirst, work out what type of document this is and how the numbers relate to each other. The goal is to find:\n- The GROSS amount (total invoice value including GST if applicable)\n- The GST component (if any)\n- The withholding tax deducted (if any) and at what rate\n- The NET amount that actually transfers to the bank\n\nKey NZ tax rules to help you:\n- GST is 15%. It may be included in the gross (3/23 of gross) OR added on top of a base fee\n- Schedular W/H tax rates are typically 20% or 33%, applied to the fee BEFORE GST\n- Net to bank = gross_inc_gst minus W/H tax (GST is NOT deducted from bank payment — it passes through)\n- Always verify your numbers add up: gross_inc_gst - wht_amount should equal net_paid\n\nReturn this JSON (use null for anything not found or not applicable):\n{\n  "gross_inc_gst": null,\n  "base_ex_gst": null,\n  "gst_amount": null,\n  "wht_amount": null,\n  "wht_rate": null,\n  "net_paid": null,\n  "payment_date": "YYYY-MM-DD",\n  "payer": null,\n  "invoice_number": null,\n  "period_start": "YYYY-MM-DD",\n  "period_end": "YYYY-MM-DD"\n}'}
   ]}];
   fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:messages})})
   .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
@@ -3160,12 +3167,23 @@ function scanRemittance(){
     window._lastRemittanceScan={
       payer:parsed.payer||null,
       whtRate:parsed.wht_rate||0,
+      whtAmount:parsed.wht_amount||0,
+      grossIncGst:parsed.gross_inc_gst||null,
+      baseExGst:parsed.base_ex_gst||null,
+      gstAmount:parsed.gst_amount||null,
       invoiceNumber:parsed.invoice_number||null,
-      reference:parsed.reference||null
+      periodStart:parsed.period_start||null,
+      periodEnd:parsed.period_end||null
     };
+    // If gross_inc_gst detected, store it for confirmMarkPaid to use as invoice amount
+    if(parsed.gross_inc_gst) window._lastRemittanceScan.invoiceAmount=parsed.gross_inc_gst;
     updatePaidSummary();
+    var resultParts=['Net: <strong>'+fmt(parsed.net_paid||0)+'</strong>'];
+    if(parsed.wht_amount) resultParts.push('W/H: <strong>'+fmt(parsed.wht_amount)+'</strong>');
+    if(parsed.gst_amount) resultParts.push('GST: <strong>'+fmt(parsed.gst_amount)+'</strong>');
+    if(parsed.gross_inc_gst) resultParts.push('Gross: <strong>'+fmt(parsed.gross_inc_gst)+'</strong>');
     resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
-    resultEl.innerHTML='&#x2713; Net: <strong>'+fmt(parsed.net_paid||0)+'</strong> &nbsp;&middot;&nbsp; W/H: <strong>'+fmt(parsed.wht_amount||0)+'</strong>';
+    resultEl.innerHTML='&#x2713; '+resultParts.join(' &nbsp;&middot;&nbsp; ');
   })
   .catch(function(e){
     if(e.message!=='401'){
@@ -3204,13 +3222,23 @@ function confirmMarkPaid(){
   inv.status='paid';
   inv.paid_date=dateVal||today();
   inv.paid_amount=net>0?net:(parseFloat(inv.amount)||0);
+  // Use gross_inc_gst from scan as the invoice amount if available and invoice is new stub
+  var scanData=window._lastRemittanceScan;
+  if(isNew&&scanData&&scanData.invoiceAmount&&inv.amount===0){
+    inv.amount=scanData.invoiceAmount;
+  }
   if(wht>0){
     inv.wht_amount=wht;
-    if(!inv.wht_rate||inv.wht_rate===0){
+    // Use actual wht_rate from scan if available
+    if(scanData&&scanData.whtRate>0){
+      inv.wht_rate=scanData.whtRate;
+    } else if(!inv.wht_rate||inv.wht_rate===0){
       var gross2=net+wht;
       inv.wht_rate=gross2>0?Math.round(wht/gross2*100):0;
     }
   }
+  if(isNew&&scanData&&scanData.periodStart) inv.date=scanData.periodStart;
+  if(isNew&&scanData&&scanData.invoiceNumber&&!inv.invoice_number) inv.invoice_number=scanData.invoiceNumber;
   if(window._paidFileData) inv.remittance_image=window._paidFileData;
   var _remClient=inv.client; var _isNewRem=isNew;
   save(); renderAll(); closeModal('modal-paid');
