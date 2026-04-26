@@ -1514,16 +1514,11 @@ function syncToServer(){
   .then(function(data){
     if(!data)return;
     (data.imageLengths||[]).forEach(function(e){_imgCache.set(e.id,e.len);});
-    // Update local IDs if server returned an ID map
     if(data.idMap){
       invoices.forEach(function(inv){
-        if(data.idMap[inv.id]){
-          inv.id=data.idMap[inv.id];
-        }
+        if(data.idMap[inv.id]) inv.id=data.idMap[inv.id];
       });
     }
-    // Clear _localOnly once successfully synced — prevents duplication on next load
-    invoices.forEach(function(inv){delete inv._localOnly;});
     saveLocal();
   })
   .catch(function(e){console.warn('Sync:',e);})
@@ -1541,20 +1536,14 @@ function loadFromServer(){
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
     // Only keep local-only items the server doesn't have yet (truly offline/unsynced)
     // Only keep local items the server doesn't have — match by ID or by content
+    // Keep _localOnly items not yet on server (by ID only — no fuzzy match)
     var unsyncedLocal=invoices.filter(function(i){
-      if(!i._localOnly) return false;
-      if(serverIds.has(String(i.id))) return false;
-      // Also check if server already has this invoice by content (synced with new ID)
-      var alreadySynced=serverInvoices.some(function(s){
-        return s.client===i.client &&
-          Math.abs((parseFloat(s.amount)||0)-(parseFloat(i.amount)||0))<0.01 &&
-          s.date===i.date;
-      });
-      return !alreadySynced;
+      return i._localOnly && !serverIds.has(String(i.id));
     });
     invoices=serverInvoices.concat(unsyncedLocal);
     bankTxns=data.bankTxns||bankTxns; settings=data.settings||settings;
-    saveLocal(); renderAll(); if(unsyncedLocal.length||binnedIds.size)syncToServer();
+    saveLocal(); renderAll();
+    if(unsyncedLocal.length||binnedIds.size) syncToServer();
   })
   .catch(function(e){console.warn('Load:',e);});
 }
@@ -3190,11 +3179,31 @@ function scanRemittance(){
   btn.disabled=true;
   btn.innerHTML='<span class="spinner"></span> Reading remittance...';
   resultEl.style.display='none';
+  // Clear ALL fields so stale data doesn't persist between scans
+  ['paid-gross','paid-gst-amt','paid-wht','paid-net'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  updatePaidSummary();
   var isImage=mime.startsWith('image/');
   var b64=data.split(',')[1];
+  var remPrompt='Analyse this NZ payment document and extract payment details. Reply ONLY with valid JSON, no markdown.'+
+    '\n\nFind these values by looking at the wage summary column on the right side of the payslip:'+
+    '\n- gross_inc_gst: the Total Gross line'+
+    '\n- gst_amount: the GST or GST/VAT line (NOT the OT line even if same number)'+
+    '\n- wht_amount: the Taxation line (withholding tax)'+
+    '\n- net_paid: the Net Pay line or bank transfer amount'+
+    '\n- wht_rate: 20 or 33 typically'+
+    '\n- base_ex_gst: gross before GST added'+
+    '\n- payment_date: Payment Date field (YYYY-MM-DD)'+
+    '\n- payer: production company name'+
+    '\n- invoice_number: Trans. No value'+
+    '\n- period_start and period_end: Pay Period dates (YYYY-MM-DD)'+
+    '\n- payer_gst: the CLIENT/PRODUCTION COMPANY GST or IRD number. The document often shows two IRD/GST numbers - one for the contractor and one for the company. Find the one associated with the production company name and their address. Digits only (e.g. 074620000). Return null if only one GST number is shown (it may be the contractor\'s)'+
+    '\n\nNZ rule: Total Gross + GST - Taxation = Net Pay. Verify this before returning.'+
+    '\nReturn: {"gross_inc_gst":null,"base_ex_gst":null,"gst_amount":null,"wht_amount":null,"wht_rate":null,"net_paid":null,"payment_date":null,"payer":null,"invoice_number":null,"period_start":null,"period_end":null,"payer_gst":null}';
   var messages=[{role:'user',content:[
     isImage?{type:'image',source:{type:'base64',media_type:mime,data:b64}}:{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
-    {type:'text',text:'Analyse this NZ payment document (remittance, payslip, invoice, or advice note) and extract the payment details. Reply ONLY with a JSON object, no markdown, no explanation.\n\nFirst, work out what type of document this is and how the numbers relate to each other. The goal is to find:\n- The GROSS amount (total invoice value including GST if applicable)\n- The GST component (if any)\n- The withholding tax deducted (if any) and at what rate\n- The NET amount that actually transfers to the bank\n\nKey NZ tax rules to help you:\n- GST is 15%. It may be included in the gross (3/23 of gross) OR added on top of a base fee\n- Schedular W/H tax rates are typically 20% or 33%, applied to the fee BEFORE GST\n- Net to bank = gross_inc_gst minus W/H tax (GST is NOT deducted from bank payment — it passes through)\n- IMPORTANT: For NZ schedular payments, W/H tax is on the BASE fee (ex-GST). Net = (base + GST) - W/H. So gross_inc_gst - wht_amount will NOT equal net_paid. Instead: (base_ex_gst + gst_amount) - wht_amount = net_paid\n- Look for lines labelled Taxation, Withholding Tax, PAYE, or Schedular Tax for the W/H amount — NOT the difference between gross and net\n- Always verify: base_ex_gst + gst_amount - wht_amount should equal net_paid\n\nReturn this JSON (use null for anything not found or not applicable):\n{\n  "gross_inc_gst": null,\n  "base_ex_gst": null,\n  "gst_amount": null,\n  "wht_amount": null,\n  "wht_rate": null,\n  "net_paid": null,\n  "payment_date": "YYYY-MM-DD",\n  "payer": null,\n  "invoice_number": null,\n  "period_start": "YYYY-MM-DD",\n  "period_end": "YYYY-MM-DD"\n}'}
+    {type:'text',text:remPrompt}
   ]}];
   fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:messages})})
   .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
@@ -3207,8 +3216,10 @@ function scanRemittance(){
     if(parsed.net_paid!=null) document.getElementById('paid-net').value=String(parsed.net_paid);
     if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
     // Fill extra fields if new remittance
-    if(parsed.payer){var pc=document.getElementById('paid-client');if(pc&&!pc.value)pc.value=parsed.payer;}
-    if(parsed.invoice_number){var pn=document.getElementById('paid-inv-num');if(pn&&!pn.value)pn.value=parsed.invoice_number;}
+    if(parsed.payer){var pc=document.getElementById('paid-client');if(pc)pc.value=parsed.payer;}
+    // Always overwrite invoice number from scan
+    var pn=document.getElementById('paid-inv-num');
+    if(pn) pn.value=parsed.invoice_number||pn.value||'';
     // Store scan data for client profile pre-fill
     window._lastRemittanceScan={
       payer:parsed.payer||null,
@@ -3217,6 +3228,7 @@ function scanRemittance(){
       grossIncGst:parsed.gross_inc_gst||null,
       baseExGst:parsed.base_ex_gst||null,
       gstAmount:parsed.gst_amount||null,
+      payerGst:parsed.payer_gst||null,
       invoiceNumber:parsed.invoice_number||null,
       periodStart:parsed.period_start||null,
       periodEnd:parsed.period_end||null
@@ -3286,8 +3298,11 @@ function confirmMarkPaid(){
       inv.wht_rate=gross2>0?Math.round(wht/gross2*100):0;
     }
   }
-  if(isNew&&scanData&&scanData.periodStart) inv.date=scanData.periodStart;
-  if(isNew&&scanData&&scanData.invoiceNumber&&!inv.invoice_number) inv.invoice_number=scanData.invoiceNumber;
+  // Use payment date as invoice date for remittances
+  if(isNew) inv.date=inv.paid_date||dateVal||today();
+  // Invoice number: field value takes priority, fall back to scan data
+  if(isNew&&!inv.invoice_number&&scanData&&scanData.invoiceNumber) inv.invoice_number=scanData.invoiceNumber;
+  if(isNew&&scanData&&scanData.payerGst) inv.client_gst=scanData.payerGst;
   if(window._paidFileData) inv.remittance_image=window._paidFileData;
   var _remClient=inv.client; var _isNewRem=isNew;
   save(); renderAll(); closeModal('modal-paid');
@@ -3402,6 +3417,16 @@ function openBankDetail(id){
   var amt=parseFloat(txn.amount)||0;
   var actions=[];
 
+  // Exclude/restore toggle
+  if(txn.excluded){
+    actions.push({label:'Restore — count as income',fn:function(){
+      delete txn.excluded; save(); renderAll(); showToast('Restored');
+    }});
+    actions.push({label:'Cancel',cls:'cancel'});
+    showSheet(fmt(Math.abs(amt))+' · '+fmtDate(txn.date)+' · Excluded from income',actions);
+    return;
+  }
+
   if(txn.matched_invoice_id){
     actions.push({label:'Remove match',cls:'danger',fn:function(){
       var prev=invoices.find(function(i){return i.id===txn.matched_invoice_id;});
@@ -3452,6 +3477,9 @@ function openBankDetail(id){
     showToast('Debit — no action needed'); return;
   }
 
+  actions.push({label:'Exclude from income',cls:'danger',fn:function(){
+    txn.excluded=true; txn.matched_invoice_id=null; save(); renderAll(); showToast('Excluded from income');
+  }});
   actions.push({label:'Cancel',cls:'cancel'});
   showSheet((amt>0?fmt(amt)+' received':'Debit '+fmt(Math.abs(amt)))+' · '+fmtDate(txn.date)+(txn.description?' · '+txn.description:''),actions);
 }
@@ -3812,7 +3840,7 @@ function openClientProfile(name, prefill){
   document.getElementById('cp-modal-title').textContent=existing?esc(name):'New Client';
   document.getElementById('cp-name').value=name||'';
   document.getElementById('cp-email').value=(existing&&existing.email)||'';
-  document.getElementById('cp-gst-num').value=(existing&&existing.gstNum)||'';
+  document.getElementById('cp-gst-num').value=(existing&&existing.gstNum)||(scan&&scan.payerGst)||'';
   // W/H: use existing profile, then scan, then 0
   var whtRate=(existing&&existing.whtRate!=null)?existing.whtRate
     :(scan&&scan.whtRate!=null)?scan.whtRate:0;
