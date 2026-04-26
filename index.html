@@ -3096,9 +3096,10 @@ function onPaidGrossInput(){
       var whtAmt=Math.round(baseExGst*rate/100*100)/100;
       document.getElementById('paid-wht').value=String(whtAmt);
     }
-    // Net = gross - wht (GST passes through to bank)
+    // Net = (gross + gst) - wht (GST passes through to bank, W/H deducted from base)
     var whtVal=parseFloat(document.getElementById('paid-wht').value)||0;
-    document.getElementById('paid-net').value=String(Math.round((gross-whtVal)*100)/100);
+    var gstVal=parseFloat(document.getElementById('paid-gst-amt').value)||0;
+    document.getElementById('paid-net').value=String(Math.round((gross+gstVal-whtVal)*100)/100);
   }
   updatePaidSummary();
 }
@@ -3110,19 +3111,20 @@ function updatePaidSummary(){
   var wht=parseFloat(document.getElementById('paid-wht').value)||0;
   var net=parseFloat(document.getElementById('paid-net').value)||0;
   if(!gross&&!net){el.style.display='none';return;}
-  // Validate: gross - wht should = net (GST passes through)
-  var calcNet=gross>0?Math.round((gross-wht)*100)/100:0;
+  // (Gross + GST) - W/H = Net (GST passes through, W/H from base only)
+  var totalWithGst=gross+gst;
+  var calcNet=gross>0?Math.round((totalWithGst-wht)*100)/100:0;
   var valid=net>0&&gross>0&&Math.abs(calcNet-net)<0.10;
   el.style.display='block';
   if(gross>0&&net>0){
     if(valid){
       el.style.background='rgba(52,199,89,.1)';
       el.style.color='var(--green)';
-      el.textContent='✓ Numbers check out — Gross − W/H = Net';
+      el.textContent='✓ Numbers check out — (Gross + GST) − W/H = Net';
     } else {
       el.style.background='rgba(255,149,0,.1)';
       el.style.color='var(--orange)';
-      el.textContent='⚠ Check numbers: Gross (− W/H '+fmt(wht)+') should equal '+fmt(calcNet)+', not '+fmt(net);
+      el.textContent='⚠ Expected net: '+fmt(calcNet)+' — check W/H and GST amounts';
     }
   } else {
     el.style.background='var(--fill)';
@@ -3192,7 +3194,7 @@ function scanRemittance(){
   var b64=data.split(',')[1];
   var messages=[{role:'user',content:[
     isImage?{type:'image',source:{type:'base64',media_type:mime,data:b64}}:{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
-    {type:'text',text:'Analyse this NZ payment document (remittance, payslip, invoice, or advice note) and extract the payment details. Reply ONLY with a JSON object, no markdown, no explanation.\n\nFirst, work out what type of document this is and how the numbers relate to each other. The goal is to find:\n- The GROSS amount (total invoice value including GST if applicable)\n- The GST component (if any)\n- The withholding tax deducted (if any) and at what rate\n- The NET amount that actually transfers to the bank\n\nKey NZ tax rules to help you:\n- GST is 15%. It may be included in the gross (3/23 of gross) OR added on top of a base fee\n- Schedular W/H tax rates are typically 20% or 33%, applied to the fee BEFORE GST\n- Net to bank = gross_inc_gst minus W/H tax (GST is NOT deducted from bank payment — it passes through)\n- Always verify your numbers add up: gross_inc_gst - wht_amount should equal net_paid\n\nReturn this JSON (use null for anything not found or not applicable):\n{\n  "gross_inc_gst": null,\n  "base_ex_gst": null,\n  "gst_amount": null,\n  "wht_amount": null,\n  "wht_rate": null,\n  "net_paid": null,\n  "payment_date": "YYYY-MM-DD",\n  "payer": null,\n  "invoice_number": null,\n  "period_start": "YYYY-MM-DD",\n  "period_end": "YYYY-MM-DD"\n}'}
+    {type:'text',text:'Analyse this NZ payment document (remittance, payslip, invoice, or advice note) and extract the payment details. Reply ONLY with a JSON object, no markdown, no explanation.\n\nFirst, work out what type of document this is and how the numbers relate to each other. The goal is to find:\n- The GROSS amount (total invoice value including GST if applicable)\n- The GST component (if any)\n- The withholding tax deducted (if any) and at what rate\n- The NET amount that actually transfers to the bank\n\nKey NZ tax rules to help you:\n- GST is 15%. It may be included in the gross (3/23 of gross) OR added on top of a base fee\n- Schedular W/H tax rates are typically 20% or 33%, applied to the fee BEFORE GST\n- Net to bank = gross_inc_gst minus W/H tax (GST is NOT deducted from bank payment — it passes through)\n- IMPORTANT: For NZ schedular payments, W/H tax is on the BASE fee (ex-GST). Net = (base + GST) - W/H. So gross_inc_gst - wht_amount will NOT equal net_paid. Instead: (base_ex_gst + gst_amount) - wht_amount = net_paid\n- Look for lines labelled Taxation, Withholding Tax, PAYE, or Schedular Tax for the W/H amount — NOT the difference between gross and net\n- Always verify: base_ex_gst + gst_amount - wht_amount should equal net_paid\n\nReturn this JSON (use null for anything not found or not applicable):\n{\n  "gross_inc_gst": null,\n  "base_ex_gst": null,\n  "gst_amount": null,\n  "wht_amount": null,\n  "wht_rate": null,\n  "net_paid": null,\n  "payment_date": "YYYY-MM-DD",\n  "payer": null,\n  "invoice_number": null,\n  "period_start": "YYYY-MM-DD",\n  "period_end": "YYYY-MM-DD"\n}'}
   ]}];
   fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:messages})})
   .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
