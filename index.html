@@ -1136,38 +1136,37 @@ body{
         </div>
       </div>
 
-      <!-- Single combined breakdown + input card -->
+      <!-- Payment received fields -->
       <div class="shdr" id="paid-details-shdr">Payment received</div>
-      <div style="margin:0 16px 0;background:var(--surface);border-radius:14px;overflow:hidden">
+      <div class="g-list">
         <div class="g-row" style="border-bottom:0.5px solid var(--sep)">
-          <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F4B5;</div>
-          <span class="g-lbl">Net received</span>
-          <input class="g-input" id="paid-net" type="text" inputmode="decimal" placeholder="0.00" oninput="updatePaidSummary()">
+          <div class="g-icon" style="background:rgba(0,122,255,.12)">&#x1F4CA;</div>
+          <span class="g-lbl">Gross</span>
+          <input class="g-input" id="paid-gross" type="text" inputmode="decimal" placeholder="0.00" oninput="onPaidGrossInput()">
+        </div>
+        <div class="g-row" style="border-bottom:0.5px solid var(--sep)">
+          <div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F9EE;</div>
+          <span class="g-lbl">GST</span>
+          <input class="g-input" id="paid-gst-amt" type="text" inputmode="decimal" placeholder="0.00" oninput="updatePaidSummary()">
         </div>
         <div class="g-row" style="border-bottom:0.5px solid var(--sep)">
           <div class="g-icon" style="background:rgba(175,82,222,.12)">&#x1F3DB;&#xFE0F;</div>
-          <span class="g-lbl">W/H tax deducted</span>
+          <span class="g-lbl">W/H tax</span>
           <input class="g-input" id="paid-wht" type="text" inputmode="decimal" placeholder="0.00" oninput="updatePaidSummary()">
         </div>
         <div class="g-row" style="border-bottom:0.5px solid var(--sep)">
+          <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F4B5;</div>
+          <span class="g-lbl">Net to bank</span>
+          <input class="g-input" id="paid-net" type="text" inputmode="decimal" placeholder="0.00" oninput="updatePaidSummary()">
+        </div>
+        <div class="g-row">
           <div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F4C5;</div>
           <span class="g-lbl" id="paid-date-lbl">Payment date</span>
           <input class="g-input" id="paid-date" type="date">
         </div>
-        <!-- Breakdown rows — shown when amounts entered -->
-        <div id="paid-summary" style="display:none">
-          <div style="display:grid;grid-template-columns:1fr 1fr;border-top:0.5px solid var(--sep)">
-            <div style="padding:12px 16px;border-right:0.5px solid var(--sep)">
-              <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px">Gross invoice</div>
-              <div id="pd-gross" style="font-size:18px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums">—</div>
-            </div>
-            <div style="padding:12px 16px">
-              <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px">GST collected</div>
-              <div id="pd-gst" style="font-size:18px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums">—</div>
-            </div>
-          </div>
-        </div>
       </div>
+      <!-- Validation hint -->
+      <div id="paid-summary" style="display:none;margin:6px 16px 0;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:500"></div>
     </div>
     <div class="modal-foot" style="padding-top:12px">
       <button class="btn-primary" onclick="confirmMarkPaid()">Mark as paid</button>
@@ -2438,6 +2437,8 @@ function openNewRemittance(){
   clearPaidFile();
   document.getElementById('paid-modal-title').textContent='New remittance';
   document.getElementById('paid-ai-result').style.display='none';
+  document.getElementById('paid-gross').value='';
+  document.getElementById('paid-gst-amt').value='';
   document.getElementById('paid-net').value='';
   document.getElementById('paid-wht').value='';
   document.getElementById('paid-date').value=today();
@@ -3064,6 +3065,8 @@ function openMarkPaid(id){
   document.getElementById('paid-ai-result').style.display='none';
   var whtAmt=Math.round((parseFloat(inv.amount)||0)*(parseFloat(inv.wht_rate)||0)/100*100)/100;
   var net=Math.round(((parseFloat(inv.amount)||0)-whtAmt)*100)/100;
+  document.getElementById('paid-gross').value=whtAmt>0?String(amt):'';
+  document.getElementById('paid-gst-amt').value=inv&&inv.gst==='yes'?String(Math.round(amt*3/23*100)/100):'';
   document.getElementById('paid-net').value=whtAmt>0?String(net):'';
   document.getElementById('paid-wht').value=whtAmt>0?String(whtAmt):'';
   document.getElementById('paid-date').value=today();
@@ -3073,20 +3076,59 @@ function openMarkPaid(id){
   openModal('modal-paid');
 }
 
+function onPaidGrossInput(){
+  // Auto-calc GST and net when gross is entered with a known W/H rate
+  var gross=parseFloat(document.getElementById('paid-gross').value)||0;
+  var wht=parseFloat(document.getElementById('paid-wht').value)||0;
+  var whtRateEl=document.getElementById('paid-wht-rate');
+  var rate=whtRateEl?parseFloat(whtRateEl.value)||0:0;
+  if(gross>0){
+    // GST = gross * 3/23 if GST invoice
+    var gstEl=document.getElementById('paid-gst');
+    var gstMode=gstEl?gstEl.value:'yes';
+    if(gstMode==='yes'){
+      var gstAmt=Math.round(gross*3/23*100)/100;
+      document.getElementById('paid-gst-amt').value=String(gstAmt);
+    }
+    // W/H = rate% of (gross - gst) if rate is set
+    if(rate>0&&!document.getElementById('paid-wht').value){
+      var baseExGst=gross*(23/38); // gross excl GST from inclusive
+      var whtAmt=Math.round(baseExGst*rate/100*100)/100;
+      document.getElementById('paid-wht').value=String(whtAmt);
+    }
+    // Net = gross - wht (GST passes through to bank)
+    var whtVal=parseFloat(document.getElementById('paid-wht').value)||0;
+    document.getElementById('paid-net').value=String(Math.round((gross-whtVal)*100)/100);
+  }
+  updatePaidSummary();
+}
+
 function updatePaidSummary(){
   var el=document.getElementById('paid-summary');
-  var net=parseFloat(document.getElementById('paid-net').value)||0;
+  var gross=parseFloat(document.getElementById('paid-gross').value)||0;
+  var gst=parseFloat(document.getElementById('paid-gst-amt').value)||0;
   var wht=parseFloat(document.getElementById('paid-wht').value)||0;
-  if(net>0||wht>0){
-    var gross=net+wht;
-    var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
-    var gstEl=document.getElementById('paid-gst');
-    var gstMode=gstEl?gstEl.value:(inv&&inv.gst?inv.gst:'yes');
-    var gstAmt=gstMode==='yes'?gross*3/23:0;
-    el.style.display='block';
-    document.getElementById('pd-gross').textContent=fmt(gross);
-    document.getElementById('pd-gst').textContent=gstAmt>0?fmt(gstAmt):'N/A';
-  } else { el.style.display='none'; }
+  var net=parseFloat(document.getElementById('paid-net').value)||0;
+  if(!gross&&!net){el.style.display='none';return;}
+  // Validate: gross - wht should = net (GST passes through)
+  var calcNet=gross>0?Math.round((gross-wht)*100)/100:0;
+  var valid=net>0&&gross>0&&Math.abs(calcNet-net)<0.10;
+  el.style.display='block';
+  if(gross>0&&net>0){
+    if(valid){
+      el.style.background='rgba(52,199,89,.1)';
+      el.style.color='var(--green)';
+      el.textContent='✓ Numbers check out — Gross − W/H = Net';
+    } else {
+      el.style.background='rgba(255,149,0,.1)';
+      el.style.color='var(--orange)';
+      el.textContent='⚠ Check numbers: Gross (− W/H '+fmt(wht)+') should equal '+fmt(calcNet)+', not '+fmt(net);
+    }
+  } else {
+    el.style.background='var(--fill)';
+    el.style.color='var(--t3)';
+    el.textContent='Fill in gross and net to validate';
+  }
 }
 
 function onPaidFile(e){
@@ -3157,8 +3199,10 @@ function scanRemittance(){
   .then(function(resp){
     var text=(resp.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
     var parsed=JSON.parse(text.replace(/```json|```/gi,'').trim());
-    if(parsed.net_paid!=null) document.getElementById('paid-net').value=String(parsed.net_paid);
+    if(parsed.gross_inc_gst!=null) document.getElementById('paid-gross').value=String(parsed.gross_inc_gst);
+    if(parsed.gst_amount!=null) document.getElementById('paid-gst-amt').value=String(parsed.gst_amount);
     if(parsed.wht_amount!=null) document.getElementById('paid-wht').value=String(parsed.wht_amount);
+    if(parsed.net_paid!=null) document.getElementById('paid-net').value=String(parsed.net_paid);
     if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
     // Fill extra fields if new remittance
     if(parsed.payer){var pc=document.getElementById('paid-client');if(pc&&!pc.value)pc.value=parsed.payer;}
@@ -3198,6 +3242,8 @@ function confirmMarkPaid(){
   var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
   if(!inv){closeModal('modal-paid');return;}
 
+  var gross=parseFloat(document.getElementById('paid-gross').value)||0;
+  var gstAmt=parseFloat(document.getElementById('paid-gst-amt').value)||0;
   var net=parseFloat(document.getElementById('paid-net').value)||0;
   var wht=parseFloat(document.getElementById('paid-wht').value)||0;
   var dateVal=document.getElementById('paid-date').value;
@@ -3224,9 +3270,10 @@ function confirmMarkPaid(){
   inv.paid_amount=net>0?net:(parseFloat(inv.amount)||0);
   // Use gross_inc_gst from scan as the invoice amount if available and invoice is new stub
   var scanData=window._lastRemittanceScan;
-  if(isNew&&scanData&&scanData.invoiceAmount&&inv.amount===0){
-    inv.amount=scanData.invoiceAmount;
+  if(isNew&&inv.amount===0){
+    inv.amount=gross>0?gross:(net+wht);
   }
+  if(isNew&&gstAmt>0) inv.gst_amount=gstAmt;
   if(wht>0){
     inv.wht_amount=wht;
     // Use actual wht_rate from scan if available
