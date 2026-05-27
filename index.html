@@ -1550,27 +1550,24 @@ function syncToServer(){
   if(_syncInFlight){_syncPending=true;return;}
   if(!LS.get(LS_TOKEN))return;
   _syncInFlight=true;
-  var deletedIds=invBin.map(function(i){return i.id;}).filter(function(id){return !String(id).startsWith('local_');});
+  var deletedIds=invBin.map(function(i){return String(i.id);}).filter(function(id){return !id.startsWith('local_');});
   var payload={
     invoices:invoices.map(function(inv){var out=Object.assign({},inv);if(inv.image&&_imgCache.get(inv.id)===inv.image.length)delete out.image;return out;}),
-    bankTxns:bankTxns, settings:settings,
-    deletedInvoiceIds:deletedIds
+    bankTxns:bankTxns,settings:settings,deletedInvoiceIds:deletedIds
   };
   fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
   .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
   .then(function(data){
     if(!data)return;
     (data.imageLengths||[]).forEach(function(e){_imgCache.set(e.id,e.len);});
-    // Update local_ IDs with real server IDs
+    // Promote local_ IDs to real server IDs
     if(data.idMap){
-      invoices.forEach(function(inv){
-        if(data.idMap[inv.id]){
-          inv.id=data.idMap[inv.id];
-          delete inv._localOnly;
-        }
+      Object.keys(data.idMap).forEach(function(localId){
+        var inv=invoices.find(function(i){return String(i.id)===localId;});
+        if(inv){inv.id=data.idMap[localId];delete inv._localOnly;}
       });
     }
-    // Clear _localOnly on all items that are now confirmed on server
+    // Clear _localOnly from anything with a real numeric ID
     invoices.forEach(function(inv){
       if(!String(inv.id).startsWith('local_')) delete inv._localOnly;
     });
@@ -1578,37 +1575,36 @@ function syncToServer(){
     if(_syncRetryTimer){clearTimeout(_syncRetryTimer);_syncRetryTimer=null;}
   })
   .catch(function(e){
-    console.warn('Sync failed, will retry:',e);
-    // Retry after 30s when server comes back online
-    if(!_syncRetryTimer){
-      _syncRetryTimer=setTimeout(function(){_syncRetryTimer=null;syncToServer();},30000);
-    }
+    console.warn('Sync failed, will retry in 30s');
+    if(!_syncRetryTimer) _syncRetryTimer=setTimeout(function(){_syncRetryTimer=null;syncToServer();},30000);
   })
   .finally(function(){_syncInFlight=false;if(_syncPending){_syncPending=false;syncToServer();}});
 }
+
 function loadFromServer(){
   if(!LS.get(LS_TOKEN))return;
   fetch(API_BASE+'/data',{headers:authHeaders()})
   .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
   .then(function(data){
     if(!data)return;
-    // Filter out binned invoices
     var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
+    // Server is source of truth — filter out binned items
     var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
-    // Only keep local-only items the server doesn't have yet (truly offline/unsynced)
-    // Only keep local items the server doesn't have — match by ID or by content
-    // Keep _localOnly items not yet on server (by ID only — no fuzzy match)
+    // Only keep local items that are genuinely unsynced (local_ prefix AND not on server)
     var unsyncedLocal=invoices.filter(function(i){
-      return i._localOnly && !serverIds.has(String(i.id));
+      return i._localOnly && String(i.id).startsWith('local_') && !serverIds.has(String(i.id));
     });
     invoices=serverInvoices.concat(unsyncedLocal);
-    bankTxns=data.bankTxns||bankTxns; settings=data.settings||settings;
+    bankTxns=data.bankTxns||bankTxns;
+    settings=data.settings||settings;
     saveLocal(); renderAll();
+    // If we have unsynced items or bin to clear, push to server
     if(unsyncedLocal.length||binnedIds.size) syncToServer();
   })
   .catch(function(e){console.warn('Load:',e);});
 }
+
 
 /* ── Formatting ── */
 function fmt(n){return'$'+(parseFloat(n)||0).toLocaleString('en-NZ',{minimumFractionDigits:2,maximumFractionDigits:2});}
