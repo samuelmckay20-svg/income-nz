@@ -3953,28 +3953,20 @@ function getReceiptsNZData(){
 }
 
 function fetchReceiptsGST(start, end, callback){
-  // Try server first, fall back to localStorage
-  var token=localStorage.getItem('nzrt_token')||localStorage.getItem('nzin_token')||'';
-  if(!token){
-    var local=getReceiptsNZData();
-    callback(calcInputGST(local.receipts, start, end));
-    return;
-  }
-  fetch(RECEIPTS_API+'/data',{headers:receiptsAuthHeaders()})
+  // Use Income NZ server as proxy — it forwards with the Receipts NZ secret
+  // Fall back to localStorage if server unavailable
+  fetch(API_BASE+'/receipts-gst',{headers:authHeaders()})
   .then(function(r){return r.ok?r.json():null;})
   .then(function(data){
     if(!data||!data.receipts){
-      var local=getReceiptsNZData();
-      callback(calcInputGST(local.receipts, start, end));
+      callback(calcInputGST(getReceiptsNZData().receipts, start, end));
       return;
     }
-    // Cache locally for offline use
     try{localStorage.setItem('nzrt5_r',JSON.stringify(data.receipts));}catch(e){}
     callback(calcInputGST(data.receipts, start, end));
   })
   .catch(function(){
-    var local=getReceiptsNZData();
-    callback(calcInputGST(local.receipts, start, end));
+    callback(calcInputGST(getReceiptsNZData().receipts, start, end));
   });
 }
 
