@@ -3980,13 +3980,20 @@ function calcInputGST(receipts, start, end){
   return {inputGST:inputGST, count:periodR.length, available:true};
 }
 
+// Entertainment categories in Receipts NZ (mirrors BUILT_IN_CATS)
+var RECEIPTS_ENT_CATS=['meals'];
+
 function gstForReceiptsItem(r){
   // Exact mirror of Receipts NZ gstForReceipt — must stay in sync
   if(!r||r.gst==='no') return 0;
   var amount=parseFloat(r.amount)||0;
-  // claimPct: custom % overrides everything; entertainment categories default to 50%
+  // claimPct: custom % overrides; entertainment category defaults to 50%; otherwise 100%
   var claimPct=1;
-  if(r.claimPct!=null&&r.claimPct>=0&&r.claimPct<=100) claimPct=r.claimPct/100;
+  if(r.claimPct!=null&&r.claimPct>=0&&r.claimPct<=100){
+    claimPct=r.claimPct/100;
+  } else if(RECEIPTS_ENT_CATS.indexOf(r.category)!==-1){
+    claimPct=0.5;
+  }
   var raw=r.gst==='partial'?amount*(3/23)*0.5:amount*(3/23);
   return raw*claimPct;
 }
