@@ -2427,30 +2427,30 @@ function renderTaxTab(){
   if(settings.gstFreq)document.getElementById('gst-freq').value=settings.gstFreq;
   if(settings.gstNum)document.getElementById('gst-num').value=settings.gstNum;
 
-  // Pull input tax from Receipts NZ
-  var rxData=getReceiptsGSTForPeriod(gstPer.start,gstPer.end);
+  // Pull input tax from Receipts NZ (async — server fetch with localStorage fallback)
   var gi=document.getElementById('gst-input');
   var netRow=document.getElementById('gst-net-row');
   var linkLbl=document.getElementById('receipts-link-lbl');
-  if(rxData&&rxData.available){
-    var inputGST=rxData.inputGST;
-    var netOwe=Math.max(0,gstOwedTax-inputGST);
-    if(gi) gi.textContent=fmt(inputGST);
-    if(gi) gi.style.color='var(--green)';
-    if(netRow) netRow.style.display='block';
-    var no=document.getElementById('gst-net-output'); if(no) no.textContent=fmt(gstOwedTax);
-    var ni=document.getElementById('gst-net-input'); if(ni) ni.textContent=fmt(inputGST);
-    var nw=document.getElementById('gst-net-owe'); if(nw) nw.textContent=fmt(netOwe);
-    // Also update the hero headline to show net owe
-    document.getElementById('gst-box7').textContent=fmt(netOwe);
-    document.getElementById('gst-period-lbl').textContent='Net after expenses · Due: '+due.date;
+  if(gi) gi.textContent='Loading…';
+  var _gstOwedSnapshot=gstOwedTax;
+  var _dueSnapshot=due;
+  fetchReceiptsGST(gstPer.start, gstPer.end, function(rxData){
+    if(rxData&&rxData.available){
+      var inputGST=rxData.inputGST;
+      var netOwe=Math.max(0,_gstOwedSnapshot-inputGST);
+      if(gi){gi.textContent=fmt(inputGST);gi.style.color='var(--green)';}
+      if(netRow) netRow.style.display='block';
+      var no=document.getElementById('gst-net-output'); if(no) no.textContent=fmt(_gstOwedSnapshot);
+      var ni=document.getElementById('gst-net-input'); if(ni) ni.textContent=fmt(inputGST);
+      var nw=document.getElementById('gst-net-owe'); if(nw) nw.textContent=fmt(netOwe);
+      var b7=document.getElementById('gst-box7'); if(b7) b7.textContent=fmt(netOwe);
+      var pl=document.getElementById('gst-period-lbl'); if(pl) pl.textContent='Net after expenses · Due: '+_dueSnapshot.date;
+    } else {
+      if(gi){gi.textContent='Not linked';gi.style.color='';}
+      if(netRow) netRow.style.display='none';
+    }
     if(linkLbl) linkLbl.textContent='Open Receipts NZ →';
-  } else {
-    var rxAll=getReceiptsNZData();
-    if(gi) gi.textContent=rxAll.mismatch?'Different user':'Not linked';
-    if(netRow) netRow.style.display='none';
-    if(linkLbl) linkLbl.textContent='Open Receipts NZ →';
-  }
+  });
 
   // ── Student loan ──
   var slToggle2=document.getElementById('sl-toggle');
@@ -3934,19 +3934,58 @@ function saveQuickAdd(){
 
 
 /* ── Receipts NZ Integration ── */
+var RECEIPTS_API='https://samuelreceipts.synology.me/api';
+var RECEIPTS_SECRET='6QwWzWg72ICMnQDiVsWj9mEW4Jv9i6UAbvFsjcBF';
+
+function receiptsAuthHeaders(){
+  // Share the same token — both apps use the same Synology server and user accounts
+  var token=localStorage.getItem('nzrt_token')||localStorage.getItem('nzin_token')||'';
+  return{'Content-Type':'application/json','x-api-secret':RECEIPTS_SECRET,'Authorization':'Bearer '+token};
+}
+
 function getReceiptsNZData(){
+  // Fallback: read from localStorage if Receipts NZ is open on same device
   try{
-    // Only use Receipts NZ data if same user is logged into both apps
-    var incomeUser=(localStorage.getItem('nzin_user')||'').toLowerCase().trim();
-    var receiptsUser=(localStorage.getItem('nzrt_username')||'').toLowerCase().trim();
-    if(!incomeUser||!receiptsUser||incomeUser!==receiptsUser){
-      return {receipts:[],mileage:[],settings:{},available:false,mismatch:true};
-    }
     var receipts=JSON.parse(localStorage.getItem('nzrt5_r')||'[]');
     var mileage=JSON.parse(localStorage.getItem('nzrt5_m')||'[]');
-    var settings=JSON.parse(localStorage.getItem('nzrt5_s')||'{}');
-    return {receipts:receipts, mileage:mileage, settings:settings, available:receipts.length>0};
-  }catch(e){return {receipts:[],mileage:[],settings:{},available:false};}
+    return {receipts:receipts, mileage:mileage, available:receipts.length>0, source:'local'};
+  }catch(e){return {receipts:[],mileage:[],available:false};}
+}
+
+function fetchReceiptsGST(start, end, callback){
+  // Try server first, fall back to localStorage
+  var token=localStorage.getItem('nzrt_token')||localStorage.getItem('nzin_token')||'';
+  if(!token){
+    var local=getReceiptsNZData();
+    callback(calcInputGST(local.receipts, start, end));
+    return;
+  }
+  fetch(RECEIPTS_API+'/data',{headers:receiptsAuthHeaders()})
+  .then(function(r){return r.ok?r.json():null;})
+  .then(function(data){
+    if(!data||!data.receipts){
+      var local=getReceiptsNZData();
+      callback(calcInputGST(local.receipts, start, end));
+      return;
+    }
+    // Cache locally for offline use
+    try{localStorage.setItem('nzrt5_r',JSON.stringify(data.receipts));}catch(e){}
+    callback(calcInputGST(data.receipts, start, end));
+  })
+  .catch(function(){
+    var local=getReceiptsNZData();
+    callback(calcInputGST(local.receipts, start, end));
+  });
+}
+
+function calcInputGST(receipts, start, end){
+  if(!receipts||!receipts.length) return {inputGST:0, count:0, available:false};
+  var periodR=receipts.filter(function(r){
+    var d=parseDate(r.date||r.created_at||'');
+    return d>=start&&d<=end;
+  });
+  var inputGST=periodR.reduce(function(s,r){return s+gstForReceiptsItem(r);},0);
+  return {inputGST:inputGST, count:periodR.length, available:true};
 }
 
 function gstForReceiptsItem(r){
@@ -3957,16 +3996,7 @@ function gstForReceiptsItem(r){
   return amount*(3/23);
 }
 
-function getReceiptsGSTForPeriod(start, end){
-  var data=getReceiptsNZData();
-  if(!data.available) return null;
-  var periodReceipts=data.receipts.filter(function(r){
-    var d=parseDate(r.date||r.created_at||'');
-    return d>=start&&d<=end;
-  });
-  var inputGST=periodReceipts.reduce(function(s,r){return s+gstForReceiptsItem(r);},0);
-  return {inputGST:inputGST, count:periodReceipts.length, available:true};
-}
+// getReceiptsGSTForPeriod replaced by fetchReceiptsGST async
 
 function openReceiptsNZ(){
   // Navigate to Receipts NZ
