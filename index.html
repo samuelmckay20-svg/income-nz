@@ -644,6 +644,29 @@ body{
               <div class="hs-val c-green" id="tax-wht-paid">$0</div>
             </div>
           </div>
+          <!-- Net GST — shown when Receipts NZ data available -->
+          <div id="gst-net-row" style="display:none;margin:12px 0 0;padding:12px 14px;background:rgba(0,122,255,.08);border-radius:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px">Net GST position</span>
+              <span style="font-size:10px;color:var(--t3)">Output − Input</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;text-align:center;background:rgba(255,59,48,.08);border-radius:8px;padding:8px 4px">
+                <div style="font-size:10px;color:var(--t3);margin-bottom:2px">Output</div>
+                <div style="font-size:16px;font-weight:700;color:var(--red)" id="gst-net-output">$0</div>
+              </div>
+              <span style="color:var(--t3);font-weight:600">−</span>
+              <div style="flex:1;text-align:center;background:rgba(52,199,89,.08);border-radius:8px;padding:8px 4px">
+                <div style="font-size:10px;color:var(--t3);margin-bottom:2px">Input</div>
+                <div style="font-size:16px;font-weight:700;color:var(--green)" id="gst-net-input">$0</div>
+              </div>
+              <span style="color:var(--t3);font-weight:600">=</span>
+              <div style="flex:1;text-align:center;background:rgba(0,122,255,.1);border-radius:8px;padding:8px 4px">
+                <div style="font-size:10px;color:var(--t3);margin-bottom:2px">Owe IRD</div>
+                <div style="font-size:16px;font-weight:700;color:var(--blue)" id="gst-net-owe">$0</div>
+              </div>
+            </div>
+          </div>
           <div class="hero-divider" style="margin-top:16px"></div>
           <!-- hidden elements still needed by JS -->
           <span id="tax-on-income" style="display:none"></span>
@@ -721,9 +744,9 @@ body{
               <span style="font-size:13px;color:var(--t3)">GST number</span>
               <input class="g-input" id="gst-num" type="text" placeholder="XX-XXX-XXX" inputmode="numeric" maxlength="11" onblur="saveSettings()" style="font-size:13px;text-align:right;max-width:140px">
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-top:2px;border-top:0.5px solid var(--sep)" onclick="showToast('Receipts NZ integration coming soon')">
-              <span style="font-size:13px;color:var(--t3)">Input tax (expenses)</span>
-              <span style="font-size:13px;font-weight:600;color:var(--blue)">Connect Receipts NZ →</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-top:2px;border-top:0.5px solid var(--sep)" onclick="openReceiptsNZ()">
+              <span style="font-size:13px;color:var(--t3)">Expense app</span>
+              <span style="font-size:13px;font-weight:600;color:var(--blue)" id="receipts-link-lbl">Open Receipts NZ →</span>
             </div>
           </div>
         </div>
@@ -2401,9 +2424,33 @@ function renderTaxTab(){
   var periodLabel=gstPer.start.toLocaleDateString('en-NZ',{day:'numeric',month:'short'})+' – '+gstPer.end.toLocaleDateString('en-NZ',{day:'numeric',month:'short'});
   document.getElementById('gst-period-lbl').textContent=periodLabel+' · Due: '+due.date;
   var cp=document.getElementById('gst-current-period'); if(cp) cp.textContent=periodLabel;
-  var gi=document.getElementById('gst-input'); if(gi) gi.textContent='Not linked';
   if(settings.gstFreq)document.getElementById('gst-freq').value=settings.gstFreq;
   if(settings.gstNum)document.getElementById('gst-num').value=settings.gstNum;
+
+  // Pull input tax from Receipts NZ
+  var rxData=getReceiptsGSTForPeriod(gstPer.start,gstPer.end);
+  var gi=document.getElementById('gst-input');
+  var netRow=document.getElementById('gst-net-row');
+  var linkLbl=document.getElementById('receipts-link-lbl');
+  if(rxData&&rxData.available){
+    var inputGST=rxData.inputGST;
+    var netOwe=Math.max(0,gstOwedTax-inputGST);
+    if(gi) gi.textContent=fmt(inputGST);
+    if(gi) gi.style.color='var(--green)';
+    if(netRow) netRow.style.display='block';
+    var no=document.getElementById('gst-net-output'); if(no) no.textContent=fmt(gstOwedTax);
+    var ni=document.getElementById('gst-net-input'); if(ni) ni.textContent=fmt(inputGST);
+    var nw=document.getElementById('gst-net-owe'); if(nw) nw.textContent=fmt(netOwe);
+    // Also update the hero headline to show net owe
+    document.getElementById('gst-box7').textContent=fmt(netOwe);
+    document.getElementById('gst-period-lbl').textContent='Net after expenses · Due: '+due.date;
+    if(linkLbl) linkLbl.textContent='Open Receipts NZ →';
+  } else {
+    var rxAll=getReceiptsNZData();
+    if(gi) gi.textContent=rxAll.mismatch?'Different user':'Not linked';
+    if(netRow) netRow.style.display='none';
+    if(linkLbl) linkLbl.textContent='Open Receipts NZ →';
+  }
 
   // ── Student loan ──
   var slToggle2=document.getElementById('sl-toggle');
@@ -3884,6 +3931,47 @@ function saveQuickAdd(){
   showToast('Saved — '+client+' '+fmt(amount));
 }
 
+
+
+/* ── Receipts NZ Integration ── */
+function getReceiptsNZData(){
+  try{
+    // Only use Receipts NZ data if same user is logged into both apps
+    var incomeUser=(localStorage.getItem('nzin_user')||'').toLowerCase().trim();
+    var receiptsUser=(localStorage.getItem('nzrt_username')||'').toLowerCase().trim();
+    if(!incomeUser||!receiptsUser||incomeUser!==receiptsUser){
+      return {receipts:[],mileage:[],settings:{},available:false,mismatch:true};
+    }
+    var receipts=JSON.parse(localStorage.getItem('nzrt5_r')||'[]');
+    var mileage=JSON.parse(localStorage.getItem('nzrt5_m')||'[]');
+    var settings=JSON.parse(localStorage.getItem('nzrt5_s')||'{}');
+    return {receipts:receipts, mileage:mileage, settings:settings, available:receipts.length>0};
+  }catch(e){return {receipts:[],mileage:[],settings:{},available:false};}
+}
+
+function gstForReceiptsItem(r){
+  // Mirror Receipts NZ gstForReceipt logic
+  if(!r||r.gst==='no') return 0;
+  var amount=parseFloat(r.amount)||0;
+  if(r.gst==='partial') return amount*(3/23)*0.5; // 50% for entertainment
+  return amount*(3/23);
+}
+
+function getReceiptsGSTForPeriod(start, end){
+  var data=getReceiptsNZData();
+  if(!data.available) return null;
+  var periodReceipts=data.receipts.filter(function(r){
+    var d=parseDate(r.date||r.created_at||'');
+    return d>=start&&d<=end;
+  });
+  var inputGST=periodReceipts.reduce(function(s,r){return s+gstForReceiptsItem(r);},0);
+  return {inputGST:inputGST, count:periodReceipts.length, available:true};
+}
+
+function openReceiptsNZ(){
+  // Navigate to Receipts NZ
+  window.open('https://samuelmckay20-svg.github.io/receipts-nz/', '_blank');
+}
 
 /* ── Client Profiles ── */
 function getClientProfile(name){
