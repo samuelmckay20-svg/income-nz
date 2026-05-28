@@ -454,7 +454,7 @@ body{
 
   <div class="navbar">
     <div class="navbar-inner">
-      <div style="width:32px"></div>
+      <button id="nav-sync-btn" onclick="manualSync()" style="width:32px;height:32px;border-radius:50%;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--t2);-webkit-tap-highlight-color:transparent;flex-shrink:0" title="Sync">&#x21BB;</button>
       <span class="navbar-title" id="nav-title">Income</span>
       <div class="avatar" id="nav-avatar" onclick="openModal('modal-account')">S</div>
     </div>
@@ -1498,6 +1498,51 @@ function loadLocal(){
 function save(){ saveLocal(); syncToServer(); }
 
 /* ── Sync ── */
+
+function manualSync(){
+  var btn=document.getElementById('nav-sync-btn');
+  if(btn){btn.style.opacity='0.4';btn.style.pointerEvents='none';}
+  var spinning=true, angle=0;
+  var spinInterval=setInterval(function(){
+    angle=(angle+20)%360;
+    if(btn) btn.style.transform='rotate('+angle+'deg)';
+    if(!spinning){clearInterval(spinInterval);if(btn){btn.style.transform='';btn.style.opacity='';btn.style.pointerEvents='';}}
+  },30);
+  var deletedIds=invBin.map(function(i){return String(i.id);}).filter(function(id){return !id.startsWith('local_');});
+  var payload={
+    invoices:invoices.map(function(inv){var out=Object.assign({},inv);if(inv.image&&_imgCache.get(inv.id)===inv.image.length)delete out.image;return out;}),
+    bankTxns:bankTxns,settings:settings,deletedInvoiceIds:deletedIds
+  };
+  fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
+  .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
+  .then(function(data){
+    if(!data) throw new Error('No response');
+    if(data.idMap){
+      Object.keys(data.idMap).forEach(function(localId){
+        var inv=invoices.find(function(i){return String(i.id)===localId;});
+        if(inv){inv.id=data.idMap[localId];delete inv._localOnly;}
+      });
+    }
+    invoices.forEach(function(inv){if(!String(inv.id).startsWith('local_')) delete inv._localOnly;});
+    saveLocal();
+    return fetch(API_BASE+'/data',{headers:authHeaders()});
+  })
+  .then(function(r){if(!r) return null; return r.json();})
+  .then(function(data){
+    if(!data) return;
+    var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
+    var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
+    var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
+    var unsyncedLocal=invoices.filter(function(i){return i._localOnly&&String(i.id).startsWith('local_')&&!serverIds.has(String(i.id));});
+    invoices=serverInvoices.concat(unsyncedLocal);
+    bankTxns=data.bankTxns||bankTxns; settings=data.settings||settings;
+    saveLocal(); renderAll();
+    showToast('Synced ✓');
+  })
+  .catch(function(e){showToast('Sync failed — check connection');})
+  .finally(function(){spinning=false;});
+}
+
 function syncToServer(){
   if(_syncInFlight){_syncPending=true;return;}
   if(!LS.get(LS_TOKEN))return;
