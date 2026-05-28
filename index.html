@@ -2796,6 +2796,16 @@ function openInvDetail(id){
   if(!inv) return;
   _detailInvId=id;
 
+  // Fetch image from server if not already loaded
+  if(!inv.image&&!inv.remittance_image&&LS.get(LS_TOKEN)){
+    fetch(API_BASE+'/invoice/'+id+'/image',{headers:authHeaders()})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(d){
+      if(d&&d.image){inv.image=d.image;saveLocal();}
+      if(d&&d.remittance_image){inv.remittance_image=d.remittance_image;saveLocal();}
+    }).catch(function(){});
+  }
+
   var status=isOverdue(inv)?'overdue':(inv.status||'unpaid');
   var amt=parseFloat(inv.amount)||0;
   var gstAmt=inv.gst==='yes'?amt*3/23:0;
@@ -2850,7 +2860,9 @@ function openInvDetail(id){
 
   // Bottom actions
   var actionsEl=document.getElementById('inv-detail-actions');
-  var viewBtn=inv.image?'<button class="inv-det-view" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">View invoice file</button>':'';
+  var _fileData=inv.image||inv.remittance_image||null;
+  var _fileLabel=inv.remittance_image&&!inv.image?'View remittance':'View invoice file';
+  var viewBtn=_fileData?'<button class="inv-det-view" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">'+_fileLabel+'</button>':'';
   actionsEl.innerHTML=viewBtn+
     '<button class="inv-det-edit" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:var(--fill);color:var(--t1);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">Edit invoice</button>'+
     '<button class="inv-det-del" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(255,59,48,.1);color:var(--red);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">Delete invoice</button>';
@@ -2870,7 +2882,7 @@ function openInvDetail(id){
     var iid=b.dataset.iid;
     if(b.classList.contains('inv-det-edit')){closeModal('modal-inv-detail');editInvoice(iid);}
     if(b.classList.contains('inv-det-del')){closeModal('modal-inv-detail');deleteInvoice(iid);}
-    if(b.classList.contains('inv-det-view')){var vi=invoices.find(function(i){return String(i.id)===String(iid);});if(vi&&vi.image)openViewer(vi.image,vi.client);}
+    if(b.classList.contains('inv-det-view')){var vi=invoices.find(function(i){return String(i.id)===String(iid);});if(vi){var fd=vi.image||vi.remittance_image;if(fd)openViewer(fd,vi.client);}}
   };
 
   openModal('modal-inv-detail');
@@ -3230,7 +3242,7 @@ function scanRemittance(){
   var resultEl=document.getElementById('paid-ai-result');
   btn.disabled=true;
   btn.innerHTML='<span class="spinner"></span> Reading remittance...';
-  resultEl.style.display='none';
+  resultEl.style.display='none'; resultEl.innerHTML='';
   // Clear ALL fields so stale data doesn't persist between scans
   ['paid-gross','paid-gst-amt','paid-wht','paid-net'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
