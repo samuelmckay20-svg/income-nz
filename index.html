@@ -703,27 +703,27 @@ body{
       <div class="hero-wrap" style="padding-top:0;padding-bottom:4px">
         <div class="hero-card" style="overflow:visible">
           <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--accent));border-radius:3px 3px 0 0"></div>
-          <div class="hero-lbl">GST to pay IRD</div>
-          <div class="hero-amount c-red" id="gst-box7">$0</div>
-          <div class="hero-period" id="gst-period-lbl">Next filing —</div>
+          <div class="hero-lbl" id="gst-hero-lbl">GST output this period</div>
+          <div class="hero-amount c-blue" id="gst-box7">$0</div>
+          <div class="hero-period" id="gst-period-lbl">Current period</div>
           <div class="hero-divider"></div>
           <div class="hero-stats">
             <div class="hero-stat" style="flex:1">
-              <div class="hs-lbl">Collected</div>
-              <div class="hs-val c-green" id="gst-box5">$0</div>
-              <div style="font-size:10px;color:var(--t3);margin-top:2px">Paid invoices</div>
-            </div>
-            <div class="hero-stat-sep"></div>
-            <div class="hero-stat" style="flex:1;padding-left:12px">
-              <div class="hs-lbl">You owe IRD</div>
+              <div class="hs-lbl">Output</div>
               <div class="hs-val c-red" id="gst-box7b">$0</div>
-              <div style="font-size:10px;color:var(--t3);margin-top:2px">All invoices</div>
+              <div style="font-size:10px;color:var(--t3);margin-top:2px">You collected</div>
             </div>
             <div class="hero-stat-sep"></div>
             <div class="hero-stat" style="flex:1;padding-left:12px">
-              <div class="hs-lbl">Input tax</div>
+              <div class="hs-lbl">Input</div>
               <div class="hs-val c-green" id="gst-input">—</div>
               <div style="font-size:10px;color:var(--t3);margin-top:2px">From expenses</div>
+            </div>
+            <div class="hero-stat-sep"></div>
+            <div class="hero-stat" style="flex:1;padding-left:12px">
+              <div class="hs-lbl">Net owe IRD</div>
+              <div class="hs-val c-orange" id="gst-net-headline">$0</div>
+              <div style="font-size:10px;color:var(--t3);margin-top:2px">After expenses</div>
             </div>
           </div>
           <div class="hero-divider" style="margin-top:16px"></div>
@@ -2417,13 +2417,14 @@ function renderTaxTab(){
     .reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
   var gstOwedTax=periodInv.filter(function(i){return i.gst==='yes';})
     .reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
-  document.getElementById('gst-box5').textContent=fmt(gstCollectedTax);
   document.getElementById('gst-box7').textContent=fmt(gstOwedTax);
   var b7=document.getElementById('gst-box7b'); if(b7) b7.textContent=fmt(gstOwedTax);
+  var nh=document.getElementById('gst-net-headline'); if(nh) nh.textContent=fmt(gstOwedTax); // updated after input tax loads
   var due=nextGSTDue();
   var periodLabel=gstPer.start.toLocaleDateString('en-NZ',{day:'numeric',month:'short'})+' – '+gstPer.end.toLocaleDateString('en-NZ',{day:'numeric',month:'short'});
   document.getElementById('gst-period-lbl').textContent=periodLabel+' · Due: '+due.date;
   var cp=document.getElementById('gst-current-period'); if(cp) cp.textContent=periodLabel;
+  var hl=document.getElementById('gst-hero-lbl'); if(hl) hl.textContent='GST output this period';
   if(settings.gstFreq)document.getElementById('gst-freq').value=settings.gstFreq;
   if(settings.gstNum)document.getElementById('gst-num').value=settings.gstNum;
 
@@ -2443,8 +2444,9 @@ function renderTaxTab(){
       var no=document.getElementById('gst-net-output'); if(no) no.textContent=fmt(_gstOwedSnapshot);
       var ni=document.getElementById('gst-net-input'); if(ni) ni.textContent=fmt(inputGST);
       var nw=document.getElementById('gst-net-owe'); if(nw) nw.textContent=fmt(netOwe);
-      var b7=document.getElementById('gst-box7'); if(b7) b7.textContent=fmt(netOwe);
-      var pl=document.getElementById('gst-period-lbl'); if(pl) pl.textContent='Net after expenses · Due: '+_dueSnapshot.date;
+      var nh=document.getElementById('gst-net-headline'); if(nh) nh.textContent=fmt(netOwe);
+      var hl=document.getElementById('gst-hero-lbl'); if(hl) hl.textContent='GST output this period';
+      var pl=document.getElementById('gst-period-lbl'); if(pl) pl.textContent=periodLabel+' · Due: '+_dueSnapshot.date;
     } else {
       if(gi){gi.textContent='Not linked';gi.style.color='';}
       if(netRow) netRow.style.display='none';
