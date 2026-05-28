@@ -454,7 +454,7 @@ body{
 
   <div class="navbar">
     <div class="navbar-inner">
-      <button id="nav-sync-btn" onclick="manualSync()" style="width:32px;height:32px;border-radius:50%;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--t2);-webkit-tap-highlight-color:transparent;flex-shrink:0" title="Sync">&#x21BB;</button>
+      <div style="width:32px"></div>
       <span class="navbar-title" id="nav-title">Income</span>
       <div class="avatar" id="nav-avatar" onclick="openModal('modal-account')">S</div>
     </div>
@@ -1493,59 +1493,11 @@ function loadLocal(){
   try{bankTxns=JSON.parse(LS.get(LS_BANK)||'[]');}catch(e){bankTxns=[];}
   try{settings=JSON.parse(LS.get(LS_SETTINGS)||'{}');}catch(e){settings={};}
   try{invBin=JSON.parse(LS.get('nzin_invbin')||'[]');}catch(e){invBin=[];}
-  try{clientProfiles=JSON.parse(LS.get('nzin_cp')||'{}');}catch(e){clientProfiles={};}
-  // Log unsynced items so we can verify they survive
-  var unsynced=invoices.filter(function(i){return i._localOnly;});
-  if(unsynced.length) console.log('loadLocal: '+unsynced.length+' unsynced local items');
+  try{clientProfiles=JSON.parse(LS.get('nzin_cp')||'{}');}catch(e){clientProfiles={}; }
 }
 function save(){ saveLocal(); syncToServer(); }
 
 /* ── Sync ── */
-var _syncRetryTimer=null;
-
-function manualSync(){
-  var btn=document.getElementById('nav-sync-btn');
-  if(btn){btn.style.opacity='0.4';btn.style.pointerEvents='none';}
-  // Spin the icon
-  var spinning=true;
-  var angle=0;
-  var spinInterval=setInterval(function(){
-    angle=(angle+20)%360;
-    if(btn) btn.style.transform='rotate('+angle+'deg)';
-    if(!spinning){clearInterval(spinInterval);if(btn){btn.style.transform='';btn.style.opacity='';btn.style.pointerEvents='';}}
-  },30);
-  // Sync then reload from server
-  var deletedIds=invBin.map(function(i){return i.id;}).filter(function(id){return !String(id).startsWith('local_');});
-  var payload={
-    invoices:invoices.map(function(inv){var out=Object.assign({},inv);if(inv.image&&_imgCache.get(inv.id)===inv.image.length)delete out.image;return out;}),
-    bankTxns:bankTxns,settings:settings,deletedInvoiceIds:deletedIds
-  };
-  fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
-  .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
-  .then(function(data){
-    if(!data) throw new Error('No response');
-    if(data.idMap) invoices.forEach(function(inv){if(data.idMap[inv.id]){inv.id=data.idMap[inv.id];delete inv._localOnly;}});
-    invoices.forEach(function(inv){if(!String(inv.id).startsWith('local_')) delete inv._localOnly;});
-    saveLocal();
-    return fetch(API_BASE+'/data',{headers:authHeaders()});
-  })
-  .then(function(r){if(!r) return null;return r.json();})
-  .then(function(data){
-    if(!data) return;
-    var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
-    var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
-    var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
-    var unsyncedLocal=invoices.filter(function(i){return i._localOnly&&!serverIds.has(String(i.id));});
-    invoices=serverInvoices.concat(unsyncedLocal);
-    bankTxns=data.bankTxns||bankTxns; settings=data.settings||settings;
-    saveLocal(); renderAll();
-    showToast('Synced ✓');
-  })
-  .catch(function(e){showToast('Sync failed — check connection');})
-  .finally(function(){spinning=false;});
-}
-
-
 function syncToServer(){
   if(_syncInFlight){_syncPending=true;return;}
   if(!LS.get(LS_TOKEN))return;
@@ -1567,15 +1519,14 @@ function syncToServer(){
         if(inv){inv.id=data.idMap[localId];delete inv._localOnly;}
       });
     }
-    // Clear _localOnly from anything with a real numeric ID
+    // Clear _localOnly from everything with a real (non-local_) ID
     invoices.forEach(function(inv){
       if(!String(inv.id).startsWith('local_')) delete inv._localOnly;
     });
     saveLocal();
-    if(_syncRetryTimer){clearTimeout(_syncRetryTimer);_syncRetryTimer=null;}
   })
   .catch(function(e){
-    console.warn('Sync failed, will retry in 30s');
+    console.warn('Sync failed, retrying in 30s');
     if(!_syncRetryTimer) _syncRetryTimer=setTimeout(function(){_syncRetryTimer=null;syncToServer();},30000);
   })
   .finally(function(){_syncInFlight=false;if(_syncPending){_syncPending=false;syncToServer();}});
@@ -1588,10 +1539,9 @@ function loadFromServer(){
   .then(function(data){
     if(!data)return;
     var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
-    // Server is source of truth — filter out binned items
     var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
-    // Only keep local items that are genuinely unsynced (local_ prefix AND not on server)
+    // Only keep items that are BOTH _localOnly AND have a local_ ID (genuinely unsynced)
     var unsyncedLocal=invoices.filter(function(i){
       return i._localOnly && String(i.id).startsWith('local_') && !serverIds.has(String(i.id));
     });
@@ -1599,7 +1549,6 @@ function loadFromServer(){
     bankTxns=data.bankTxns||bankTxns;
     settings=data.settings||settings;
     saveLocal(); renderAll();
-    // If we have unsynced items or bin to clear, push to server
     if(unsyncedLocal.length||binnedIds.size) syncToServer();
   })
   .catch(function(e){console.warn('Load:',e);});
