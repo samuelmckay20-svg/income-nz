@@ -2984,7 +2984,7 @@ function scanInvoiceForm(){
   fetch(API_BASE+'/claude',{
     method:'POST',
     headers:authHeaders(),
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,messages:messages})
+    body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:500,messages:messages})
   })
   .then(function(r){
     if(r.status===401){showToast('Session expired — please log in again');throw new Error('401');}
@@ -3494,7 +3494,7 @@ function scanRemittance(){
       {type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfB64}},
       {type:'text',text:remPrompt}
     ]}];
-    fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:messages})})
+    fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages:messages})})
     .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
     .then(handleScanResponse)
     .catch(function(e){
@@ -3511,7 +3511,7 @@ function scanRemittance(){
       {type:'image',source:{type:'base64',media_type:imgMime,data:imgB64}},
       {type:'text',text:remPrompt}
     ]}];
-    fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:messages})})
+    fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages:messages})})
     .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
     .then(handleScanResponse)
     .catch(function(e){
@@ -4489,6 +4489,18 @@ function pickExistingClient(wrongName){
   showSheet('Which client is this?',actions);
 }
 
+
+function autoDetectModel(){
+  fetch(API_BASE+'/models',{headers:authHeaders()})
+  .then(function(r){return r.ok?r.json():null;})
+  .then(function(data){
+    if(!data||!data.model) return;
+    CLAUDE_MODEL=data.model;
+    console.log('Claude model:',CLAUDE_MODEL);
+  })
+  .catch(function(){});
+}
+
 /* ── Init pinch zoom on viewer ── */
 function initPinchZoom(){
   var viewer=document.getElementById('img-viewer');
@@ -4532,7 +4544,7 @@ function initPinchZoom(){
     document.getElementById('nav-avatar').textContent=u.charAt(0).toUpperCase();
     document.getElementById('acct-name').textContent=u;
     document.getElementById('acct-email').textContent=LS.get(LS_ETOKEN)||'';
-    loadLocal(); showScreen('main-screen'); renderAll(); loadFromServer();
+    loadLocal(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
   } else {
     showScreen('login-screen');
   }
@@ -4605,7 +4617,7 @@ function callClaudeForScan(b64, mime){
   fetch(API_BASE+'/claude',{
     method:'POST',
     headers:authHeaders(),
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,messages:messages})
+    body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:500,messages:messages})
   })
   .then(function(r){return r.json();})
   .then(function(data){
