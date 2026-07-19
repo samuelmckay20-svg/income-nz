@@ -1532,14 +1532,23 @@ function manualSync(){
     if(!spinning){clearInterval(spinInterval);if(btn){btn.style.transform='';btn.style.opacity='';btn.style.pointerEvents='';}}
   },30);
   var deletedIds=invBin.map(function(i){return String(i.id);}).filter(function(id){return !id.startsWith('local_');});
+  // Strip images from payload to avoid size limits
   var payload={
-    invoices:invoices.map(function(inv){var out=Object.assign({},inv);if(inv.image&&_imgCache.get(inv.id)===inv.image.length)delete out.image;return out;}),
-    bankTxns:bankTxns,settings:settings,deletedInvoiceIds:deletedIds
+    invoices:invoices.map(function(inv){
+      var out=Object.assign({},inv);
+      delete out.image; delete out.remittance_image;
+      return out;
+    }),
+    bankTxns:bankTxns, settings:settings, deletedInvoiceIds:deletedIds
   };
   fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
-  .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
+  .then(function(r){
+    if(r.status===401){handle401();spinning=false;return null;}
+    if(!r.ok) throw new Error('Server error '+r.status);
+    return r.json();
+  })
   .then(function(data){
-    if(!data) throw new Error('No response');
+    if(!data) return null;
     if(data.idMap){
       Object.keys(data.idMap).forEach(function(localId){
         var inv=invoices.find(function(i){return String(i.id)===localId;});
@@ -1550,7 +1559,7 @@ function manualSync(){
     saveLocal();
     return fetch(API_BASE+'/data',{headers:authHeaders()});
   })
-  .then(function(r){if(!r) return null; return r.json();})
+  .then(function(r){if(!r) return null; if(!r.ok) throw new Error('Load error '+r.status); return r.json();})
   .then(function(data){
     if(!data) return;
     var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
@@ -1562,7 +1571,10 @@ function manualSync(){
     saveLocal(); renderAll();
     showToast('Synced ✓');
   })
-  .catch(function(e){showToast('Sync failed — check connection');})
+  .catch(function(e){
+    console.error('Sync error:',e);
+    showToast('Sync failed — '+e.message);
+  })
   .finally(function(){spinning=false;});
 }
 
