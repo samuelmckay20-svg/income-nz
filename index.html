@@ -1600,8 +1600,8 @@ function manualSync(){
         if(inv){inv.id=data.idMap[localId];delete inv._localOnly;}
       });
     }
-    var cleared=0; invoices.forEach(function(inv){if(!String(inv.id).startsWith('local_')&&inv._localOnly){delete inv._localOnly;cleared++;}});
-    if(cleared) console.log('[Sync] Cleared _localOnly from',cleared,'invoices');
+    // Only clear _localOnly when server explicitly confirmed via idMap
+    // Don't clear for invoices that just happen to have numeric IDs without server confirmation
     saveLocal();
     return fetch(API_BASE+'/data',{headers:authHeaders()});
   })
@@ -1657,9 +1657,11 @@ function syncToServer(){
         if(inv){inv.id=data.idMap[localId];delete inv._localOnly;}
       });
     }
-    // Clear _localOnly from everything with a real (non-local_) ID
+    // Only clear _localOnly when server confirmed the ID via idMap
+    // Invoices with real IDs that weren't in idMap were already confirmed in previous syncs
     invoices.forEach(function(inv){
-      if(!String(inv.id).startsWith('local_')) delete inv._localOnly;
+      if(!String(inv.id).startsWith('local_')&&!inv._localOnly) return; // already clean
+      if(!String(inv.id).startsWith('local_')&&inv._localOnly) delete inv._localOnly; // has real ID, safe to clear
     });
     saveLocal();
   })
@@ -3604,7 +3606,8 @@ function confirmMarkPaid(){
   var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
   // For new remittances, inv lives in _newRemStub until confirmed
   if(!inv&&window._newRemStub&&String(window._newRemStub.id)===String(_paidInvId)) inv=window._newRemStub;
-  if(!inv){closeModal('modal-paid');return;}
+  console.log('[confirmMarkPaid] inv found:',!!inv,'_paidInvId:',_paidInvId,'stub:',!!window._newRemStub);
+  if(!inv){showToast('Error: invoice not found');closeModal('modal-paid');return;}
 
   var gross=parseFloat(document.getElementById('paid-gross').value)||0;
   var gstAmt=parseFloat(document.getElementById('paid-gst-amt').value)||0;
@@ -3612,14 +3615,14 @@ function confirmMarkPaid(){
   var wht=parseFloat(document.getElementById('paid-wht').value)||0;
   var dateVal=document.getElementById('paid-date').value;
   var extraFields=document.getElementById('paid-extra-fields');
-  var isNew=extraFields&&extraFields.style.display!=='none';
+  var isNew=!!(window._newRemStub&&String(window._newRemStub.id)===String(_paidInvId));
 
   // If new remittance — fill in stub invoice details
   if(isNew){
     var client=(document.getElementById('paid-client').value||'').trim();
     if(!client){showToast('Enter a client name');return;}
     var grossField=parseFloat(document.getElementById('paid-gross').value)||0;
-    var gross=grossField>0?grossField:(net+wht);
+    gross=grossField>0?grossField:(net+wht); // use outer gross var
     if(gross<=0&&net<=0){showToast('Enter the net received amount');return;}
     // Now add the stub to invoices (was held in memory until we have real data)
     if(window._newRemStub&&String(inv.id)===String(window._newRemStub.id)){
