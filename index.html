@@ -3480,135 +3480,104 @@ function scanRemittance(){
     var el=document.getElementById(id); if(el) el.value='';
   });
   updatePaidSummary();
+
   var isImage=mime.startsWith('image/');
   var b64=data.split(',')[1];
-  var remPrompt='NZ remittance or payslip. Reply ONLY with JSON. No markdown.\n'+
-    'Single invoice: {"gross_inc_gst":649.75,"gst_amount":84.75,"wht_amount":113.00,"net_paid":536.75,"wht_rate":20,"payment_date":"2026-06-04","payer":"Sky Network Television Limited","invoice_number":"SKY-0127","payer_gst":null,"invoices":null,"total_net_paid":null}\n'+
-    'Multiple invoices: {"gross_inc_gst":null,"gst_amount":null,"wht_amount":null,"net_paid":null,"wht_rate":20,"payment_date":"2026-04-09","payer":"Sky Network Television Limited","invoice_number":null,"payer_gst":null,"total_net_paid":880.00,'+
-    '"invoices":[{"invoice_number":"SKY-1726","gross_inc_gst":500.00,"gst_amount":65.22,"wht_amount":100.00,"net_paid":400.00},{"invoice_number":"SKY-1826","gross_inc_gst":600.00,"gst_amount":78.26,"wht_amount":120.00,"net_paid":480.00}]}\n'+
-    'Rules: GST=amount*3/23. WH is on ex-GST base. net=gross-wht. Use null for missing fields.';
-  var messages=[{role:'user',content:[
-    isImage?{type:'image',source:{type:'base64',media_type:mime,data:b64}}:{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
-    {type:'text',text:remPrompt}
-  ]}];
-  fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:messages})})
-  .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
-  .then(function(resp){
-    var text=(resp.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
-    console.log('Scan raw response:',text.slice(0,500));
-    var cleanText=text.replace(/```json|```/gi,'').trim();
-    // Extract JSON if wrapped in other text
-    var jsonMatch=cleanText.match(/\{[\s\S]*\}/);
-    if(!jsonMatch) throw new Error('No JSON found in response: '+text.slice(0,100));
-    var parsed=JSON.parse(jsonMatch[0]);
 
-    // Store scan data
-    window._lastRemittanceScan={
-      payer:parsed.payer||null,
-      whtRate:parsed.wht_rate||0,
-      payerGst:parsed.payer_gst||null,
-      multi:parsed.invoices&&parsed.invoices.length>1
-    };
+  var remPrompt='NZ remittance or payslip. Reply ONLY with JSON. No markdown. '+
+    'Single: {"gross_inc_gst":649.75,"gst_amount":84.75,"wht_amount":113.00,"net_paid":536.75,"wht_rate":20,"payment_date":"2026-06-04","payer":"Sky","invoice_number":"SKY-0127","payer_gst":null,"invoices":null,"total_net_paid":null} '+
+    'Multi: {"gross_inc_gst":null,"wht_rate":20,"payment_date":"2026-04-09","payer":"Sky","invoice_number":null,"payer_gst":null,"total_net_paid":880,"invoices":[{"invoice_number":"SKY-1726","gross_inc_gst":500,"gst_amount":65.22,"wht_amount":100,"net_paid":400},{"invoice_number":"SKY-1826","gross_inc_gst":600,"gst_amount":78.26,"wht_amount":120,"net_paid":480}]} '+
+    'Rules: GST=gross*3/23. WH on ex-GST base. net=gross-wht. null for missing.';
 
-    if(parsed.invoices&&parsed.invoices.length>0){
-      // MULTI-INVOICE remittance (e.g. Sky)
-      window._lastRemittanceScan.multiInvoices=parsed.invoices;
-      window._lastRemittanceScan.paymentDate=parsed.payment_date;
+  function doScan(imgB64, imgMime){
+    var messages=[{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:imgMime,data:imgB64}},
+      {type:'text',text:remPrompt}
+    ]}];
+    fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:messages})})
+    .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
+    .then(function(resp){
+      if(resp.error) throw new Error('API: '+(resp.error.message||JSON.stringify(resp.error)));
+      var text=(resp.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
+      console.log('Scan raw:',text.slice(0,600));
+      if(!text) throw new Error('Empty response from Claude');
+      var ct=text.replace(/```json|```/gi,'').trim();
+      var js2=ct.indexOf('{'), je2=ct.lastIndexOf('}')+1;
+      if(js2===-1||je2===0) throw new Error('No JSON found. Got: '+ct.slice(0,80));
+      var parsed=JSON.parse(ct.slice(js2,je2));
 
-      // Show summary in result area + offer to create multiple invoices
-      var totalGross=parsed.invoices.reduce(function(s,inv){return s+(parseFloat(inv.gross_inc_gst)||0);},0);
-      var totalWht=parsed.invoices.reduce(function(s,inv){return s+(parseFloat(inv.wht_amount)||0);},0);
-      var totalNet=parsed.total_net_paid||parsed.invoices.reduce(function(s,inv){return s+(parseFloat(inv.net_paid)||0);},0);
+      window._lastRemittanceScan={
+        payer:parsed.payer||null,
+        whtRate:parsed.wht_rate||0,
+        payerGst:parsed.payer_gst||null,
+        multi:!!(parsed.invoices&&parsed.invoices.length>1)
+      };
 
-      resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
-      resultEl.innerHTML='<strong>'+parsed.invoices.length+' invoices found</strong> &nbsp;&middot;&nbsp; Total net: <strong>'+fmt(totalNet)+'</strong> &nbsp;&middot;&nbsp; W/H: <strong>'+fmt(totalWht)+'</strong><br>'
-        +'<div style="margin-top:8px">'
-        +parsed.invoices.map(function(inv){
-          return '<span style="font-size:12px;color:var(--t2)">'+esc(inv.invoice_number||'?')+': '+fmt(inv.gross_inc_gst||0)+' &minus; W/H '+fmt(inv.wht_amount||0)+' = '+fmt(inv.net_paid||0)+'</span>';
-        }).join('<br>')
-        +'</div>'
-        +'<button onclick="createMultiRemittance()" class="btn-primary" style="margin-top:10px;font-size:14px;padding:10px 16px">Create '+parsed.invoices.length+' invoices</button>';
+      if(parsed.invoices&&parsed.invoices.length>0){
+        window._lastRemittanceScan.multiInvoices=parsed.invoices;
+        window._lastRemittanceScan.paymentDate=parsed.payment_date;
+        var totalGross=parsed.invoices.reduce(function(s,inv){return s+(parseFloat(inv.gross_inc_gst)||0);},0);
+        var totalWht=parsed.invoices.reduce(function(s,inv){return s+(parseFloat(inv.wht_amount)||0);},0);
+        var totalNet=parsed.total_net_paid||parsed.invoices.reduce(function(s,inv){return s+(parseFloat(inv.net_paid)||0);},0);
+        resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
+        resultEl.innerHTML='<strong>'+parsed.invoices.length+' invoices found</strong> &nbsp;&middot;&nbsp; Total net: <strong>'+fmt(totalNet)+'</strong> &nbsp;&middot;&nbsp; W/H: <strong>'+fmt(totalWht)+'</strong><br>'
+          +'<div style="margin-top:8px">'+parsed.invoices.map(function(inv){
+            return '<span style="font-size:12px;color:var(--t2)">'+esc(inv.invoice_number||'?')+': '+fmt(inv.gross_inc_gst||0)+' &minus; W/H '+fmt(inv.wht_amount||0)+' = '+fmt(inv.net_paid||0)+'</span>';
+          }).join('<br>')+'</div>'
+          +'<button onclick="createMultiRemittance()" class="btn-primary" style="margin-top:10px;font-size:14px;padding:10px 16px">Create '+parsed.invoices.length+' invoices</button>';
+        document.getElementById('paid-net').value=String(totalNet);
+        document.getElementById('paid-wht').value=String(totalWht);
+        document.getElementById('paid-gross').value=String(totalGross);
+        if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
+        if(parsed.payer){var pc=document.getElementById('paid-client');if(pc)pc.value=parsed.payer;}
+        updatePaidSummary();
+      } else {
+        if(parsed.gross_inc_gst!=null) document.getElementById('paid-gross').value=String(parsed.gross_inc_gst);
+        if(parsed.gst_amount!=null) document.getElementById('paid-gst-amt').value=String(parsed.gst_amount);
+        if(parsed.wht_amount!=null) document.getElementById('paid-wht').value=String(parsed.wht_amount);
+        if(parsed.net_paid!=null) document.getElementById('paid-net').value=String(parsed.net_paid);
+        if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
+        if(parsed.payer){var pc2=document.getElementById('paid-client');if(pc2)pc2.value=parsed.payer;}
+        var pn=document.getElementById('paid-inv-num'); if(pn) pn.value=parsed.invoice_number||pn.value||'';
+        window._lastRemittanceScan.invoiceNumber=parsed.invoice_number||null;
+        window._lastRemittanceScan.grossIncGst=parsed.gross_inc_gst||null;
+        window._lastRemittanceScan.invoiceAmount=parsed.gross_inc_gst||null;
+        updatePaidSummary();
+        var parts=['Net: <strong>'+fmt(parsed.net_paid||0)+'</strong>'];
+        if(parsed.wht_amount) parts.push('W/H: <strong>'+fmt(parsed.wht_amount)+'</strong>');
+        if(parsed.gross_inc_gst) parts.push('Gross: <strong>'+fmt(parsed.gross_inc_gst)+'</strong>');
+        resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
+        resultEl.innerHTML='✓ '+parts.join(' &nbsp;&middot;&nbsp; ');
+      }
+    })
+    .catch(function(e){
+      if(e.message!=='401'){
+        resultEl.className='ai-inv-result-err'; resultEl.style.display='block';
+        resultEl.textContent='Could not read: '+e.message;
+        console.error('Scan error:',e);
+      }
+    })
+    .finally(function(){btn.disabled=false; btn.innerHTML='<span>&#x2736;</span> Read remittance';});
+  }
 
-      // Pre-fill totals in fields for reference
-      document.getElementById('paid-net').value=String(totalNet);
-      document.getElementById('paid-wht').value=String(totalWht);
-      document.getElementById('paid-gross').value=String(totalGross);
-      if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
-      if(parsed.payer){var pc=document.getElementById('paid-client');if(pc)pc.value=parsed.payer;}
-      updatePaidSummary();
-
-    } else {
-      // SINGLE invoice remittance (Night Zone style)
-      if(parsed.gross_inc_gst!=null) document.getElementById('paid-gross').value=String(parsed.gross_inc_gst);
-      if(parsed.gst_amount!=null) document.getElementById('paid-gst-amt').value=String(parsed.gst_amount);
-      if(parsed.wht_amount!=null) document.getElementById('paid-wht').value=String(parsed.wht_amount);
-      if(parsed.net_paid!=null) document.getElementById('paid-net').value=String(parsed.net_paid);
-      if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
-      if(parsed.payer){var pc=document.getElementById('paid-client');if(pc)pc.value=parsed.payer;}
-      var pn=document.getElementById('paid-inv-num');
-      if(pn) pn.value=parsed.invoice_number||pn.value||'';
-      window._lastRemittanceScan.invoiceNumber=parsed.invoice_number||null;
-      window._lastRemittanceScan.grossIncGst=parsed.gross_inc_gst||null;
-      window._lastRemittanceScan.gstAmount=parsed.gst_amount||null;
-      window._lastRemittanceScan.whtAmount=parsed.wht_amount||null;
-      window._lastRemittanceScan.invoiceAmount=parsed.gross_inc_gst||null;
-      updatePaidSummary();
-      var resultParts=['Net: <strong>'+fmt(parsed.net_paid||0)+'</strong>'];
-      if(parsed.wht_amount) resultParts.push('W/H: <strong>'+fmt(parsed.wht_amount)+'</strong>');
-      if(parsed.gross_inc_gst) resultParts.push('Gross: <strong>'+fmt(parsed.gross_inc_gst)+'</strong>');
-      resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
-      resultEl.innerHTML='&#x2713; '+resultParts.join(' &nbsp;&middot;&nbsp; ');
-    }
-  })
-  .catch(function(e){
-    if(e.message!=='401'){
-      resultEl.className='ai-inv-result-err'; resultEl.style.display='block';
-      resultEl.textContent='Could not read: '+e.message;
-      console.error('Scan error:',e);
-    }
-  })
-  .finally(function(){btn.disabled=false; btn.innerHTML='<span>&#x2736;</span> Read remittance';});
-}
-
-function createMultiRemittance(){
-  var scan=window._lastRemittanceScan;
-  if(!scan||!scan.multiInvoices) return;
-  var payer=scan.payer||(document.getElementById('paid-client')||{}).value||'';
-  var paymentDate=scan.paymentDate||document.getElementById('paid-date').value||today();
-  var gstSetting=document.getElementById('paid-gst')?document.getElementById('paid-gst').value:'yes';
-
-  scan.multiInvoices.forEach(function(inv){
-    var gross=parseFloat(inv.gross_inc_gst)||0;
-    var wht=parseFloat(inv.wht_amount)||0;
-    var net=parseFloat(inv.net_paid)||(gross-wht);
-    var gstAmt=gstSetting==='yes'?gross*3/23:0;
-    var whtRate=gross>0?Math.round(wht/gross*100):0;
-    var newInv={
-      id:'local_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
-      client:payer,
-      amount:gross,
-      date:paymentDate,
-      due_date:null,
-      invoice_number:inv.invoice_number||null,
-      gst:gstSetting,
-      wht_rate:whtRate,
-      wht_amount:wht,
-      status:'paid',
-      paid_date:paymentDate,
-      paid_amount:net,
-      source:'manual',
-      _localOnly:true,
-      created_at:new Date().toISOString(),
-      updated_at:new Date().toISOString()
-    };
-    if(window._paidFileData) newInv.remittance_image=window._paidFileData;
-    invoices.unshift(newInv);
-  });
-
-  save(); renderAll(); closeModal('modal-paid');
-  showToast(scan.multiInvoices.length+' invoices saved from '+payer);
-  window._lastRemittanceScan=null;
-  checkNewClient(payer);
+  // Render PDF to image for better extraction
+  if(!isImage && window.pdfjsLib){
+    try{
+      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      var pdfBytes=new Uint8Array(atob(b64).split('').map(function(c){return c.charCodeAt(0);}));
+      pdfjsLib.getDocument({data:pdfBytes}).promise.then(function(pdf){return pdf.getPage(1);})
+      .then(function(page){
+        var vp=page.getViewport({scale:2.0});
+        var canvas=document.createElement('canvas');
+        canvas.width=vp.width; canvas.height=vp.height;
+        return page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise.then(function(){
+          doScan(canvas.toDataURL('image/png').split(',')[1],'image/png');
+        });
+      }).catch(function(e){console.warn('PDF render failed:',e); doScan(b64,'image/jpeg');});
+    }catch(e){doScan(b64,'image/jpeg');}
+  } else {
+    doScan(b64, isImage?mime:'image/jpeg');
+  }
 }
 
 function confirmMarkPaid(){
