@@ -3603,11 +3603,11 @@ function scanRemittance(){
 }
 
 function confirmMarkPaid(){
+  console.log('[confirmMarkPaid] START _paidInvId:',_paidInvId,'stub:',window._newRemStub?window._newRemStub.id:'none','invoices:',invoices.length);
   var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
-  // For new remittances, inv lives in _newRemStub until confirmed
   if(!inv&&window._newRemStub&&String(window._newRemStub.id)===String(_paidInvId)) inv=window._newRemStub;
-  console.log('[confirmMarkPaid] inv found:',!!inv,'_paidInvId:',_paidInvId,'stub:',!!window._newRemStub);
-  if(!inv){showToast('Error: invoice not found');closeModal('modal-paid');return;}
+  console.log('[confirmMarkPaid] inv found:',!!inv,inv?inv.client:'');
+  if(!inv){showToast('Error: invoice not found - try again');closeModal('modal-paid');return;}
 
   var gross=parseFloat(document.getElementById('paid-gross').value)||0;
   var gstAmt=parseFloat(document.getElementById('paid-gst-amt').value)||0;
