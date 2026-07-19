@@ -2163,8 +2163,10 @@ function invCard(inv){
   html+='<div class="r-top"><div style="min-width:0"><div class="r-title">'+esc(inv.client)+'</div>';
   html+='<div class="r-sub">'+(inv.invoice_number?'#'+esc(inv.invoice_number)+' · ':'')+fmtDate(inv.date)+'</div></div>';
   html+='<div style="text-align:right;flex-shrink:0"><div class="r-amount" style="color:'+c+'">'+fmt(displayAmt)+'</div>'+grossSub+'</div></div>';
+  var isBankVerified=bankTxns.some(function(t){return t.matched_invoice_id&&String(t.matched_invoice_id)===String(inv.id);});
+  var verifiedBadge=isBankVerified?'<span class="badge" style="background:rgba(52,199,89,.12);color:var(--green)">&#x2713; Verified</span>':'';
   html+='<div class="r-meta"><span class="badge b-'+status+'">'+(labels[status]||status)+'</span>';
-  html+=(inv.due_date&&inv.status!=='paid'?'<span class="r-sub">Due '+fmtDate(inv.due_date)+'</span>':'')+whtBadge;
+  html+=(inv.due_date&&inv.status!=='paid'?'<span class="r-sub">Due '+fmtDate(inv.due_date)+'</span>':'')+whtBadge+verifiedBadge;
   html+='</div></div></div>';
   return html;
 }
@@ -2328,12 +2330,12 @@ function renderBank(){
   }
   if(btn) btn.style.display='flex';
   var sorted=bankTxns.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-  var unverified=sorted.filter(function(t){return !t.matched_invoice_id&&!t.excluded;});
-  var approved=sorted.filter(function(t){return t.matched_invoice_id||t.excluded;});
+  var unverified=sorted.filter(function(t){return !t.excluded;});
+  var approved=sorted.filter(function(t){return t.excluded;});
   var credits=sorted.filter(function(t){return parseFloat(t.amount)>0&&!t.excluded;});
   var totalCredits=credits.reduce(function(s,t){return s+(parseFloat(t.amount)||0);},0);
   var verifiedCredits=credits.filter(function(t){return !!t.matched_invoice_id;}).reduce(function(s,t){return s+(parseFloat(t.amount)||0);},0);
-  var unverifiedCount=credits.filter(function(t){return !t.matched_invoice_id;}).length;
+  var unverifiedCount=credits.filter(function(t){return !t.matched_invoice_id&&!t.excluded;}).length;
   var uc=document.getElementById('bank-unverified-count'); if(uc) uc.textContent=String(unverifiedCount);
   var us=document.getElementById('bank-unverified-sub'); if(us) us.textContent=unverifiedCount===0?'All credits verified':unverifiedCount+' credit'+(unverifiedCount===1?'':'s')+' need attention';
   var tc=document.getElementById('bank-total-credits'); if(tc) tc.textContent=fmt(totalCredits);
