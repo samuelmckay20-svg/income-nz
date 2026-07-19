@@ -616,6 +616,10 @@ body{
         </div>
       </div>
       <div id="bank-list"></div>
+      <div id="bank-approved-section" style="display:none">
+        <div class="shdr" style="margin-top:8px;color:var(--red)">Excluded from income</div>
+        <div id="bank-approved-list"></div>
+      </div>
     </div>
 
     <!-- ── TAX ── -->
@@ -2299,10 +2303,10 @@ function renderClientsTab(){
 function bankTxnCard(txn){
   var amt=parseFloat(txn.amount)||0, isC=amt>0;
   var matched=!!txn.matched_invoice_id, excluded=!!txn.excluded;
-  var barC=excluded?'var(--t4)':matched?'var(--green)':isC?'var(--orange)':'var(--t4)';
-  var amtC=excluded?'var(--t3)':matched?'var(--green)':isC?'var(--orange)':'var(--t4)';
+  var barC=excluded?'var(--red)':matched?'var(--green)':isC?'var(--orange)':'var(--t4)';
+  var amtC=excluded?'var(--red)':matched?'var(--green)':isC?'var(--orange)':'var(--t4)';
   var badge=excluded
-    ?'<span class="badge" style="background:rgba(120,120,128,.12);color:var(--t3)">Excluded</span>'
+    ?'<span class="badge" style="background:rgba(255,59,48,.12);color:var(--red)">Excluded</span>'
     :matched?'<span class="badge b-matched">Matched</span>'
     :isC?'<span class="badge b-unmatched">Unmatched</span>'
     :'<span class="badge b-debit">Debit</span>';
