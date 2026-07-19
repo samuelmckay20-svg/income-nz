@@ -3856,6 +3856,7 @@ function openBankDetail(id){
 }
 function runAutoMatch(){
   var matched=0;
+  var claimedInvoiceIds=new Set(); // track invoices claimed in this pass
   bankTxns.forEach(function(txn){
     if(txn.matched_invoice_id) return;
     var credit=parseFloat(txn.amount)||0; if(credit<=0) return;
@@ -3869,7 +3870,7 @@ function runAutoMatch(){
 
       if(inv.status==='paid'){
         // Already paid — match bank txn to it if amounts align and not already bank-linked
-        var alreadyLinked=bankTxns.some(function(t){return t!==txn&&String(t.matched_invoice_id)===String(inv.id);});
+        var alreadyLinked=claimedInvoiceIds.has(String(inv.id))||bankTxns.some(function(t){return t!==txn&&String(t.matched_invoice_id)===String(inv.id);});
         if(alreadyLinked) return;
         var diff=Math.abs(credit-netPaid);
         if(diff>0.10) return; // exact match only
@@ -3895,6 +3896,7 @@ function runAutoMatch(){
 
     if(best){
       txn.matched_invoice_id=best.id;
+      claimedInvoiceIds.add(String(best.id));
       if(best.status!=='paid'){
         best.status='paid';
         best.paid_date=txn.date;
