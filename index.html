@@ -3433,14 +3433,17 @@ function parseCSV(text){
   function ci(n){return cols.indexOf(n);}
 
   // Detect bank format by checking headers
-  var iDate=ci('date');
+  var iDate=ci('date')>=0?ci('date'):ci('effective date')>=0?ci('effective date'):ci('transaction date');
   // Kiwibank: separate credit/debit columns + op name + tp ref
   var iCredit=ci('amount (credit)'), iDebit=ci('amount (debit)');
   var iOpName=ci('op name'), iTpRef=ci('tp ref');
   // ANZ: single amount or credits column
   var iAmt=ci('amount'), iCred=ci('credits'), iOther=ci('other party');
-  var iDesc=ci('memo/description')>=0?ci('memo/description'):ci('description');
+  var iDesc=ci('memo/description')>=0?ci('memo/description'):ci('description')>=0?ci('description'):ci('particulars');
   var iRef=iTpRef>=0?iTpRef:(ci('reference')>=0?ci('reference'):ci('tp ref'));
+  // BNZ/Kiwibank business: Effective Date, Amount, Other Party Name, Description
+  var iBNZDate=ci('effective date'), iBNZOtherParty=ci('other party name'), iBNZRef=ci('reference');
+  var isBNZ=iBNZDate>=0&&iAmt>=0&&iBNZOtherParty>=0;
 
   var isKiwibank=iCredit>=0&&iDebit>=0;
   var imported=0,skipped=0,matched=0;
@@ -3467,6 +3470,18 @@ function parseCSV(text){
       var memoClean=memo.replace(/^Direct Credit\s+/i,'').replace(/^Bill Payment\s+/i,'').split(';')[0].trim();
       desc=opName||memoClean;
       ref=clean(row[iTpRef]||'');
+    } else if(isBNZ){
+      // BNZ / Kiwibank business format: Effective Date, Amount, Other Party Name
+      var rawAmt=clean(row[iAmt]||'');
+      if(!rawAmt){skipped++;continue;}
+      amount=parseFloat(rawAmt.replace(/,/g,'')); if(isNaN(amount)){skipped++;continue;}
+      // Use Other Party Name as description, fall back to Description/Particulars
+      var otherParty=clean(row[iBNZOtherParty]||'');
+      var descField=clean(row[iDesc]||'');
+      // Extract meaningful part from the verbose description
+      var descClean=descField.replace(/^Direct Credit\s+/i,'').replace(/^Automatic Payment\s+/i,'').split(/\s{2,}/)[0].trim();
+      desc=otherParty||descClean;
+      ref=clean(row[iBNZRef]||row[iRef]||'');
     } else {
       // ANZ format
       var rawAmt=iCred>=0?clean(row[iCred]):clean(row[iAmt]);
@@ -3499,20 +3514,29 @@ function parseCSV(text){
       });
       if(bestMatch) autoMatchId=bestMatch.id;
     }
-    bankTxns.push({id:'bank_'+Date.now()+'_'+i,date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:autoMatchId,source:isKiwibank?'kiwibank':'anz',imported_at:new Date().toISOString()});
+    bankTxns.push({id:'bank_'+Date.now()+'_'+i,date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:autoMatchId,source:isKiwibank?'kiwibank':isBNZ?'bnz':'anz',imported_at:new Date().toISOString()});
     if(autoMatchId) matched++;
     else imported++;
   }
+  if(imported===0&&matched===0&&skipped===0){
+    showToast('No rows found — check CSV format');
+    console.log('CSV header:',header);
+    return;
+  }
   save();renderAll();
   var msg=imported+' imported';
-  if(matched) msg+=', '+matched+' auto-matched to existing invoices';
+  if(matched) msg+=', '+matched+' auto-matched';
   if(skipped) msg+=' ('+skipped+' skipped)';
   showToast(msg);
+  console.log('CSV import: imported='+imported+' matched='+matched+' skipped='+skipped);
 }
 function csvRow(line){var r=[],cur='',inQ=false;for(var i=0;i<line.length;i++){var ch=line[i];if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){r.push(cur);cur='';}else{cur+=ch;}}r.push(cur);return r;}
 function clean(s){return String(s||'').trim().replace(/^"|"$/g,'');}
 function normDate(s){
   if(!s)return null;
+  // YYYY-MM-DD (ISO / BNZ)
+  var m0=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m0)return s;
   // DD/MM/YYYY (ANZ)
   var m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if(m)return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
