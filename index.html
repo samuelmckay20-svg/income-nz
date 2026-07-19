@@ -1600,7 +1600,8 @@ function manualSync(){
         if(inv){inv.id=data.idMap[localId];delete inv._localOnly;}
       });
     }
-    invoices.forEach(function(inv){if(!String(inv.id).startsWith('local_')) delete inv._localOnly;});
+    var cleared=0; invoices.forEach(function(inv){if(!String(inv.id).startsWith('local_')&&inv._localOnly){delete inv._localOnly;cleared++;}});
+    if(cleared) console.log('[Sync] Cleared _localOnly from',cleared,'invoices');
     saveLocal();
     return fetch(API_BASE+'/data',{headers:authHeaders()});
   })
@@ -1611,6 +1612,7 @@ function manualSync(){
     var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
     var unsyncedLocal=invoices.filter(function(i){return i._localOnly&&String(i.id).startsWith('local_')&&!serverIds.has(String(i.id));});
+    console.log('[ManualSync] server:',serverInvoices.length,'unsynced:',unsyncedLocal.length);
     invoices=serverInvoices.concat(unsyncedLocal);
     // Preserve excluded/matched flags
     var sBank=data.bankTxns||[];
@@ -1681,6 +1683,8 @@ function loadFromServer(){
     var unsyncedLocal=invoices.filter(function(i){
       return i._localOnly && String(i.id).startsWith('local_') && !serverIds.has(String(i.id));
     });
+    console.log('[Load] server:',serverInvoices.length,'unsynced local:',unsyncedLocal.length,'total after:',serverInvoices.length+unsyncedLocal.length);
+    if(unsyncedLocal.length) console.log('[Load] unsynced:',unsyncedLocal.map(function(i){return i.client+'('+i.id+')'}));
     invoices=serverInvoices.concat(unsyncedLocal);
     // Preserve excluded/matched flags from local bankTxns when server overwrites
     var serverBank=data.bankTxns||[];
@@ -2711,9 +2715,9 @@ function openNewRemittance(){
     status:'unpaid',source:'manual',_localOnly:true,
     created_at:new Date().toISOString(),updated_at:new Date().toISOString()
   };
-  invoices.unshift(stub);
+  window._newRemStub=stub; // hold in memory only until confirmed
   // Open mark paid modal straight away — user fills in details + uploads remittance
-  _paidInvId=stub.id;
+  // Open mark paid modal — user fills in details + uploads remittance
   clearPaidFile();
   document.getElementById('paid-modal-title').textContent='New remittance';
   document.getElementById('paid-ai-result').style.display='none';
@@ -3598,6 +3602,8 @@ function scanRemittance(){
 
 function confirmMarkPaid(){
   var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
+  // For new remittances, inv lives in _newRemStub until confirmed
+  if(!inv&&window._newRemStub&&String(window._newRemStub.id)===String(_paidInvId)) inv=window._newRemStub;
   if(!inv){closeModal('modal-paid');return;}
 
   var gross=parseFloat(document.getElementById('paid-gross').value)||0;
@@ -3612,13 +3618,16 @@ function confirmMarkPaid(){
   if(isNew){
     var client=(document.getElementById('paid-client').value||'').trim();
     if(!client){showToast('Enter a client name');return;}
-    // Use paid-gross field directly if filled (scan sets this to gross_inc_gst)
-    // Fall back to net+wht which also equals gross inc GST for NZ schedular payments
     var grossField=parseFloat(document.getElementById('paid-gross').value)||0;
     var gross=grossField>0?grossField:(net+wht);
     if(gross<=0&&net<=0){showToast('Enter the net received amount');return;}
+    // Now add the stub to invoices (was held in memory until we have real data)
+    if(window._newRemStub&&String(inv.id)===String(window._newRemStub.id)){
+      invoices.unshift(inv);
+      window._newRemStub=null;
+    }
     inv.client=client;
-    inv.amount=gross; // always gross inc GST for correct Box 5
+    inv.amount=gross;
     inv.date=dateVal||today();
     inv.invoice_number=document.getElementById('paid-inv-num').value.trim()||null;
     inv.gst=document.getElementById('paid-gst').value;
