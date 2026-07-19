@@ -2718,6 +2718,7 @@ function openNewRemittance(){
     created_at:new Date().toISOString(),updated_at:new Date().toISOString()
   };
   window._newRemStub=stub; // hold in memory only until confirmed
+  _paidInvId=stub.id; // set so confirmMarkPaid can find the stub
   // Open mark paid modal straight away — user fills in details + uploads remittance
   // Open mark paid modal — user fills in details + uploads remittance
   clearPaidFile();
