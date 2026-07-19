@@ -3489,6 +3489,23 @@ function scanRemittance(){
     'Multi: {"gross_inc_gst":null,"wht_rate":20,"payment_date":"2026-04-09","payer":"Sky","invoice_number":null,"payer_gst":null,"total_net_paid":880,"invoices":[{"invoice_number":"SKY-1726","gross_inc_gst":500,"gst_amount":65.22,"wht_amount":100,"net_paid":400},{"invoice_number":"SKY-1826","gross_inc_gst":600,"gst_amount":78.26,"wht_amount":120,"net_paid":480}]} '+
     'Rules: GST=gross*3/23. WH on ex-GST base. net=gross-wht. null for missing.';
 
+  function doScanPDF(pdfB64){
+    var messages=[{role:'user',content:[
+      {type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfB64}},
+      {type:'text',text:remPrompt}
+    ]}];
+    fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:messages})})
+    .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
+    .then(handleScanResponse)
+    .catch(function(e){
+      if(e.message!=='401'){
+        resultEl.className='ai-inv-result-err'; resultEl.style.display='block';
+        resultEl.textContent='Could not read: '+e.message;
+      }
+    })
+    .finally(function(){btn.disabled=false; btn.innerHTML='<span>&#x2736;</span> Read remittance';});
+  }
+
   function doScan(imgB64, imgMime){
     var messages=[{role:'user',content:[
       {type:'image',source:{type:'base64',media_type:imgMime,data:imgB64}},
@@ -3496,7 +3513,14 @@ function scanRemittance(){
     ]}];
     fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:messages})})
     .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
-    .then(function(resp){
+    .then(handleScanResponse)
+    .catch(function(e){
+      if(e.message!=='401'){resultEl.className='ai-inv-result-err';resultEl.style.display='block';resultEl.textContent='Could not read: '+e.message;console.error('Scan error:',e);}
+    })
+    .finally(function(){btn.disabled=false;btn.innerHTML='<span>&#x2736;</span> Read remittance';});
+  }
+
+  function handleScanResponse(resp){
       if(resp.error) throw new Error('API: '+(resp.error.message||JSON.stringify(resp.error)));
       var text=(resp.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
       console.log('Scan raw:',text.slice(0,600));
@@ -3549,16 +3573,8 @@ function scanRemittance(){
         resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
         resultEl.innerHTML='✓ '+parts.join(' &nbsp;&middot;&nbsp; ');
       }
-    })
-    .catch(function(e){
-      if(e.message!=='401'){
-        resultEl.className='ai-inv-result-err'; resultEl.style.display='block';
-        resultEl.textContent='Could not read: '+e.message;
-        console.error('Scan error:',e);
-      }
-    })
-    .finally(function(){btn.disabled=false; btn.innerHTML='<span>&#x2736;</span> Read remittance';});
   }
+
 
   // Render PDF to image for better extraction
   if(!isImage && window.pdfjsLib){
@@ -3573,8 +3589,8 @@ function scanRemittance(){
         return page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise.then(function(){
           doScan(canvas.toDataURL('image/png').split(',')[1],'image/png');
         });
-      }).catch(function(e){console.warn('PDF render failed:',e); doScan(b64,'image/jpeg');});
-    }catch(e){doScan(b64,'image/jpeg');}
+      }).catch(function(e){console.warn('PDF render failed:',e); doScanPDF(b64);});
+    }catch(e){doScanPDF(b64);}
   } else {
     doScan(b64, isImage?mime:'image/jpeg');
   }
