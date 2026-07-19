@@ -2167,7 +2167,7 @@ function invCard(inv){
   html+='<div class="r-top"><div style="min-width:0"><div class="r-title">'+esc(inv.client)+'</div>';
   html+='<div class="r-sub">'+(inv.invoice_number?'#'+esc(inv.invoice_number)+' · ':'')+fmtDate(inv.date)+'</div></div>';
   html+='<div style="text-align:right;flex-shrink:0"><div class="r-amount" style="color:'+c+'">'+fmt(displayAmt)+'</div>'+grossSub+'</div></div>';
-  var isBankVerified=bankTxns.some(function(t){return t.matched_invoice_id&&String(t.matched_invoice_id)===String(inv.id);});
+  var isBankVerified=bankTxns.some(function(t){return t.matched_invoice_id&&(String(t.matched_invoice_id)===String(inv.id)||Number(t.matched_invoice_id)===Number(inv.id));});
   var verifiedBadge=isBankVerified?'<span class="badge" style="background:rgba(52,199,89,.12);color:var(--green)">&#x2713; Verified</span>':'';
   html+='<div class="r-meta"><span class="badge b-'+status+'">'+(labels[status]||status)+'</span>';
   html+=(inv.due_date&&inv.status!=='paid'?'<span class="r-sub">Due '+fmtDate(inv.due_date)+'</span>':'')+whtBadge+verifiedBadge;
@@ -3561,7 +3561,7 @@ function parseCSV(text){
       invoices.forEach(function(inv){
         if(inv.status!=='paid') return;
         // Already linked to a bank txn?
-        if(bankTxns.some(function(t){return t.matched_invoice_id===inv.id;})) return;
+        if(bankTxns.some(function(t){return String(t.matched_invoice_id)===String(inv.id);})) return;
         var netPaid=inv.paid_amount!=null?parseFloat(inv.paid_amount):(parseFloat(inv.amount)||0)*(1-(parseFloat(inv.wht_rate)||0)/100);
         var diff=Math.abs(amount-netPaid);
         if(diff>Math.max(netPaid*0.02,0.10)) return; // within 2% or 10c
@@ -3693,7 +3693,7 @@ function runAutoMatch(){
 
       if(inv.status==='paid'){
         // Already paid — match bank txn to it if amounts align and not already bank-linked
-        var alreadyLinked=bankTxns.some(function(t){return t!==txn&&t.matched_invoice_id===inv.id;});
+        var alreadyLinked=bankTxns.some(function(t){return t!==txn&&String(t.matched_invoice_id)===String(inv.id);});
         if(alreadyLinked) return;
         var diff=Math.abs(credit-netPaid);
         if(diff>Math.max(netPaid*0.02,0.10)) return;
