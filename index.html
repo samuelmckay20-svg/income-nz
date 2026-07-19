@@ -1571,7 +1571,18 @@ function manualSync(){
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
     var unsyncedLocal=invoices.filter(function(i){return i._localOnly&&String(i.id).startsWith('local_')&&!serverIds.has(String(i.id));});
     invoices=serverInvoices.concat(unsyncedLocal);
-    bankTxns=data.bankTxns||bankTxns; settings=data.settings||settings;
+    // Preserve excluded/matched flags
+    var sBank=data.bankTxns||[];
+    var lBankMap={};
+    bankTxns.forEach(function(t){lBankMap[t.id]=t;});
+    bankTxns=sBank.map(function(t){
+      var l=lBankMap[t.id];
+      if(l){if(l.excluded)t.excluded=true;if(l.matched_invoice_id)t.matched_invoice_id=l.matched_invoice_id;}
+      return t;
+    });
+    sBank.forEach(function(t){delete lBankMap[t.id];});
+    Object.values(lBankMap).forEach(function(t){bankTxns.push(t);});
+    settings=data.settings||settings;
     saveLocal(); renderAll();
     showToast('Synced ✓');
   })
@@ -1630,7 +1641,21 @@ function loadFromServer(){
       return i._localOnly && String(i.id).startsWith('local_') && !serverIds.has(String(i.id));
     });
     invoices=serverInvoices.concat(unsyncedLocal);
-    bankTxns=data.bankTxns||bankTxns;
+    // Preserve excluded/matched flags from local bankTxns when server overwrites
+    var serverBank=data.bankTxns||[];
+    var localBankMap={};
+    bankTxns.forEach(function(t){localBankMap[t.id]=t;});
+    bankTxns=serverBank.map(function(t){
+      var local=localBankMap[t.id];
+      if(local){
+        if(local.excluded) t.excluded=true;
+        if(local.matched_invoice_id) t.matched_invoice_id=local.matched_invoice_id;
+      }
+      return t;
+    });
+    // Keep any local-only txns not yet on server (CSV imports not synced yet)
+    serverBank.forEach(function(t){delete localBankMap[t.id];});
+    Object.values(localBankMap).forEach(function(t){bankTxns.push(t);});
     settings=data.settings||settings;
     saveLocal(); renderAll();
     if(unsyncedLocal.length||binnedIds.size) syncToServer();
