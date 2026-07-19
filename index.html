@@ -3476,69 +3476,108 @@ function scanRemittance(){
   btn.disabled=true;
   btn.innerHTML='<span class="spinner"></span> Reading remittance...';
   resultEl.style.display='none'; resultEl.innerHTML='';
-  // Clear ALL fields so stale data doesn't persist between scans
   ['paid-gross','paid-gst-amt','paid-wht','paid-net'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
   });
   updatePaidSummary();
   var isImage=mime.startsWith('image/');
   var b64=data.split(',')[1];
-  var remPrompt='Analyse this NZ payment document and extract payment details. Reply ONLY with valid JSON, no markdown.'+
-    '\n\nFind these values by looking at the wage summary column on the right side of the payslip:'+
-    '\n- gross_inc_gst: the Total Gross line'+
-    '\n- gst_amount: the GST or GST/VAT line (NOT the OT line even if same number)'+
-    '\n- wht_amount: the Taxation line (withholding tax)'+
-    '\n- net_paid: the Net Pay line or bank transfer amount'+
-    '\n- wht_rate: 20 or 33 typically'+
-    '\n- base_ex_gst: gross before GST added'+
-    '\n- payment_date: Payment Date field (YYYY-MM-DD)'+
-    '\n- payer: production company name'+
-    '\n- invoice_number: Trans. No value'+
-    '\n- period_start and period_end: Pay Period dates (YYYY-MM-DD)'+
-    '\n- payer_gst: the CLIENT/PRODUCTION COMPANY GST or IRD number. The document often shows two IRD/GST numbers - one for the contractor and one for the company. Find the one associated with the production company name and their address. Digits only (e.g. 074620000). Return null if only one GST number is shown (it may be the contractor\'s)'+
-    '\n\nNZ rule: Total Gross + GST - Taxation = Net Pay. Verify this before returning.'+
-    '\nReturn: {"gross_inc_gst":null,"base_ex_gst":null,"gst_amount":null,"wht_amount":null,"wht_rate":null,"net_paid":null,"payment_date":null,"payer":null,"invoice_number":null,"period_start":null,"period_end":null,"payer_gst":null}';
+  var remPrompt='Analyse this NZ remittance advice or payslip. Reply ONLY with valid JSON, no markdown, no explanation.\n\n'+
+    'This document may contain ONE invoice or MULTIPLE invoices paid together.\n\n'+
+    'If SINGLE invoice (e.g. Night Zone payslip style):\n'+
+    '- gross_inc_gst: total gross including GST\n'+
+    '- gst_amount: GST component\n'+
+    '- wht_amount: withholding tax deducted\n'+
+    '- net_paid: amount banked\n'+
+    '- wht_rate: 20 or 33\n'+
+    '- payment_date: YYYY-MM-DD\n'+
+    '- payer: company name\n'+
+    '- invoice_number: invoice or trans number\n'+
+    '- payer_gst: payer GST/IRD number (digits only)\n'+
+    '- invoices: null\n\n'+
+    'If MULTIPLE invoices (e.g. Sky remittance with list of invoice numbers):\n'+
+    '- Set invoices to an array of objects, one per invoice line\n'+
+    '- Each object: {invoice_number, gross_inc_gst, wht_amount, wht_rate, net_paid, gst_amount}\n'+
+    '- gross_inc_gst: the invoice amount including GST (e.g. $500 if GST inclusive)\n'+
+    '- wht_amount: W/Tax Deducted shown next to that invoice\n'+
+    '- net_paid for each: gross_inc_gst minus wht_amount\n'+
+    '- Set total_net_paid to the "Direct credited to your bank" total\n'+
+    '- Set payment_date, payer, payer_gst at top level\n'+
+    '- Set gross_inc_gst, wht_amount, net_paid to null (use invoices array instead)\n\n'+
+    'NZ GST rule: if amounts include GST, GST = amount x 3/23\n'+
+    'NZ W/H: typically 20% of the invoice amount\n\n'+
+    'Return:\n'+
+    '{"gross_inc_gst":null,"gst_amount":null,"wht_amount":null,"net_paid":null,"wht_rate":null,'+
+    '"payment_date":null,"payer":null,"invoice_number":null,"payer_gst":null,'+
+    '"invoices":null,"total_net_paid":null}';
+
   var messages=[{role:'user',content:[
     isImage?{type:'image',source:{type:'base64',media_type:mime,data:b64}}:{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
     {type:'text',text:remPrompt}
   ]}];
-  fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:messages})})
+  fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:messages})})
   .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
   .then(function(resp){
     var text=(resp.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
     var parsed=JSON.parse(text.replace(/```json|```/gi,'').trim());
-    if(parsed.gross_inc_gst!=null) document.getElementById('paid-gross').value=String(parsed.gross_inc_gst);
-    if(parsed.gst_amount!=null) document.getElementById('paid-gst-amt').value=String(parsed.gst_amount);
-    if(parsed.wht_amount!=null) document.getElementById('paid-wht').value=String(parsed.wht_amount);
-    if(parsed.net_paid!=null) document.getElementById('paid-net').value=String(parsed.net_paid);
-    if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
-    // Fill extra fields if new remittance
-    if(parsed.payer){var pc=document.getElementById('paid-client');if(pc)pc.value=parsed.payer;}
-    // Always overwrite invoice number from scan
-    var pn=document.getElementById('paid-inv-num');
-    if(pn) pn.value=parsed.invoice_number||pn.value||'';
-    // Store scan data for client profile pre-fill
+
+    // Store scan data
     window._lastRemittanceScan={
       payer:parsed.payer||null,
       whtRate:parsed.wht_rate||0,
-      whtAmount:parsed.wht_amount||0,
-      grossIncGst:parsed.gross_inc_gst||null,
-      baseExGst:parsed.base_ex_gst||null,
-      gstAmount:parsed.gst_amount||null,
       payerGst:parsed.payer_gst||null,
-      invoiceNumber:parsed.invoice_number||null,
-      periodStart:parsed.period_start||null,
-      periodEnd:parsed.period_end||null
+      multi:parsed.invoices&&parsed.invoices.length>1
     };
-    // If gross_inc_gst detected, store it for confirmMarkPaid to use as invoice amount
-    if(parsed.gross_inc_gst) window._lastRemittanceScan.invoiceAmount=parsed.gross_inc_gst;
-    updatePaidSummary();
-    var resultParts=['Net: <strong>'+fmt(parsed.net_paid||0)+'</strong>'];
-    if(parsed.wht_amount) resultParts.push('W/H: <strong>'+fmt(parsed.wht_amount)+'</strong>');
-    if(parsed.gst_amount) resultParts.push('GST: <strong>'+fmt(parsed.gst_amount)+'</strong>');
-    if(parsed.gross_inc_gst) resultParts.push('Gross: <strong>'+fmt(parsed.gross_inc_gst)+'</strong>');
-    resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
-    resultEl.innerHTML='&#x2713; '+resultParts.join(' &nbsp;&middot;&nbsp; ');
+
+    if(parsed.invoices&&parsed.invoices.length>0){
+      // MULTI-INVOICE remittance (e.g. Sky)
+      window._lastRemittanceScan.multiInvoices=parsed.invoices;
+      window._lastRemittanceScan.paymentDate=parsed.payment_date;
+
+      // Show summary in result area + offer to create multiple invoices
+      var totalGross=parsed.invoices.reduce(function(s,inv){return s+(parseFloat(inv.gross_inc_gst)||0);},0);
+      var totalWht=parsed.invoices.reduce(function(s,inv){return s+(parseFloat(inv.wht_amount)||0);},0);
+      var totalNet=parsed.total_net_paid||parsed.invoices.reduce(function(s,inv){return s+(parseFloat(inv.net_paid)||0);},0);
+
+      resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
+      resultEl.innerHTML='<strong>'+parsed.invoices.length+' invoices found</strong> &nbsp;&middot;&nbsp; Total net: <strong>'+fmt(totalNet)+'</strong> &nbsp;&middot;&nbsp; W/H: <strong>'+fmt(totalWht)+'</strong><br>'
+        +'<div style="margin-top:8px">'
+        +parsed.invoices.map(function(inv){
+          return '<span style="font-size:12px;color:var(--t2)">'+esc(inv.invoice_number||'?')+': '+fmt(inv.gross_inc_gst||0)+' &minus; W/H '+fmt(inv.wht_amount||0)+' = '+fmt(inv.net_paid||0)+'</span>';
+        }).join('<br>')
+        +'</div>'
+        +'<button onclick="createMultiRemittance()" class="btn-primary" style="margin-top:10px;font-size:14px;padding:10px 16px">Create '+parsed.invoices.length+' invoices</button>';
+
+      // Pre-fill totals in fields for reference
+      document.getElementById('paid-net').value=String(totalNet);
+      document.getElementById('paid-wht').value=String(totalWht);
+      document.getElementById('paid-gross').value=String(totalGross);
+      if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
+      if(parsed.payer){var pc=document.getElementById('paid-client');if(pc)pc.value=parsed.payer;}
+      updatePaidSummary();
+
+    } else {
+      // SINGLE invoice remittance (Night Zone style)
+      if(parsed.gross_inc_gst!=null) document.getElementById('paid-gross').value=String(parsed.gross_inc_gst);
+      if(parsed.gst_amount!=null) document.getElementById('paid-gst-amt').value=String(parsed.gst_amount);
+      if(parsed.wht_amount!=null) document.getElementById('paid-wht').value=String(parsed.wht_amount);
+      if(parsed.net_paid!=null) document.getElementById('paid-net').value=String(parsed.net_paid);
+      if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
+      if(parsed.payer){var pc=document.getElementById('paid-client');if(pc)pc.value=parsed.payer;}
+      var pn=document.getElementById('paid-inv-num');
+      if(pn) pn.value=parsed.invoice_number||pn.value||'';
+      window._lastRemittanceScan.invoiceNumber=parsed.invoice_number||null;
+      window._lastRemittanceScan.grossIncGst=parsed.gross_inc_gst||null;
+      window._lastRemittanceScan.gstAmount=parsed.gst_amount||null;
+      window._lastRemittanceScan.whtAmount=parsed.wht_amount||null;
+      window._lastRemittanceScan.invoiceAmount=parsed.gross_inc_gst||null;
+      updatePaidSummary();
+      var resultParts=['Net: <strong>'+fmt(parsed.net_paid||0)+'</strong>'];
+      if(parsed.wht_amount) resultParts.push('W/H: <strong>'+fmt(parsed.wht_amount)+'</strong>');
+      if(parsed.gross_inc_gst) resultParts.push('Gross: <strong>'+fmt(parsed.gross_inc_gst)+'</strong>');
+      resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
+      resultEl.innerHTML='&#x2713; '+resultParts.join(' &nbsp;&middot;&nbsp; ');
+    }
   })
   .catch(function(e){
     if(e.message!=='401'){
@@ -3547,6 +3586,47 @@ function scanRemittance(){
     }
   })
   .finally(function(){btn.disabled=false; btn.innerHTML='<span>&#x2736;</span> Read remittance';});
+}
+
+function createMultiRemittance(){
+  var scan=window._lastRemittanceScan;
+  if(!scan||!scan.multiInvoices) return;
+  var payer=scan.payer||(document.getElementById('paid-client')||{}).value||'';
+  var paymentDate=scan.paymentDate||document.getElementById('paid-date').value||today();
+  var gstSetting=document.getElementById('paid-gst')?document.getElementById('paid-gst').value:'yes';
+
+  scan.multiInvoices.forEach(function(inv){
+    var gross=parseFloat(inv.gross_inc_gst)||0;
+    var wht=parseFloat(inv.wht_amount)||0;
+    var net=parseFloat(inv.net_paid)||(gross-wht);
+    var gstAmt=gstSetting==='yes'?gross*3/23:0;
+    var whtRate=gross>0?Math.round(wht/gross*100):0;
+    var newInv={
+      id:'local_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      client:payer,
+      amount:gross,
+      date:paymentDate,
+      due_date:null,
+      invoice_number:inv.invoice_number||null,
+      gst:gstSetting,
+      wht_rate:whtRate,
+      wht_amount:wht,
+      status:'paid',
+      paid_date:paymentDate,
+      paid_amount:net,
+      source:'manual',
+      _localOnly:true,
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString()
+    };
+    if(window._paidFileData) newInv.remittance_image=window._paidFileData;
+    invoices.unshift(newInv);
+  });
+
+  save(); renderAll(); closeModal('modal-paid');
+  showToast(scan.multiInvoices.length+' invoices saved from '+payer);
+  window._lastRemittanceScan=null;
+  checkNewClient(payer);
 }
 
 function confirmMarkPaid(){
