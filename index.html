@@ -3515,11 +3515,16 @@ function scanRemittance(){
     isImage?{type:'image',source:{type:'base64',media_type:mime,data:b64}}:{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
     {type:'text',text:remPrompt}
   ]}];
-  fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:messages})})
+  fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:messages})})
   .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
   .then(function(resp){
     var text=(resp.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
-    var parsed=JSON.parse(text.replace(/```json|```/gi,'').trim());
+    console.log('Scan raw response:',text.slice(0,500));
+    var cleanText=text.replace(/```json|```/gi,'').trim();
+    // Extract JSON if wrapped in other text
+    var jsonMatch=cleanText.match(/\{[\s\S]*\}/);
+    if(!jsonMatch) throw new Error('No JSON found in response: '+text.slice(0,100));
+    var parsed=JSON.parse(jsonMatch[0]);
 
     // Store scan data
     window._lastRemittanceScan={
