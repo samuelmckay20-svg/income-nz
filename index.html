@@ -4030,9 +4030,14 @@ function getReceiptsNZData(){
   }catch(e){return {receipts:[],mileage:[],available:false};}
 }
 
+var _rxGSTCache=null, _rxGSTCacheTime=0;
 function fetchReceiptsGST(start, end, callback){
-  // Use Income NZ server as proxy — it forwards with the Receipts NZ secret
-  // Fall back to localStorage if server unavailable
+  // Cache for 5 minutes to avoid hammering the server
+  var now=Date.now();
+  if(_rxGSTCache&&now-_rxGSTCacheTime<300000){
+    callback(calcInputGST(_rxGSTCache.receipts, start, end));
+    return;
+  }
   fetch(API_BASE+'/receipts-gst',{headers:authHeaders()})
   .then(function(r){return r.ok?r.json():null;})
   .then(function(data){
@@ -4041,6 +4046,7 @@ function fetchReceiptsGST(start, end, callback){
       return;
     }
     try{localStorage.setItem('nzrt5_r',JSON.stringify(data.receipts));}catch(e){}
+    _rxGSTCache={receipts:data.receipts}; _rxGSTCacheTime=Date.now();
     callback(calcInputGST(data.receipts, start, end));
   })
   .catch(function(){
