@@ -3582,7 +3582,8 @@ function scanRemittance(){
   .catch(function(e){
     if(e.message!=='401'){
       resultEl.className='ai-inv-result-err'; resultEl.style.display='block';
-      resultEl.textContent='Could not read — enter amounts manually above.';
+      resultEl.textContent='Could not read: '+e.message;
+      console.error('Scan error:',e);
     }
   })
   .finally(function(){btn.disabled=false; btn.innerHTML='<span>&#x2736;</span> Read remittance';});
