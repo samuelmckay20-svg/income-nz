@@ -1042,7 +1042,7 @@ body{
           <div class="g-icon" style="background:rgba(0,122,255,0.12)">&#x1F3E2;</div>
           <span class="g-lbl">Client</span>
           <input class="g-input" id="f-client" type="text" placeholder="Client name" autocapitalize="words"
-            oninput="onClientInput('f-client','f-client-hint')" onblur="onClientBlur('f-client')">
+            oninput="onClientInput('f-client','f-client-hint')" onblur="onClientBlur('f-client')" onchange="onClientBlur('f-client')">
         </div>
         <div id="f-client-hint" style="display:none;padding:8px 16px;font-size:12px;color:var(--blue);cursor:pointer;background:rgba(0,122,255,.06);border-top:0.5px solid var(--sep)"></div>
         <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,0.12)">💵</div><span class="g-lbl">Amount (incl. GST)</span><input class="g-input" id="f-amount" type="text" placeholder="0.00" inputmode="decimal"></div>
@@ -1755,9 +1755,11 @@ function renderIncomeTab(){
   // Net received = what actually hit the bank (gross minus W/H)
   // Use paid_amount if set (most accurate), otherwise derive from gross - W/H
   var received=paid.reduce(function(s,i){
-    if(i.paid_amount!=null&&i.paid_amount!=='') return s+(parseFloat(i.paid_amount)||0);
-    var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;
-    return s+(parseFloat(i.amount)||0)-wa;
+    var amt2=parseFloat(i.amount)||0;
+    var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):amt2*(parseFloat(i.wht_rate)||0)/100;
+    // If no W/H deduction, full gross hits bank
+    if(wa<=0) return s+amt2;
+    return s+(i.paid_amount!=null&&i.paid_amount!==''?parseFloat(i.paid_amount):amt2-wa);
   },0);
 
   // GST collected = GST portion of paid invoice face values
@@ -2265,7 +2267,10 @@ function invCard(inv){
   var amt=parseFloat(inv.amount)||0;
   var wr=parseFloat(inv.wht_rate)||0;
   var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):Math.round(amt*wr/100*100)/100;
-  var displayAmt=inv.status==='paid'&&inv.paid_amount!=null?parseFloat(inv.paid_amount):(amt-whtAmt);
+  // When no W/H, net = full gross (GST passes through, nothing deducted)
+  var displayAmt=whtAmt>0
+    ?(inv.status==='paid'&&inv.paid_amount!=null?parseFloat(inv.paid_amount):amt-whtAmt)
+    :amt;
   var whtBadge=wr>0?'<span class="badge" style="background:rgba(175,82,222,0.12);color:var(--purple)">W/H '+wr+'%</span>':'';
   var grossSub=inv.status==='paid'&&whtAmt>0?'<div style="font-size:11px;color:var(--t3);text-align:right">of '+fmt(amt)+'</div>':'';
   var html='<div class="r-card" data-iid="'+esc(String(inv.id))+'">';
@@ -3044,7 +3049,10 @@ function openInvDetail(id){
   var amt=parseFloat(inv.amount)||0;
   var gstAmt=inv.gst==='yes'?amt*3/23:0;
   var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):(amt*(parseFloat(inv.wht_rate)||0)/100);
-  var netAmt=inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):amt-whtAmt;
+  // Net to bank: if no W/H, full gross hits bank regardless of stored paid_amount
+  var netAmt=whtAmt>0
+    ?(inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):amt-whtAmt)
+    :amt; // no deductions = full gross received
 
   // Title
   document.getElementById('inv-detail-title').textContent=inv.client;
@@ -3399,19 +3407,22 @@ function updatePaidSummary(){
   var net=parseFloat(document.getElementById('paid-net').value)||0;
   if(!gross&&!net){el.style.display='none';return;}
   // (Gross + GST) - W/H = Net (GST passes through, W/H from base only)
-  var totalWithGst=gross+gst;
-  var calcNet=gross>0?Math.round((totalWithGst-wht)*100)/100:0;
-  var valid=net>0&&gross>0&&Math.abs(calcNet-net)<0.10;
+  // Try both NZ payment formulas
+  var calcNetA=gross>0?Math.round((gross+gst-wht)*100)/100:0; // Night Zone: base+GST-WH=net
+  var calcNetB=gross>0?Math.round((gross-wht)*100)/100:0;     // Sky: gross(incGST)-WH=net
+  var validA=net>0&&gross>0&&Math.abs(calcNetA-net)<0.10;
+  var validB=net>0&&gross>0&&Math.abs(calcNetB-net)<0.10;
+  var valid=validA||validB;
   el.style.display='block';
   if(gross>0&&net>0){
     if(valid){
       el.style.background='rgba(52,199,89,.1)';
       el.style.color='var(--green)';
-      el.textContent='✓ Numbers check out — (Gross + GST) − W/H = Net';
+      el.textContent='\u2713 Numbers check out';
     } else {
       el.style.background='rgba(255,149,0,.1)';
       el.style.color='var(--orange)';
-      el.textContent='⚠ Expected net: '+fmt(calcNet)+' — check W/H and GST amounts';
+      el.textContent='\u26a0 Expected net: '+fmt(calcNetA)+(gst>0?' or '+fmt(calcNetB):'')+', got '+fmt(net);
     }
   } else {
     el.style.background='var(--fill)';
@@ -3577,23 +3588,11 @@ function scanRemittance(){
   }
 
 
-  // Render PDF to image for better extraction
-  if(!isImage && window.pdfjsLib){
-    try{
-      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      var pdfBytes=new Uint8Array(atob(b64).split('').map(function(c){return c.charCodeAt(0);}));
-      pdfjsLib.getDocument({data:pdfBytes}).promise.then(function(pdf){return pdf.getPage(1);})
-      .then(function(page){
-        var vp=page.getViewport({scale:2.0});
-        var canvas=document.createElement('canvas');
-        canvas.width=vp.width; canvas.height=vp.height;
-        return page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise.then(function(){
-          doScan(canvas.toDataURL('image/png').split(',')[1],'image/png');
-        });
-      }).catch(function(e){console.warn('PDF render failed:',e); doScanPDF(b64);});
-    }catch(e){doScanPDF(b64);}
+  // Send PDF natively — claude-sonnet-4-6 supports document type
+  if(!isImage){
+    doScanPDF(b64);
   } else {
-    doScan(b64, isImage?mime:'image/jpeg');
+    doScan(b64, mime);
   }
 }
 
@@ -4409,6 +4408,14 @@ function onClientBlur(inputId){
 
 function applyClientProfile(name, inputId){
   var profile=getClientProfile(name);
+  // If no formal profile, try to infer W/H rate from past invoices for this client
+  if(!profile){
+    var pastInvs=invoices.filter(function(i){return (i.client||'').toLowerCase()===name.toLowerCase()&&(parseFloat(i.wht_rate)||0)>0;});
+    if(pastInvs.length>0){
+      var inferredRate=parseFloat(pastInvs[0].wht_rate)||0;
+      profile={whtRate:inferredRate, gst:'yes', terms:30};
+    }
+  }
   if(!profile) return;
   // Apply to invoice form
   if(inputId==='f-client'||inputId.startsWith('f-')){
