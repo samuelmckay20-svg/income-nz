@@ -703,58 +703,98 @@ body{
       <span id="tax-income-sub" style="display:none"></span>
 
       <!-- ── GST ── -->
-      <div class="shdr">GST</div>
-      <div class="hero-wrap" style="padding-top:0;padding-bottom:4px">
-        <div class="hero-card" style="overflow:visible">
-          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--accent));border-radius:3px 3px 0 0"></div>
-          <div class="hero-lbl" id="gst-hero-lbl">GST output this period</div>
-          <div class="hero-amount c-blue" id="gst-box7">$0</div>
-          <div class="hero-period" id="gst-period-lbl">Current period</div>
-          <div class="hero-divider"></div>
-          <div class="hero-stats">
-            <div class="hero-stat" style="flex:1">
-              <div class="hs-lbl">Output</div>
-              <div class="hs-val c-red" id="gst-box7b">$0</div>
-              <div style="font-size:10px;color:var(--t3);margin-top:2px">You collected</div>
-            </div>
-            <div class="hero-stat-sep"></div>
-            <div class="hero-stat" style="flex:1;padding-left:12px">
-              <div class="hs-lbl">Input</div>
-              <div class="hs-val c-green" id="gst-input">—</div>
-              <div style="font-size:10px;color:var(--t3);margin-top:2px">From expenses</div>
-            </div>
-            <div class="hero-stat-sep"></div>
-            <div class="hero-stat" style="flex:1;padding-left:12px">
-              <div class="hs-lbl">Net owe IRD</div>
-              <div class="hs-val c-orange" id="gst-net-headline">$0</div>
-              <div style="font-size:10px;color:var(--t3);margin-top:2px">After expenses</div>
-            </div>
+      <div class="shdr-row">
+        <span class="shdr">GST return</span>
+        <select id="gst-period-select" class="g-select" style="font-size:12px;width:auto" onchange="renderTaxTab()"></select>
+      </div>
+      <div style="margin:0 16px 8px;background:var(--surface);border-radius:16px;overflow:hidden">
+
+        <!-- Period + due date banner -->
+        <div id="gst-due-banner" style="padding:12px 16px;border-bottom:0.5px solid var(--sep);display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px">Period</div>
+            <div style="font-size:14px;font-weight:600;color:var(--t1)" id="gst-period-label">—</div>
           </div>
-          <div class="hero-divider" style="margin-top:16px"></div>
-          <div style="display:flex;flex-direction:column;gap:10px;padding-top:2px">
-            <div style="display:flex;align-items:center;justify-content:space-between">
-              <span style="font-size:13px;color:var(--t3)">Current period</span>
-              <span style="font-size:13px;font-weight:600;color:var(--t2)" id="gst-current-period">—</span>
+          <div style="text-align:right">
+            <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px">Due</div>
+            <div style="font-size:14px;font-weight:700" id="gst-due-label">—</div>
+          </div>
+        </div>
+
+        <!-- Net GST hero -->
+        <div style="padding:20px 16px 16px;text-align:center;border-bottom:0.5px solid var(--sep)">
+          <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Net GST to pay IRD</div>
+          <div style="font-size:42px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-1px" id="gst-box15">$0</div>
+          <div style="font-size:12px;color:var(--t3);margin-top:4px" id="gst-box15-sub">Output minus input</div>
+        </div>
+
+        <!-- IRD return boxes -->
+        <div style="padding:0">
+          <!-- Box 5 -->
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--t1)">Total sales</div>
+              <div style="font-size:11px;color:var(--t3);margin-top:1px">GST-inclusive income received this period</div>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between">
-              <span style="font-size:13px;color:var(--t3)">Filing frequency</span>
-              <select class="g-select" id="gst-freq" onchange="saveSettings()" style="font-size:13px">
-                <option value="2monthly">2-monthly</option>
-                <option value="1monthly">Monthly</option>
-                <option value="6monthly">6-monthly</option>
-              </select>
+            <div style="font-size:17px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums" id="gst-box5">$0</div>
+          </div>
+          <!-- Box 7 -->
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep);background:rgba(255,59,48,.04)">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--red)">GST collected</div>
+              <div style="font-size:11px;color:var(--t3);margin-top:1px">Output tax (Box 5 × 3/23)</div>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between">
-              <span style="font-size:13px;color:var(--t3)">GST number</span>
-              <input class="g-input" id="gst-num" type="text" placeholder="XX-XXX-XXX" inputmode="numeric" maxlength="11" onblur="saveSettings()" style="font-size:13px;text-align:right;max-width:140px">
+            <div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums" id="gst-box7">$0</div>
+          </div>
+          <!-- Box 11 -->
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--t1)">Total purchases</div>
+              <div style="font-size:11px;color:var(--t3);margin-top:1px">GST-inclusive expenses paid this period</div>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-top:2px;border-top:0.5px solid var(--sep)" onclick="openReceiptsNZ()">
-              <span style="font-size:13px;color:var(--t3)">Expense app</span>
-              <span style="font-size:13px;font-weight:600;color:var(--blue)" id="receipts-link-lbl">Open Receipts NZ →</span>
+            <div style="font-size:17px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums" id="gst-box11">—</div>
+          </div>
+          <!-- Box 13 -->
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep);background:rgba(52,199,89,.04)">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--green)">GST to claim</div>
+              <div style="font-size:11px;color:var(--t3);margin-top:1px">Input tax on expenses (from Receipts NZ)</div>
             </div>
+            <div style="font-size:17px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums" id="gst-box13">—</div>
+          </div>
+          <!-- Box 15 summary -->
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(0,122,255,.06)">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--blue)">Amount to pay IRD</div>
+              <div style="font-size:11px;color:var(--t3);margin-top:1px">Output minus input</div>
+            </div>
+            <div style="font-size:17px;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums" id="gst-box15b">$0</div>
+          </div>
+        </div>
+
+        <!-- Settings -->
+        <div style="padding:12px 16px;border-top:0.5px solid var(--sep);display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:13px;color:var(--t3)">Filing frequency</span>
+            <select class="g-select" id="gst-freq" onchange="saveSettings();renderTaxTab()" style="font-size:13px">
+              <option value="2monthly">2-monthly</option>
+              <option value="1monthly">Monthly</option>
+              <option value="6monthly">6-monthly</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:13px;color:var(--t3)">GST number</span>
+            <input class="g-input" id="gst-num" type="text" placeholder="074-620-000" inputmode="numeric" maxlength="15" onblur="saveSettings()" style="font-size:13px;text-align:right;max-width:140px">
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-top:2px;border-top:0.5px solid var(--sep)" onclick="openReceiptsNZ()">
+            <span style="font-size:13px;color:var(--t3)">Expense data</span>
+            <span style="font-size:13px;font-weight:600;color:var(--blue)" id="receipts-link-lbl">Open Receipts NZ →</span>
           </div>
         </div>
       </div>
+
+      <!-- Net GST row hidden (kept for JS compat) -->
+      <div id="gst-net-row" style="display:none"></div>
 
       <!-- ── ACC ── -->
       <div class="shdr">ACC levies</div>
@@ -1979,40 +2019,81 @@ function renderSources(fyInvoices){
 }
 
 /* ── Next GST due ── */
-function currentGSTPeriod(){
+function getGSTSchedule(){
+  // Returns all 2-monthly periods in order (NZ: Feb/Mar, Apr/May, Jun/Jul, Aug/Sep, Oct/Nov, Dec/Jan)
+  // Period ends on last day of: Jan(0), Mar(2), May(4), Jul(6), Sep(8), Nov(10)
   var freq=settings.gstFreq||'2monthly';
-  var now=new Date(), m=now.getMonth(), y=now.getFullYear();
   var months=freq==='1monthly'?1:freq==='6monthly'?6:2;
-  var periodEnds=freq==='1monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:freq==='6monthly'?[3,9]:[0,2,4,6,8,10];
-  for(var i=0;i<24;i++){
-    var pm=(m+i)%12, py=y+Math.floor((m+i)/12);
-    if(periodEnds.indexOf(pm)!==-1){
-      var end=new Date(py,pm+1,0);
-      if(end>=now){
-        var start=new Date(py,pm+1-months,1);
-        return{start:start,end:end};
-      }
-    }
+  var periodEndMonths=freq==='1monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:freq==='6monthly'?[3,9]:[0,2,4,6,8,10];
+  // Build last 3 years of periods + next upcoming
+  var periods=[];
+  var now=new Date();
+  var y=now.getFullYear()-2;
+  for(var iter=0;iter<48;iter++){
+    periodEndMonths.forEach(function(pm){
+      var end=new Date(y,pm+1,0); // last day of month pm
+      var start=new Date(y,pm+1-months,1);
+      var due=new Date(y,pm+1,28); // 28th of month after period ends
+      periods.push({start:start,end:end,due:due});
+    });
+    y++;
   }
-  return{start:FY.start,end:FY.end};
+  // Filter to reasonable range and sort
+  var cutoff=new Date(now.getFullYear()-2,0,1);
+  periods=periods.filter(function(p){return p.end>=cutoff;}).sort(function(a,b){return b.end-a.end;});
+  return periods;
+}
+
+function currentGSTPeriod(){
+  var periods=getGSTSchedule();
+  var now=new Date();
+  // Current = the period that contains today, or next upcoming
+  var current=periods.slice().reverse().find(function(p){return p.end>=now&&p.start<=now;});
+  if(!current) current=periods[periods.length-1];
+  return current||{start:FY.start,end:FY.end,due:new Date()};
 }
 
 function nextGSTDue(){
-  var freq=settings.gstFreq||'2monthly';
-  var now=new Date(), m=now.getMonth(), y=now.getFullYear();
-  var periodEnds=freq==='1monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:freq==='6monthly'?[3,9]:[0,2,4,6,8,10];
-  for(var i=0;i<24;i++){
-    var pm=(m+i)%12, py=y+Math.floor((m+i)/12);
-    if(periodEnds.indexOf(pm)!==-1){
-      var end=new Date(py,pm+1,0);
-      if(end>=now){
-        var due=new Date(py,pm+2,28);
-        var days=Math.ceil((due-now)/86400000);
-        return{date:due.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'}),period:'Period ends '+end.toLocaleDateString('en-NZ',{month:'long',year:'numeric'})+' \u00b7 '+days+' days'};
-      }
-    }
-  }
-  return{date:'\u2014',period:'Set frequency below'};
+  var p=currentGSTPeriod();
+  var now=new Date();
+  var days=Math.ceil((p.due-now)/86400000);
+  var overdue=days<0;
+  return{
+    date:p.due.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'}),
+    period:fmtDateRange(p.start,p.end),
+    days:days,
+    overdue:overdue
+  };
+}
+
+function fmtDateRange(start,end){
+  return start.toLocaleDateString('en-NZ',{day:'numeric',month:'short'})+' – '+end.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});
+}
+
+function populateGSTPeriodSelector(){
+  var sel=document.getElementById('gst-period-select');
+  if(!sel)return;
+  var periods=getGSTSchedule();
+  var now=new Date();
+  sel.innerHTML='';
+  periods.forEach(function(p,idx){
+    var isCurrent=p.start<=now&&p.end>=now;
+    var isPast=p.end<now;
+    var label=fmtDateRange(p.start,p.end)+(isCurrent?' (current)':isPast?' ✓':'');
+    var opt=document.createElement('option');
+    opt.value=idx;
+    opt.textContent=label;
+    if(isCurrent) opt.selected=true;
+    if(!isPast&&!isCurrent) opt.style.color='var(--t3)';
+    sel.appendChild(opt);
+  });
+}
+
+function getSelectedGSTPeriod(){
+  var sel=document.getElementById('gst-period-select');
+  var periods=getGSTSchedule();
+  var idx=sel?parseInt(sel.value)||0:0;
+  return periods[idx]||currentGSTPeriod();
 }
 
 /* ── SVG Chart ── */
@@ -2493,46 +2574,66 @@ function renderTaxTab(){
     if(sel){for(var o=0;o<sel.options.length;o++){if(parseFloat(sel.options[o].value)===parseFloat(settings.accRate)){sel.selectedIndex=o;break;}}}
   }
 
-  // ── GST — current filing period only ──
-  var gstPer=currentGSTPeriod();
-  var periodInv=invoices.filter(function(i){var d=parseDate(i.date);return d>=gstPer.start&&d<=gstPer.end;});
-  var gstCollectedTax=periodInv.filter(function(i){return i.status==='paid'&&i.gst==='yes';})
-    .reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
-  var gstOwedTax=periodInv.filter(function(i){return i.gst==='yes';})
-    .reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
-  document.getElementById('gst-box7').textContent=fmt(gstOwedTax);
-  var b7=document.getElementById('gst-box7b'); if(b7) b7.textContent=fmt(gstOwedTax);
-  var nh=document.getElementById('gst-net-headline'); if(nh) nh.textContent=fmt(gstOwedTax); // updated after input tax loads
-  var due=nextGSTDue();
-  var periodLabel=gstPer.start.toLocaleDateString('en-NZ',{day:'numeric',month:'short'})+' – '+gstPer.end.toLocaleDateString('en-NZ',{day:'numeric',month:'short'});
-  document.getElementById('gst-period-lbl').textContent=periodLabel+' · Due: '+due.date;
-  var cp=document.getElementById('gst-current-period'); if(cp) cp.textContent=periodLabel;
-  var hl=document.getElementById('gst-hero-lbl'); if(hl) hl.textContent='GST output this period';
+  // ── GST — payments basis, selected period ──
+  // Populate period selector on first render
+  populateGSTPeriodSelector();
+  var gstPer=getSelectedGSTPeriod();
+
+  // PAYMENTS BASIS: filter by paid_date (when money was received)
+  var paidInPeriod=invoices.filter(function(i){
+    if(i.status!=='paid') return false;
+    var pd=parseDate(i.paid_date||i.date);
+    return pd>=gstPer.start&&pd<=gstPer.end&&i.gst==='yes';
+  });
+
+  // Box 5: total GST-inclusive sales received in period
+  var box5=paidInPeriod.reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
+  // Box 7: GST collected (output tax) = Box5 × 3/23
+  var box7=paidInPeriod.reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
+
+  // Period label + due date
+  var periodLabel=fmtDateRange(gstPer.start,gstPer.end);
+  var now2=new Date();
+  var daysUntilDue=Math.ceil((gstPer.due-now2)/86400000);
+  var overdue=daysUntilDue<0;
+  var dueLabel=gstPer.due.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});
+  var pl=document.getElementById('gst-period-label'); if(pl) pl.textContent=periodLabel;
+  var dl=document.getElementById('gst-due-label');
+  if(dl){
+    dl.textContent=overdue?'Overdue — '+dueLabel:daysUntilDue===0?'Due today!':daysUntilDue+' days — '+dueLabel;
+    dl.style.color=overdue?'var(--red)':daysUntilDue<=7?'var(--orange)':'var(--green)';
+  }
+  var banner=document.getElementById('gst-due-banner');
+  if(banner) banner.style.background=overdue?'rgba(255,59,48,.06)':daysUntilDue<=7?'rgba(255,149,0,.06)':'rgba(52,199,89,.06)';
+
+  // Set box values
+  var set=function(id,val){var e=document.getElementById(id);if(e)e.textContent=val;};
+  set('gst-box5',fmt(box5));
+  set('gst-box7',fmt(box7));
+  set('gst-box15',fmt(box7)); // updated after input tax loads
+  set('gst-box15b',fmt(box7));
+  set('gst-box15-sub','Box 7 '+(box7>0?fmt(box7):'$0')+' minus Box 13 (loading…)');
+
   if(settings.gstFreq)document.getElementById('gst-freq').value=settings.gstFreq;
   if(settings.gstNum)document.getElementById('gst-num').value=settings.gstNum;
 
-  // Pull input tax from Receipts NZ (async — server fetch with localStorage fallback)
-  var gi=document.getElementById('gst-input');
-  var netRow=document.getElementById('gst-net-row');
+  // Fetch input tax from Receipts NZ
   var linkLbl=document.getElementById('receipts-link-lbl');
-  if(gi) gi.textContent='Loading…';
-  var _gstOwedSnapshot=gstOwedTax;
-  var _dueSnapshot=due;
+  set('gst-box11','…'); set('gst-box13','…');
+  var _box7snap=box7, _perSnap=gstPer;
   fetchReceiptsGST(gstPer.start, gstPer.end, function(rxData){
     if(rxData&&rxData.available){
-      var inputGST=rxData.inputGST;
-      var netOwe=Math.max(0,_gstOwedSnapshot-inputGST);
-      if(gi){gi.textContent=fmt(inputGST);gi.style.color='var(--green)';}
-      if(netRow) netRow.style.display='block';
-      var no=document.getElementById('gst-net-output'); if(no) no.textContent=fmt(_gstOwedSnapshot);
-      var ni=document.getElementById('gst-net-input'); if(ni) ni.textContent=fmt(inputGST);
-      var nw=document.getElementById('gst-net-owe'); if(nw) nw.textContent=fmt(netOwe);
-      var nh=document.getElementById('gst-net-headline'); if(nh) nh.textContent=fmt(netOwe);
-      var hl=document.getElementById('gst-hero-lbl'); if(hl) hl.textContent='GST output this period';
-      var pl=document.getElementById('gst-period-lbl'); if(pl) pl.textContent=periodLabel+' · Due: '+_dueSnapshot.date;
+      var box13=rxData.inputGST;
+      var box11=rxData.totalExpenses||0;
+      var box15=Math.max(0,_box7snap-box13);
+      set('gst-box11',box11>0?fmt(box11):'—');
+      set('gst-box13',fmt(box13));
+      set('gst-box15',fmt(box15));
+      set('gst-box15b',fmt(box15));
+      set('gst-box15-sub','Box 7 '+fmt(_box7snap)+' minus Box 13 '+fmt(box13));
     } else {
-      if(gi){gi.textContent='Not linked';gi.style.color='';}
-      if(netRow) netRow.style.display='none';
+      set('gst-box11','Link Receipts NZ');
+      set('gst-box13','Link Receipts NZ');
     }
     if(linkLbl) linkLbl.textContent='Open Receipts NZ →';
   });
@@ -3464,10 +3565,13 @@ function confirmMarkPaid(){
   if(isNew){
     var client=(document.getElementById('paid-client').value||'').trim();
     if(!client){showToast('Enter a client name');return;}
-    var gross=net+wht;
+    // Use paid-gross field directly if filled (scan sets this to gross_inc_gst)
+    // Fall back to net+wht which also equals gross inc GST for NZ schedular payments
+    var grossField=parseFloat(document.getElementById('paid-gross').value)||0;
+    var gross=grossField>0?grossField:(net+wht);
     if(gross<=0&&net<=0){showToast('Enter the net received amount');return;}
     inv.client=client;
-    inv.amount=gross>0?gross:net;
+    inv.amount=gross; // always gross inc GST for correct Box 5
     inv.date=dateVal||today();
     inv.invoice_number=document.getElementById('paid-inv-num').value.trim()||null;
     inv.gst=document.getElementById('paid-gst').value;
@@ -4086,13 +4190,15 @@ function fetchReceiptsGST(start, end, callback){
 }
 
 function calcInputGST(receipts, start, end){
-  if(!receipts||!receipts.length) return {inputGST:0, count:0, available:false};
+  if(!receipts||!receipts.length) return {inputGST:0, totalExpenses:0, count:0, available:false};
+  // PAYMENTS BASIS: filter by date paid (receipt date = when you paid)
   var periodR=receipts.filter(function(r){
     var d=parseDate(r.date||r.created_at||'');
     return d>=start&&d<=end;
   });
   var inputGST=periodR.reduce(function(s,r){return s+gstForReceiptsItem(r);},0);
-  return {inputGST:inputGST, count:periodR.length, available:true};
+  var totalExpenses=periodR.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
+  return {inputGST:inputGST, totalExpenses:totalExpenses, count:periodR.length, available:true};
 }
 
 // Entertainment categories in Receipts NZ (mirrors BUILT_IN_CATS)
