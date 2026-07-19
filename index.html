@@ -3729,28 +3729,9 @@ function parseCSV(text){
     // Skip exact duplicates already in bank list
     var dup=bankTxns.some(function(t){return t.date===isoDate&&t.amount===amount&&t.description===desc;});
     if(dup){skipped++;continue;}
-    // Auto-match against paid invoices — avoids duplicating remittances already logged
-    var autoMatchId=null;
-    if(amount>0){
-      var txnD=new Date(isoDate);
-      var bestMatch=null,bestScore=Infinity;
-      invoices.forEach(function(inv){
-        if(inv.status!=='paid') return;
-        // Already linked to a bank txn?
-        if(bankTxns.some(function(t){return String(t.matched_invoice_id)===String(inv.id);})) return;
-        var netPaid=inv.paid_amount!=null?parseFloat(inv.paid_amount):(parseFloat(inv.amount)||0)*(1-(parseFloat(inv.wht_rate)||0)/100);
-        var diff=Math.abs(amount-netPaid);
-        if(diff>0.10) return; // within 10c only for auto-match on import
-        var daysDiff=Math.abs((txnD-new Date(inv.paid_date||inv.date))/86400000);
-        if(daysDiff>14) return; // within 14 days
-        var score=diff+daysDiff*0.5;
-        if(score<bestScore){bestScore=score;bestMatch=inv;}
-      });
-      if(bestMatch) autoMatchId=bestMatch.id;
-    }
-    bankTxns.push({id:'bank_'+Date.now()+'_'+i,date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:autoMatchId,source:isKiwibank?'kiwibank':isBNZ?'bnz':'anz',imported_at:new Date().toISOString()});
-    if(autoMatchId) matched++;
-    else imported++;
+    // No auto-match on import — use Auto-match button to link manually
+    bankTxns.push({id:'bank_'+Date.now()+'_'+i,date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:null,source:isKiwibank?'kiwibank':isBNZ?'bnz':'anz',imported_at:new Date().toISOString()});
+    imported++;
   }
   if(imported===0&&matched===0&&skipped===0){
     showToast('No rows found — check CSV format');
@@ -3759,7 +3740,6 @@ function parseCSV(text){
   }
   save();renderAll();
   var msg=imported+' imported';
-  if(matched) msg+=', '+matched+' auto-matched';
   if(skipped) msg+=' ('+skipped+' skipped)';
   showToast(msg);
   console.log('CSV import: imported='+imported+' matched='+matched+' skipped='+skipped);
@@ -3836,11 +3816,17 @@ function openBankDetail(id){
       _pendingMatchTxnId=id;
       openModal('modal-invoice');
     }});
-    var unpaid=invoices.filter(function(i){return i.status!=='paid';}).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-    unpaid.slice(0,6).forEach(function(inv){
-      actions.push({label:'Match → '+inv.client+' '+fmt(inv.amount),fn:function(){
-        txn.matched_invoice_id=inv.id; inv.status='paid';
-        inv.paid_date=txn.date; inv.paid_amount=txn.amount;
+    // Show unpaid + paid-but-unlinked invoices for manual matching
+    var matchable=invoices.filter(function(i){
+      if(i.status!=='paid') return true; // unpaid - can match and mark paid
+      // paid but not yet linked to a bank txn
+      return !bankTxns.some(function(t){return t!==txn&&String(t.matched_invoice_id)===String(i.id);});
+    }).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+    matchable.slice(0,8).forEach(function(inv){
+      var label=(inv.status==='paid'?'✓ ':'')+inv.client+' '+fmt(inv.amount)+(inv.invoice_number?' #'+inv.invoice_number:'');
+      actions.push({label:'Match → '+label,fn:function(){
+        txn.matched_invoice_id=inv.id;
+        if(inv.status!=='paid'){inv.status='paid';inv.paid_date=txn.date;inv.paid_amount=txn.amount;}
         save(); renderAll(); showToast('Matched to '+inv.client);
       }});
     });
