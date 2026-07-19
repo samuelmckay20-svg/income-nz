@@ -3740,7 +3740,7 @@ function parseCSV(text){
         if(bankTxns.some(function(t){return String(t.matched_invoice_id)===String(inv.id);})) return;
         var netPaid=inv.paid_amount!=null?parseFloat(inv.paid_amount):(parseFloat(inv.amount)||0)*(1-(parseFloat(inv.wht_rate)||0)/100);
         var diff=Math.abs(amount-netPaid);
-        if(diff>Math.max(netPaid*0.02,0.10)) return; // within 2% or 10c
+        if(diff>0.10) return; // within 10c only for auto-match on import
         var daysDiff=Math.abs((txnD-new Date(inv.paid_date||inv.date))/86400000);
         if(daysDiff>14) return; // within 14 days
         var score=diff+daysDiff*0.5;
@@ -3872,18 +3872,22 @@ function runAutoMatch(){
         var alreadyLinked=bankTxns.some(function(t){return t!==txn&&String(t.matched_invoice_id)===String(inv.id);});
         if(alreadyLinked) return;
         var diff=Math.abs(credit-netPaid);
-        if(diff>Math.max(netPaid*0.02,0.10)) return;
+        if(diff>0.10) return; // exact match only
         var daysDiff=Math.abs((txnDate-new Date(inv.paid_date||inv.date))/86400000);
-        if(daysDiff>14) return;
+        if(daysDiff>7) return; // within 7 days of paid date
         var score=diff+daysDiff*0.5+1; // slight penalty vs unpaid match
         if(score<bestScore){bestScore=score;best=inv;}
       } else {
-        // Unpaid — match and mark paid
-        var expectedNet=invAmt*(1-whtRate/100);
-        var diff=Math.min(Math.abs(credit-expectedNet),Math.abs(credit-invAmt));
-        if(diff>invAmt*0.05) return;
+        // Unpaid — only match if amounts are very close (exact or rounding only)
+        var expectedNet=whtRate>0?invAmt*(1-whtRate/100):invAmt;
+        var diffNet=Math.abs(credit-expectedNet);
+        var diffGross=Math.abs(credit-invAmt);
+        var diff=Math.min(diffNet,diffGross);
+        // Strict: within $1 only — prevent false matches
+        if(diff>1.00) return;
         var daysDiff=(txnDate-new Date(inv.date))/86400000;
-        if(daysDiff<0||daysDiff>120) return;
+        // Must be after invoice date and within 60 days
+        if(daysDiff<0||daysDiff>60) return;
         var score=diff+daysDiff*0.3;
         if(score<bestScore){bestScore=score;best=inv;}
       }
