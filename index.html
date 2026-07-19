@@ -648,29 +648,6 @@ body{
               <div class="hs-val c-green" id="tax-wht-paid">$0</div>
             </div>
           </div>
-          <!-- Net GST — shown when Receipts NZ data available -->
-          <div id="gst-net-row" style="display:none;margin:12px 0 0;padding:12px 14px;background:rgba(0,122,255,.08);border-radius:12px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-              <span style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px">Net GST position</span>
-              <span style="font-size:10px;color:var(--t3)">Output − Input</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="flex:1;text-align:center;background:rgba(255,59,48,.08);border-radius:8px;padding:8px 4px">
-                <div style="font-size:10px;color:var(--t3);margin-bottom:2px">Output</div>
-                <div style="font-size:16px;font-weight:700;color:var(--red)" id="gst-net-output">$0</div>
-              </div>
-              <span style="color:var(--t3);font-weight:600">−</span>
-              <div style="flex:1;text-align:center;background:rgba(52,199,89,.08);border-radius:8px;padding:8px 4px">
-                <div style="font-size:10px;color:var(--t3);margin-bottom:2px">Input</div>
-                <div style="font-size:16px;font-weight:700;color:var(--green)" id="gst-net-input">$0</div>
-              </div>
-              <span style="color:var(--t3);font-weight:600">=</span>
-              <div style="flex:1;text-align:center;background:rgba(0,122,255,.1);border-radius:8px;padding:8px 4px">
-                <div style="font-size:10px;color:var(--t3);margin-bottom:2px">Owe IRD</div>
-                <div style="font-size:16px;font-weight:700;color:var(--blue)" id="gst-net-owe">$0</div>
-              </div>
-            </div>
-          </div>
           <div class="hero-divider" style="margin-top:16px"></div>
           <!-- hidden elements still needed by JS -->
           <span id="tax-on-income" style="display:none"></span>
@@ -703,98 +680,58 @@ body{
       <span id="tax-income-sub" style="display:none"></span>
 
       <!-- ── GST ── -->
-      <div class="shdr-row">
-        <span class="shdr">GST return</span>
-        <select id="gst-period-select" class="g-select" style="font-size:12px;width:auto" onchange="renderTaxTab()"></select>
-      </div>
-      <div style="margin:0 16px 8px;background:var(--surface);border-radius:16px;overflow:hidden">
-
-        <!-- Period + due date banner -->
-        <div id="gst-due-banner" style="padding:12px 16px;border-bottom:0.5px solid var(--sep);display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px">Period</div>
-            <div style="font-size:14px;font-weight:600;color:var(--t1)" id="gst-period-label">—</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px">Due</div>
-            <div style="font-size:14px;font-weight:700" id="gst-due-label">—</div>
-          </div>
-        </div>
-
-        <!-- Net GST hero -->
-        <div style="padding:20px 16px 16px;text-align:center;border-bottom:0.5px solid var(--sep)">
-          <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Net GST to pay IRD</div>
-          <div style="font-size:42px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-1px" id="gst-box15">$0</div>
-          <div style="font-size:12px;color:var(--t3);margin-top:4px" id="gst-box15-sub">Output minus input</div>
-        </div>
-
-        <!-- IRD return boxes -->
-        <div style="padding:0">
-          <!-- Box 5 -->
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
-            <div>
-              <div style="font-size:13px;font-weight:600;color:var(--t1)">Total sales</div>
-              <div style="font-size:11px;color:var(--t3);margin-top:1px">GST-inclusive income received this period</div>
+      <div class="shdr">GST</div>
+      <div class="hero-wrap" style="padding-top:0;padding-bottom:4px">
+        <div class="hero-card" style="overflow:visible">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--accent));border-radius:3px 3px 0 0"></div>
+          <div class="hero-lbl">GST to pay IRD</div>
+          <div class="hero-amount c-red" id="gst-box7">$0</div>
+          <div class="hero-period" id="gst-period-lbl">Next filing —</div>
+          <div class="hero-divider"></div>
+          <div class="hero-stats">
+            <div class="hero-stat" style="flex:1">
+              <div class="hs-lbl">Collected</div>
+              <div class="hs-val c-green" id="gst-box5">$0</div>
+              <div style="font-size:10px;color:var(--t3);margin-top:2px">Paid invoices</div>
             </div>
-            <div style="font-size:17px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums" id="gst-box5">$0</div>
-          </div>
-          <!-- Box 7 -->
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep);background:rgba(255,59,48,.04)">
-            <div>
-              <div style="font-size:13px;font-weight:600;color:var(--red)">GST collected</div>
-              <div style="font-size:11px;color:var(--t3);margin-top:1px">Output tax (Box 5 × 3/23)</div>
+            <div class="hero-stat-sep"></div>
+            <div class="hero-stat" style="flex:1;padding-left:12px">
+              <div class="hs-lbl">You owe IRD</div>
+              <div class="hs-val c-red" id="gst-box7b">$0</div>
+              <div style="font-size:10px;color:var(--t3);margin-top:2px">All invoices</div>
             </div>
-            <div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums" id="gst-box7">$0</div>
-          </div>
-          <!-- Box 11 -->
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
-            <div>
-              <div style="font-size:13px;font-weight:600;color:var(--t1)">Total purchases</div>
-              <div style="font-size:11px;color:var(--t3);margin-top:1px">GST-inclusive expenses paid this period</div>
+            <div class="hero-stat-sep"></div>
+            <div class="hero-stat" style="flex:1;padding-left:12px">
+              <div class="hs-lbl">Input tax</div>
+              <div class="hs-val c-green" id="gst-input">—</div>
+              <div style="font-size:10px;color:var(--t3);margin-top:2px">From expenses</div>
             </div>
-            <div style="font-size:17px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums" id="gst-box11">—</div>
           </div>
-          <!-- Box 13 -->
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep);background:rgba(52,199,89,.04)">
-            <div>
-              <div style="font-size:13px;font-weight:600;color:var(--green)">GST to claim</div>
-              <div style="font-size:11px;color:var(--t3);margin-top:1px">Input tax on expenses (from Receipts NZ)</div>
+          <div class="hero-divider" style="margin-top:16px"></div>
+          <div style="display:flex;flex-direction:column;gap:10px;padding-top:2px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:13px;color:var(--t3)">Current period</span>
+              <span style="font-size:13px;font-weight:600;color:var(--t2)" id="gst-current-period">—</span>
             </div>
-            <div style="font-size:17px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums" id="gst-box13">—</div>
-          </div>
-          <!-- Box 15 summary -->
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(0,122,255,.06)">
-            <div>
-              <div style="font-size:13px;font-weight:700;color:var(--blue)">Amount to pay IRD</div>
-              <div style="font-size:11px;color:var(--t3);margin-top:1px">Output minus input</div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:13px;color:var(--t3)">Filing frequency</span>
+              <select class="g-select" id="gst-freq" onchange="saveSettings()" style="font-size:13px">
+                <option value="2monthly">2-monthly</option>
+                <option value="1monthly">Monthly</option>
+                <option value="6monthly">6-monthly</option>
+              </select>
             </div>
-            <div style="font-size:17px;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums" id="gst-box15b">$0</div>
-          </div>
-        </div>
-
-        <!-- Settings -->
-        <div style="padding:12px 16px;border-top:0.5px solid var(--sep);display:flex;flex-direction:column;gap:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <span style="font-size:13px;color:var(--t3)">Filing frequency</span>
-            <select class="g-select" id="gst-freq" onchange="saveSettings();renderTaxTab()" style="font-size:13px">
-              <option value="2monthly">2-monthly</option>
-              <option value="1monthly">Monthly</option>
-              <option value="6monthly">6-monthly</option>
-            </select>
-          </div>
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <span style="font-size:13px;color:var(--t3)">GST number</span>
-            <input class="g-input" id="gst-num" type="text" placeholder="074-620-000" inputmode="numeric" maxlength="15" onblur="saveSettings()" style="font-size:13px;text-align:right;max-width:140px">
-          </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-top:2px;border-top:0.5px solid var(--sep)" onclick="openReceiptsNZ()">
-            <span style="font-size:13px;color:var(--t3)">Expense data</span>
-            <span style="font-size:13px;font-weight:600;color:var(--blue)" id="receipts-link-lbl">Open Receipts NZ →</span>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:13px;color:var(--t3)">GST number</span>
+              <input class="g-input" id="gst-num" type="text" placeholder="XX-XXX-XXX" inputmode="numeric" maxlength="11" onblur="saveSettings()" style="font-size:13px;text-align:right;max-width:140px">
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-top:2px;border-top:0.5px solid var(--sep)" onclick="showToast('Receipts NZ integration coming soon')">
+              <span style="font-size:13px;color:var(--t3)">Input tax (expenses)</span>
+              <span style="font-size:13px;font-weight:600;color:var(--blue)">Connect Receipts NZ →</span>
+            </div>
           </div>
         </div>
       </div>
-
-      <!-- Net GST row hidden (kept for JS compat) -->
-      <div id="gst-net-row" style="display:none"></div>
 
       <!-- ── ACC ── -->
       <div class="shdr">ACC levies</div>
@@ -1042,7 +979,7 @@ body{
           <div class="g-icon" style="background:rgba(0,122,255,0.12)">&#x1F3E2;</div>
           <span class="g-lbl">Client</span>
           <input class="g-input" id="f-client" type="text" placeholder="Client name" autocapitalize="words"
-            oninput="onClientInput('f-client','f-client-hint')" onblur="onClientBlur('f-client')" onchange="onClientBlur('f-client')">
+            oninput="onClientInput('f-client','f-client-hint')" onblur="onClientBlur('f-client')">
         </div>
         <div id="f-client-hint" style="display:none;padding:8px 16px;font-size:12px;color:var(--blue);cursor:pointer;background:rgba(0,122,255,.06);border-top:0.5px solid var(--sep)"></div>
         <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,0.12)">💵</div><span class="g-lbl">Amount (incl. GST)</span><input class="g-input" id="f-amount" type="text" placeholder="0.00" inputmode="decimal"></div>
@@ -1567,6 +1504,13 @@ function save(){ saveLocal(); syncToServer(); }
 
 /* ── Sync ── */
 
+function autoDetectModel(){
+  fetch(API_BASE+'/models',{headers:authHeaders()})
+  .then(function(r){return r.ok?r.json():null;})
+  .then(function(data){if(data&&data.model) CLAUDE_MODEL=data.model;})
+  .catch(function(){});
+}
+
 function manualSync(){
   var btn=document.getElementById('nav-sync-btn');
   if(btn){btn.style.opacity='0.4';btn.style.pointerEvents='none';}
@@ -1577,14 +1521,9 @@ function manualSync(){
     if(!spinning){clearInterval(spinInterval);if(btn){btn.style.transform='';btn.style.opacity='';btn.style.pointerEvents='';}}
   },30);
   var deletedIds=invBin.map(function(i){return String(i.id);}).filter(function(id){return !id.startsWith('local_');});
-  // Strip images from payload to avoid size limits
   var payload={
-    invoices:invoices.map(function(inv){
-      var out=Object.assign({},inv);
-      delete out.image; delete out.remittance_image;
-      return out;
-    }),
-    bankTxns:bankTxns, settings:settings, deletedInvoiceIds:deletedIds
+    invoices:invoices.map(function(inv){var out=Object.assign({},inv);delete out.image;delete out.remittance_image;return out;}),
+    bankTxns:bankTxns,settings:settings,deletedInvoiceIds:deletedIds
   };
   fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
   .then(function(r){
@@ -1600,8 +1539,7 @@ function manualSync(){
         if(inv){inv.id=data.idMap[localId];delete inv._localOnly;}
       });
     }
-    // Only clear _localOnly when server explicitly confirmed via idMap
-    // Don't clear for invoices that just happen to have numeric IDs without server confirmation
+    invoices.forEach(function(inv){if(!String(inv.id).startsWith('local_')&&inv._localOnly) delete inv._localOnly;});
     saveLocal();
     return fetch(API_BASE+'/data',{headers:authHeaders()});
   })
@@ -1612,9 +1550,7 @@ function manualSync(){
     var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
     var unsyncedLocal=invoices.filter(function(i){return i._localOnly&&String(i.id).startsWith('local_')&&!serverIds.has(String(i.id));});
-    console.log('[ManualSync] server:',serverInvoices.length,'unsynced:',unsyncedLocal.length);
     invoices=serverInvoices.concat(unsyncedLocal);
-    // Preserve excluded/matched flags
     var sBank=data.bankTxns||[];
     var lBankMap={};
     bankTxns.forEach(function(t){lBankMap[t.id]=t;});
@@ -1629,10 +1565,7 @@ function manualSync(){
     saveLocal(); renderAll();
     showToast('Synced ✓');
   })
-  .catch(function(e){
-    console.error('Sync error:',e);
-    showToast('Sync failed — '+e.message);
-  })
+  .catch(function(e){showToast('Sync failed — '+e.message);})
   .finally(function(){spinning=false;});
 }
 
@@ -1640,76 +1573,51 @@ function syncToServer(){
   if(_syncInFlight){_syncPending=true;return;}
   if(!LS.get(LS_TOKEN))return;
   _syncInFlight=true;
-  var deletedIds=invBin.map(function(i){return String(i.id);}).filter(function(id){return !id.startsWith('local_');});
+  // Include bin IDs so server knows what to delete
+  var deletedIds=invBin.map(function(i){return i.id;}).filter(function(id){return !String(id).startsWith('local_');});
   var payload={
     invoices:invoices.map(function(inv){var out=Object.assign({},inv);if(inv.image&&_imgCache.get(inv.id)===inv.image.length)delete out.image;return out;}),
-    bankTxns:bankTxns,settings:settings,deletedInvoiceIds:deletedIds
+    bankTxns:bankTxns, settings:settings,
+    deletedInvoiceIds:deletedIds
   };
   fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
   .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
   .then(function(data){
     if(!data)return;
     (data.imageLengths||[]).forEach(function(e){_imgCache.set(e.id,e.len);});
-    // Promote local_ IDs to real server IDs
     if(data.idMap){
-      Object.keys(data.idMap).forEach(function(localId){
-        var inv=invoices.find(function(i){return String(i.id)===localId;});
-        if(inv){inv.id=data.idMap[localId];delete inv._localOnly;}
+      invoices.forEach(function(inv){
+        if(data.idMap[inv.id]) inv.id=data.idMap[inv.id];
       });
     }
-    // Only clear _localOnly when server confirmed the ID via idMap
-    // Invoices with real IDs that weren't in idMap were already confirmed in previous syncs
-    invoices.forEach(function(inv){
-      if(!String(inv.id).startsWith('local_')&&!inv._localOnly) return; // already clean
-      if(!String(inv.id).startsWith('local_')&&inv._localOnly) delete inv._localOnly; // has real ID, safe to clear
-    });
     saveLocal();
   })
-  .catch(function(e){
-    console.warn('Sync failed, retrying in 30s');
-    if(!_syncRetryTimer) _syncRetryTimer=setTimeout(function(){_syncRetryTimer=null;syncToServer();},30000);
-  })
+  .catch(function(e){console.warn('Sync:',e);})
   .finally(function(){_syncInFlight=false;if(_syncPending){_syncPending=false;syncToServer();}});
 }
-
 function loadFromServer(){
   if(!LS.get(LS_TOKEN))return;
   fetch(API_BASE+'/data',{headers:authHeaders()})
   .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
   .then(function(data){
     if(!data)return;
+    // Filter out binned invoices
     var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
     var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
-    // Only keep items that are BOTH _localOnly AND have a local_ ID (genuinely unsynced)
+    // Only keep local-only items the server doesn't have yet (truly offline/unsynced)
+    // Only keep local items the server doesn't have — match by ID or by content
+    // Keep _localOnly items not yet on server (by ID only — no fuzzy match)
     var unsyncedLocal=invoices.filter(function(i){
-      return i._localOnly && String(i.id).startsWith('local_') && !serverIds.has(String(i.id));
+      return i._localOnly && !serverIds.has(String(i.id));
     });
-    console.log('[Load] server:',serverInvoices.length,'unsynced local:',unsyncedLocal.length,'total after:',serverInvoices.length+unsyncedLocal.length);
-    if(unsyncedLocal.length) console.log('[Load] unsynced:',unsyncedLocal.map(function(i){return i.client+'('+i.id+')'}));
     invoices=serverInvoices.concat(unsyncedLocal);
-    // Preserve excluded/matched flags from local bankTxns when server overwrites
-    var serverBank=data.bankTxns||[];
-    var localBankMap={};
-    bankTxns.forEach(function(t){localBankMap[t.id]=t;});
-    bankTxns=serverBank.map(function(t){
-      var local=localBankMap[t.id];
-      if(local){
-        if(local.excluded) t.excluded=true;
-        if(local.matched_invoice_id) t.matched_invoice_id=local.matched_invoice_id;
-      }
-      return t;
-    });
-    // Keep any local-only txns not yet on server (CSV imports not synced yet)
-    serverBank.forEach(function(t){delete localBankMap[t.id];});
-    Object.values(localBankMap).forEach(function(t){bankTxns.push(t);});
-    settings=data.settings||settings;
+    bankTxns=data.bankTxns||bankTxns; settings=data.settings||settings;
     saveLocal(); renderAll();
     if(unsyncedLocal.length||binnedIds.size) syncToServer();
   })
   .catch(function(e){console.warn('Load:',e);});
 }
-
 
 /* ── Formatting ── */
 function fmt(n){return'$'+(parseFloat(n)||0).toLocaleString('en-NZ',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -1761,11 +1669,9 @@ function renderIncomeTab(){
   // Net received = what actually hit the bank (gross minus W/H)
   // Use paid_amount if set (most accurate), otherwise derive from gross - W/H
   var received=paid.reduce(function(s,i){
-    var amt2=parseFloat(i.amount)||0;
-    var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):amt2*(parseFloat(i.wht_rate)||0)/100;
-    // If no W/H deduction, full gross hits bank
-    if(wa<=0) return s+amt2;
-    return s+(i.paid_amount!=null&&i.paid_amount!==''?parseFloat(i.paid_amount):amt2-wa);
+    if(i.paid_amount!=null&&i.paid_amount!=='') return s+(parseFloat(i.paid_amount)||0);
+    var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;
+    return s+(parseFloat(i.amount)||0)-wa;
   },0);
 
   // GST collected = GST portion of paid invoice face values
@@ -2028,81 +1934,40 @@ function renderSources(fyInvoices){
 }
 
 /* ── Next GST due ── */
-function getGSTSchedule(){
-  // Returns all 2-monthly periods in order (NZ: Feb/Mar, Apr/May, Jun/Jul, Aug/Sep, Oct/Nov, Dec/Jan)
-  // Period ends on last day of: Jan(0), Mar(2), May(4), Jul(6), Sep(8), Nov(10)
-  var freq=settings.gstFreq||'2monthly';
-  var months=freq==='1monthly'?1:freq==='6monthly'?6:2;
-  var periodEndMonths=freq==='1monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:freq==='6monthly'?[3,9]:[0,2,4,6,8,10];
-  // Build last 3 years of periods + next upcoming
-  var periods=[];
-  var now=new Date();
-  var y=now.getFullYear()-2;
-  for(var iter=0;iter<48;iter++){
-    periodEndMonths.forEach(function(pm){
-      var end=new Date(y,pm+1,0); // last day of month pm
-      var start=new Date(y,pm+1-months,1);
-      var due=new Date(y,pm+1,28); // 28th of month after period ends
-      periods.push({start:start,end:end,due:due});
-    });
-    y++;
-  }
-  // Filter to reasonable range and sort
-  var cutoff=new Date(now.getFullYear()-2,0,1);
-  periods=periods.filter(function(p){return p.end>=cutoff;}).sort(function(a,b){return b.end-a.end;});
-  return periods;
-}
-
 function currentGSTPeriod(){
-  var periods=getGSTSchedule();
-  var now=new Date();
-  // Current = the period that contains today, or next upcoming
-  var current=periods.slice().reverse().find(function(p){return p.end>=now&&p.start<=now;});
-  if(!current) current=periods[periods.length-1];
-  return current||{start:FY.start,end:FY.end,due:new Date()};
+  var freq=settings.gstFreq||'2monthly';
+  var now=new Date(), m=now.getMonth(), y=now.getFullYear();
+  var months=freq==='1monthly'?1:freq==='6monthly'?6:2;
+  var periodEnds=freq==='1monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:freq==='6monthly'?[3,9]:[0,2,4,6,8,10];
+  for(var i=0;i<24;i++){
+    var pm=(m+i)%12, py=y+Math.floor((m+i)/12);
+    if(periodEnds.indexOf(pm)!==-1){
+      var end=new Date(py,pm+1,0);
+      if(end>=now){
+        var start=new Date(py,pm+1-months,1);
+        return{start:start,end:end};
+      }
+    }
+  }
+  return{start:FY.start,end:FY.end};
 }
 
 function nextGSTDue(){
-  var p=currentGSTPeriod();
-  var now=new Date();
-  var days=Math.ceil((p.due-now)/86400000);
-  var overdue=days<0;
-  return{
-    date:p.due.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'}),
-    period:fmtDateRange(p.start,p.end),
-    days:days,
-    overdue:overdue
-  };
-}
-
-function fmtDateRange(start,end){
-  return start.toLocaleDateString('en-NZ',{day:'numeric',month:'short'})+' – '+end.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});
-}
-
-function populateGSTPeriodSelector(){
-  var sel=document.getElementById('gst-period-select');
-  if(!sel)return;
-  var periods=getGSTSchedule();
-  var now=new Date();
-  sel.innerHTML='';
-  periods.forEach(function(p,idx){
-    var isCurrent=p.start<=now&&p.end>=now;
-    var isPast=p.end<now;
-    var label=fmtDateRange(p.start,p.end)+(isCurrent?' (current)':isPast?' ✓':'');
-    var opt=document.createElement('option');
-    opt.value=idx;
-    opt.textContent=label;
-    if(isCurrent) opt.selected=true;
-    if(!isPast&&!isCurrent) opt.style.color='var(--t3)';
-    sel.appendChild(opt);
-  });
-}
-
-function getSelectedGSTPeriod(){
-  var sel=document.getElementById('gst-period-select');
-  var periods=getGSTSchedule();
-  var idx=sel?parseInt(sel.value)||0:0;
-  return periods[idx]||currentGSTPeriod();
+  var freq=settings.gstFreq||'2monthly';
+  var now=new Date(), m=now.getMonth(), y=now.getFullYear();
+  var periodEnds=freq==='1monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:freq==='6monthly'?[3,9]:[0,2,4,6,8,10];
+  for(var i=0;i<24;i++){
+    var pm=(m+i)%12, py=y+Math.floor((m+i)/12);
+    if(periodEnds.indexOf(pm)!==-1){
+      var end=new Date(py,pm+1,0);
+      if(end>=now){
+        var due=new Date(py,pm+1,28);
+        var days=Math.ceil((due-now)/86400000);
+        return{date:due.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'}),period:'Period ends '+end.toLocaleDateString('en-NZ',{month:'long',year:'numeric'})+' \u00b7 '+days+' days'};
+      }
+    }
+  }
+  return{date:'\u2014',period:'Set frequency below'};
 }
 
 /* ── SVG Chart ── */
@@ -2273,10 +2138,7 @@ function invCard(inv){
   var amt=parseFloat(inv.amount)||0;
   var wr=parseFloat(inv.wht_rate)||0;
   var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):Math.round(amt*wr/100*100)/100;
-  // When no W/H, net = full gross (GST passes through, nothing deducted)
-  var displayAmt=whtAmt>0
-    ?(inv.status==='paid'&&inv.paid_amount!=null?parseFloat(inv.paid_amount):amt-whtAmt)
-    :amt;
+  var displayAmt=whtAmt>0?(inv.status==='paid'&&inv.paid_amount!=null?parseFloat(inv.paid_amount):amt-whtAmt):amt;
   var whtBadge=wr>0?'<span class="badge" style="background:rgba(175,82,222,0.12);color:var(--purple)">W/H '+wr+'%</span>':'';
   var grossSub=inv.status==='paid'&&whtAmt>0?'<div style="font-size:11px;color:var(--t3);text-align:right">of '+fmt(amt)+'</div>':'';
   var html='<div class="r-card" data-iid="'+esc(String(inv.id))+'">';
@@ -2285,10 +2147,8 @@ function invCard(inv){
   html+='<div class="r-top"><div style="min-width:0"><div class="r-title">'+esc(inv.client)+'</div>';
   html+='<div class="r-sub">'+(inv.invoice_number?'#'+esc(inv.invoice_number)+' · ':'')+fmtDate(inv.date)+'</div></div>';
   html+='<div style="text-align:right;flex-shrink:0"><div class="r-amount" style="color:'+c+'">'+fmt(displayAmt)+'</div>'+grossSub+'</div></div>';
-  var isBankVerified=bankTxns.some(function(t){return t.matched_invoice_id&&(String(t.matched_invoice_id)===String(inv.id)||Number(t.matched_invoice_id)===Number(inv.id));});
-  var verifiedBadge=isBankVerified?'<span class="badge" style="background:rgba(52,199,89,.12);color:var(--green)">&#x2713; Verified</span>':'';
   html+='<div class="r-meta"><span class="badge b-'+status+'">'+(labels[status]||status)+'</span>';
-  html+=(inv.due_date&&inv.status!=='paid'?'<span class="r-sub">Due '+fmtDate(inv.due_date)+'</span>':'')+whtBadge+verifiedBadge;
+  html+=(inv.due_date&&inv.status!=='paid'?'<span class="r-sub">Due '+fmtDate(inv.due_date)+'</span>':'')+whtBadge;
   html+='</div></div></div>';
   return html;
 }
@@ -2418,62 +2278,22 @@ function renderClientsTab(){
 }
 
 /* ── Render Bank ── */
-function bankTxnCard(txn){
-  var amt=parseFloat(txn.amount)||0, isC=amt>0;
-  var matched=!!txn.matched_invoice_id, excluded=!!txn.excluded;
-  var barC=excluded?'var(--red)':matched?'var(--green)':isC?'var(--orange)':'var(--t4)';
-  var amtC=excluded?'var(--red)':matched?'var(--green)':isC?'var(--orange)':'var(--t4)';
-  var badge=excluded
-    ?'<span class="badge" style="background:rgba(255,59,48,.12);color:var(--red)">Excluded</span>'
-    :matched?'<span class="badge b-matched">Matched</span>'
-    :isC?'<span class="badge b-unmatched">Unmatched</span>'
-    :'<span class="badge b-debit">Debit</span>';
-  var html='<div class="r-card" style="'+( excluded?'opacity:.45;':'')+'" data-bid="'+esc(txn.id)+'">';
-  html+='<div class="r-bar" style="background:'+barC+'"></div>';
-  html+='<div class="r-body"><div class="r-top"><div style="min-width:0">';
-  html+='<div class="r-title">'+esc(txn.description||'\u2014')+'</div>';
-  html+='<div class="r-sub">'+fmtDate(txn.date)+(txn.reference?' \u00b7 '+esc(txn.reference):'')+'</div>';
-  html+='</div><div class="r-amount" style="color:'+amtC+'">'+fmt(Math.abs(amt))+'</div></div>';
-  html+='<div class="r-meta">'+badge+'</div></div></div>';
-  return html;
-}
 function renderBank(){
   var el=document.getElementById('bank-list');
-  var approvedEl=document.getElementById('bank-approved-list');
-  var approvedSection=document.getElementById('bank-approved-section');
   var btn=document.getElementById('automatch-btn');
-  if(!bankTxns.length){
-    el.innerHTML=emptyState('&#x1F3E6;','No transactions','Upload your bank CSV');
-    if(btn) btn.style.display='none';
-    if(approvedSection) approvedSection.style.display='none';
-    var uc=document.getElementById('bank-unverified-count'); if(uc) uc.textContent='0';
-    var us=document.getElementById('bank-unverified-sub'); if(us) us.textContent='No transactions imported';
-    return;
-  }
-  if(btn) btn.style.display='flex';
-  var sorted=bankTxns.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-  var unverified=sorted.filter(function(t){return !t.excluded;});
-  var approved=sorted.filter(function(t){return t.excluded;});
-  var credits=sorted.filter(function(t){return parseFloat(t.amount)>0&&!t.excluded;});
-  var totalCredits=credits.reduce(function(s,t){return s+(parseFloat(t.amount)||0);},0);
-  var verifiedCredits=credits.filter(function(t){return !!t.matched_invoice_id;}).reduce(function(s,t){return s+(parseFloat(t.amount)||0);},0);
-  var unverifiedCount=credits.filter(function(t){return !t.matched_invoice_id&&!t.excluded;}).length;
-  var uc=document.getElementById('bank-unverified-count'); if(uc) uc.textContent=String(unverifiedCount);
-  var us=document.getElementById('bank-unverified-sub'); if(us) us.textContent=unverifiedCount===0?'All credits verified':unverifiedCount+' credit'+(unverifiedCount===1?'':'s')+' need attention';
-  var tc=document.getElementById('bank-total-credits'); if(tc) tc.textContent=fmt(totalCredits);
-  var vt=document.getElementById('bank-verified-total'); if(vt) vt.textContent=fmt(verifiedCredits);
-  var ut=document.getElementById('bank-unverified-total'); if(ut) ut.textContent=fmt(totalCredits-verifiedCredits);
-  el.innerHTML=unverified.length?unverified.map(bankTxnCard).join(''):'<div style="padding:16px;text-align:center;color:var(--t3);font-size:13px">All transactions verified</div>';
-  el.onclick=function(e){var card=e.target.closest('[data-bid]');if(card)openBankDetail(card.dataset.bid);};
-  if(approved.length){
-    if(approvedSection) approvedSection.style.display='block';
-    if(approvedEl){
-      approvedEl.innerHTML=approved.map(bankTxnCard).join('');
-      approvedEl.onclick=function(e){var card=e.target.closest('[data-bid]');if(card)openBankDetail(card.dataset.bid);};
-    }
-  } else {
-    if(approvedSection) approvedSection.style.display='none';
-  }
+  if(!bankTxns.length){el.innerHTML=emptyState('🏦','No transactions','Upload your ANZ CSV to match payments');btn.style.display='none';return;}
+  btn.style.display='block';
+  el.innerHTML=bankTxns.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).map(function(txn){
+    var amt=parseFloat(txn.amount)||0, isC=amt>0, matched=!!txn.matched_invoice_id;
+    var c=matched?'var(--green)':isC?'var(--orange)':'var(--t4)';
+    var badge=matched?'<span class="badge b-matched">Matched</span>':isC?'<span class="badge b-unmatched">Unmatched</span>':'<span class="badge b-debit">Debit</span>';
+    return '<div class="r-card" onclick="openBankDetail(\''+esc(txn.id)+'\')">'
+      +'<div class="r-bar" style="background:'+c+'"></div>'
+      +'<div class="r-body"><div class="r-top"><div style="min-width:0"><div class="r-title">'+esc(txn.description||'\u2014')+'</div>'
+      +'<div class="r-sub">'+fmtDate(txn.date)+(txn.reference?' \u00b7 '+esc(txn.reference):'')+'</div></div>'
+      +'<div class="r-amount" style="color:'+c+'">'+fmt(Math.abs(amt))+'</div></div>'
+      +'<div class="r-meta">'+badge+'</div></div></div>';
+  }).join('');
 }
 
 /* ── NZ Income Tax Calculation (2025/26 rates) ── */
@@ -2586,69 +2406,23 @@ function renderTaxTab(){
     if(sel){for(var o=0;o<sel.options.length;o++){if(parseFloat(sel.options[o].value)===parseFloat(settings.accRate)){sel.selectedIndex=o;break;}}}
   }
 
-  // ── GST — payments basis, selected period ──
-  // Populate period selector on first render
-  populateGSTPeriodSelector();
-  var gstPer=getSelectedGSTPeriod();
-
-  // PAYMENTS BASIS: filter by paid_date (when money was received)
-  var paidInPeriod=invoices.filter(function(i){
-    if(i.status!=='paid') return false;
-    var pd=parseDate(i.paid_date||i.date);
-    return pd>=gstPer.start&&pd<=gstPer.end&&i.gst==='yes';
-  });
-
-  // Box 5: total GST-inclusive sales received in period
-  var box5=paidInPeriod.reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
-  // Box 7: GST collected (output tax) = Box5 × 3/23
-  var box7=paidInPeriod.reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
-
-  // Period label + due date
-  var periodLabel=fmtDateRange(gstPer.start,gstPer.end);
-  var now2=new Date();
-  var daysUntilDue=Math.ceil((gstPer.due-now2)/86400000);
-  var overdue=daysUntilDue<0;
-  var dueLabel=gstPer.due.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});
-  var pl=document.getElementById('gst-period-label'); if(pl) pl.textContent=periodLabel;
-  var dl=document.getElementById('gst-due-label');
-  if(dl){
-    dl.textContent=overdue?'Overdue — '+dueLabel:daysUntilDue===0?'Due today!':daysUntilDue+' days — '+dueLabel;
-    dl.style.color=overdue?'var(--red)':daysUntilDue<=7?'var(--orange)':'var(--green)';
-  }
-  var banner=document.getElementById('gst-due-banner');
-  if(banner) banner.style.background=overdue?'rgba(255,59,48,.06)':daysUntilDue<=7?'rgba(255,149,0,.06)':'rgba(52,199,89,.06)';
-
-  // Set box values
-  var set=function(id,val){var e=document.getElementById(id);if(e)e.textContent=val;};
-  set('gst-box5',fmt(box5));
-  set('gst-box7',fmt(box7));
-  set('gst-box15',fmt(box7)); // updated after input tax loads
-  set('gst-box15b',fmt(box7));
-  set('gst-box15-sub','Box 7 '+(box7>0?fmt(box7):'$0')+' minus Box 13 (loading…)');
-
+  // ── GST — current filing period only ──
+  var gstPer=currentGSTPeriod();
+  var periodInv=invoices.filter(function(i){var d=parseDate(i.date);return d>=gstPer.start&&d<=gstPer.end;});
+  var gstCollectedTax=periodInv.filter(function(i){return i.status==='paid'&&i.gst==='yes';})
+    .reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
+  var gstOwedTax=periodInv.filter(function(i){return i.gst==='yes';})
+    .reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
+  document.getElementById('gst-box5').textContent=fmt(gstCollectedTax);
+  document.getElementById('gst-box7').textContent=fmt(gstOwedTax);
+  var b7=document.getElementById('gst-box7b'); if(b7) b7.textContent=fmt(gstOwedTax);
+  var due=nextGSTDue();
+  var periodLabel=gstPer.start.toLocaleDateString('en-NZ',{day:'numeric',month:'short'})+' – '+gstPer.end.toLocaleDateString('en-NZ',{day:'numeric',month:'short'});
+  document.getElementById('gst-period-lbl').textContent=periodLabel+' · Due: '+due.date;
+  var cp=document.getElementById('gst-current-period'); if(cp) cp.textContent=periodLabel;
+  var gi=document.getElementById('gst-input'); if(gi) gi.textContent='Not linked';
   if(settings.gstFreq)document.getElementById('gst-freq').value=settings.gstFreq;
   if(settings.gstNum)document.getElementById('gst-num').value=settings.gstNum;
-
-  // Fetch input tax from Receipts NZ
-  var linkLbl=document.getElementById('receipts-link-lbl');
-  set('gst-box11','…'); set('gst-box13','…');
-  var _box7snap=box7, _perSnap=gstPer;
-  fetchReceiptsGST(gstPer.start, gstPer.end, function(rxData){
-    if(rxData&&rxData.available){
-      var box13=rxData.inputGST;
-      var box11=rxData.totalExpenses||0;
-      var box15=Math.max(0,_box7snap-box13);
-      set('gst-box11',box11>0?fmt(box11):'—');
-      set('gst-box13',fmt(box13));
-      set('gst-box15',fmt(box15));
-      set('gst-box15b',fmt(box15));
-      set('gst-box15-sub','Box 7 '+fmt(_box7snap)+' minus Box 13 '+fmt(box13));
-    } else {
-      set('gst-box11','Link Receipts NZ');
-      set('gst-box13','Link Receipts NZ');
-    }
-    if(linkLbl) linkLbl.textContent='Open Receipts NZ →';
-  });
 
   // ── Student loan ──
   var slToggle2=document.getElementById('sl-toggle');
@@ -2717,10 +2491,8 @@ function openNewRemittance(){
     status:'unpaid',source:'manual',_localOnly:true,
     created_at:new Date().toISOString(),updated_at:new Date().toISOString()
   };
-  window._newRemStub=stub; // hold in memory only until confirmed
-  _paidInvId=stub.id; // set so confirmMarkPaid can find the stub
-  // Open mark paid modal straight away — user fills in details + uploads remittance
-  // Open mark paid modal — user fills in details + uploads remittance
+  window._newRemStub=stub;
+  _paidInvId=stub.id;
   clearPaidFile();
   document.getElementById('paid-modal-title').textContent='New remittance';
   document.getElementById('paid-ai-result').style.display='none';
@@ -3042,24 +2814,11 @@ function openInvDetail(id){
   if(!inv) return;
   _detailInvId=id;
 
-  // Fetch image from server if not already loaded
-  if(!inv.image&&!inv.remittance_image&&LS.get(LS_TOKEN)){
-    fetch(API_BASE+'/invoice/'+id+'/image',{headers:authHeaders()})
-    .then(function(r){return r.ok?r.json():null;})
-    .then(function(d){
-      if(d&&d.image){inv.image=d.image;saveLocal();}
-      if(d&&d.remittance_image){inv.remittance_image=d.remittance_image;saveLocal();}
-    }).catch(function(){});
-  }
-
   var status=isOverdue(inv)?'overdue':(inv.status||'unpaid');
   var amt=parseFloat(inv.amount)||0;
   var gstAmt=inv.gst==='yes'?amt*3/23:0;
   var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):(amt*(parseFloat(inv.wht_rate)||0)/100);
-  // Net to bank: if no W/H, full gross hits bank regardless of stored paid_amount
-  var netAmt=whtAmt>0
-    ?(inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):amt-whtAmt)
-    :amt; // no deductions = full gross received
+  var netAmt=whtAmt>0?(inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):amt-whtAmt):amt;
 
   // Title
   document.getElementById('inv-detail-title').textContent=inv.client;
@@ -3109,9 +2868,7 @@ function openInvDetail(id){
 
   // Bottom actions
   var actionsEl=document.getElementById('inv-detail-actions');
-  var _fileData=inv.image||inv.remittance_image||null;
-  var _fileLabel=inv.remittance_image&&!inv.image?'View remittance':'View invoice file';
-  var viewBtn=_fileData?'<button class="inv-det-view" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">'+_fileLabel+'</button>':'';
+  var viewBtn=inv.image?'<button class="inv-det-view" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">View invoice file</button>':'';
   actionsEl.innerHTML=viewBtn+
     '<button class="inv-det-edit" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:var(--fill);color:var(--t1);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">Edit invoice</button>'+
     '<button class="inv-det-del" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(255,59,48,.1);color:var(--red);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">Delete invoice</button>';
@@ -3131,7 +2888,7 @@ function openInvDetail(id){
     var iid=b.dataset.iid;
     if(b.classList.contains('inv-det-edit')){closeModal('modal-inv-detail');editInvoice(iid);}
     if(b.classList.contains('inv-det-del')){closeModal('modal-inv-detail');deleteInvoice(iid);}
-    if(b.classList.contains('inv-det-view')){var vi=invoices.find(function(i){return String(i.id)===String(iid);});if(vi){var fd=vi.image||vi.remittance_image;if(fd)openViewer(fd,vi.client);}}
+    if(b.classList.contains('inv-det-view')){var vi=invoices.find(function(i){return String(i.id)===String(iid);});if(vi&&vi.image)openViewer(vi.image,vi.client);}
   };
 
   openModal('modal-inv-detail');
@@ -3414,22 +3171,19 @@ function updatePaidSummary(){
   var net=parseFloat(document.getElementById('paid-net').value)||0;
   if(!gross&&!net){el.style.display='none';return;}
   // (Gross + GST) - W/H = Net (GST passes through, W/H from base only)
-  // Try both NZ payment formulas
-  var calcNetA=gross>0?Math.round((gross+gst-wht)*100)/100:0; // Night Zone: base+GST-WH=net
-  var calcNetB=gross>0?Math.round((gross-wht)*100)/100:0;     // Sky: gross(incGST)-WH=net
-  var validA=net>0&&gross>0&&Math.abs(calcNetA-net)<0.10;
-  var validB=net>0&&gross>0&&Math.abs(calcNetB-net)<0.10;
-  var valid=validA||validB;
+  var calcNetA=gross>0?Math.round((gross+gst-wht)*100)/100:0;
+  var calcNetB=gross>0?Math.round((gross-wht)*100)/100:0;
+  var valid=net>0&&gross>0&&(Math.abs(calcNetA-net)<0.10||Math.abs(calcNetB-net)<0.10);
   el.style.display='block';
   if(gross>0&&net>0){
     if(valid){
       el.style.background='rgba(52,199,89,.1)';
       el.style.color='var(--green)';
-      el.textContent='\u2713 Numbers check out';
+      el.textContent='✓ Numbers check out — (Gross + GST) − W/H = Net';
     } else {
       el.style.background='rgba(255,149,0,.1)';
       el.style.color='var(--orange)';
-      el.textContent='\u26a0 Expected net: '+fmt(calcNetA)+(gst>0?' or '+fmt(calcNetB):'')+', got '+fmt(net);
+      el.textContent='⚠ Expected net: '+fmt(calcNet)+' — check W/H and GST amounts';
     }
   } else {
     el.style.background='var(--fill)';
@@ -3478,6 +3232,10 @@ function renderPaidPDFPreview(dataUrl){
 
 function viewPaidFile(){ openViewer(window._paidFileData,'Remittance'); }
 
+function onClosePaidModal(){
+  if(window._newRemStub){window._newRemStub=null;}
+}
+
 function clearPaidFile(){
   window._paidFileData=null; window._paidFileMime=null;
   document.getElementById('paid-prev-wrap').style.display='none';
@@ -3494,126 +3252,126 @@ function scanRemittance(){
   var resultEl=document.getElementById('paid-ai-result');
   btn.disabled=true;
   btn.innerHTML='<span class="spinner"></span> Reading remittance...';
-  resultEl.style.display='none'; resultEl.innerHTML='';
+  resultEl.style.display='none';
+  // Clear ALL fields so stale data doesn't persist between scans
   ['paid-gross','paid-gst-amt','paid-wht','paid-net'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
   });
   updatePaidSummary();
-
   var isImage=mime.startsWith('image/');
   var b64=data.split(',')[1];
+  var remPrompt='Analyse this NZ payment document and extract payment details. Reply ONLY with valid JSON, no markdown.'+
+    '\n\nFind these values by looking at the wage summary column on the right side of the payslip:'+
+    '\n- gross_inc_gst: the Total Gross line'+
+    '\n- gst_amount: the GST or GST/VAT line (NOT the OT line even if same number)'+
+    '\n- wht_amount: the Taxation line (withholding tax)'+
+    '\n- net_paid: the Net Pay line or bank transfer amount'+
+    '\n- wht_rate: 20 or 33 typically'+
+    '\n- base_ex_gst: gross before GST added'+
+    '\n- payment_date: Payment Date field (YYYY-MM-DD)'+
+    '\n- payer: production company name'+
+    '\n- invoice_number: Trans. No value'+
+    '\n- period_start and period_end: Pay Period dates (YYYY-MM-DD)'+
+    '\n- payer_gst: the CLIENT/PRODUCTION COMPANY GST or IRD number. The document often shows two IRD/GST numbers - one for the contractor and one for the company. Find the one associated with the production company name and their address. Digits only (e.g. 074620000). Return null if only one GST number is shown (it may be the contractor\'s)'+
+    '\n\nNZ rule: Total Gross + GST - Taxation = Net Pay. Verify this before returning.'+
+    '\nReturn: {"gross_inc_gst":null,"base_ex_gst":null,"gst_amount":null,"wht_amount":null,"wht_rate":null,"net_paid":null,"payment_date":null,"payer":null,"invoice_number":null,"period_start":null,"period_end":null,"payer_gst":null}';
+  var messages=[{role:'user',content:[
+    isImage?{type:'image',source:{type:'base64',media_type:mime,data:b64}}:{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+    {type:'text',text:remPrompt}
+  ]}];
+  fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:300,messages:messages})})
+  .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
+  .then(function(resp){
+    var text=(resp.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
+    var parsed=JSON.parse(text.replace(/```json|```/gi,'').trim());
+    if(parsed.gross_inc_gst!=null) document.getElementById('paid-gross').value=String(parsed.gross_inc_gst);
+    if(parsed.gst_amount!=null) document.getElementById('paid-gst-amt').value=String(parsed.gst_amount);
+    if(parsed.wht_amount!=null) document.getElementById('paid-wht').value=String(parsed.wht_amount);
+    if(parsed.net_paid!=null) document.getElementById('paid-net').value=String(parsed.net_paid);
+    if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
+    // Fill extra fields if new remittance
+    if(parsed.payer){var pc=document.getElementById('paid-client');if(pc)pc.value=parsed.payer;}
+    // Always overwrite invoice number from scan
+    var pn=document.getElementById('paid-inv-num');
+    if(pn) pn.value=parsed.invoice_number||pn.value||'';
+    // Store scan data for client profile pre-fill
+    window._lastRemittanceScan={
+      payer:parsed.payer||null,
+      whtRate:parsed.wht_rate||0,
+      whtAmount:parsed.wht_amount||0,
+      grossIncGst:parsed.gross_inc_gst||null,
+      baseExGst:parsed.base_ex_gst||null,
+      gstAmount:parsed.gst_amount||null,
+      payerGst:parsed.payer_gst||null,
+      invoiceNumber:parsed.invoice_number||null,
+      periodStart:parsed.period_start||null,
+      periodEnd:parsed.period_end||null
+    };
+    // If gross_inc_gst detected, store it for confirmMarkPaid to use as invoice amount
+    if(parsed.gross_inc_gst) window._lastRemittanceScan.invoiceAmount=parsed.gross_inc_gst;
+    updatePaidSummary();
+    var resultParts=['Net: <strong>'+fmt(parsed.net_paid||0)+'</strong>'];
+    if(parsed.wht_amount) resultParts.push('W/H: <strong>'+fmt(parsed.wht_amount)+'</strong>');
+    if(parsed.gst_amount) resultParts.push('GST: <strong>'+fmt(parsed.gst_amount)+'</strong>');
+    if(parsed.gross_inc_gst) resultParts.push('Gross: <strong>'+fmt(parsed.gross_inc_gst)+'</strong>');
+    resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
+    resultEl.innerHTML='&#x2713; '+resultParts.join(' &nbsp;&middot;&nbsp; ');
+  })
+  .catch(function(e){
+    if(e.message!=='401'){
+      resultEl.className='ai-inv-result-err'; resultEl.style.display='block';
+      resultEl.textContent='Could not read — enter amounts manually above.';
+    }
+  })
+  .finally(function(){btn.disabled=false; btn.innerHTML='<span>&#x2736;</span> Read remittance';});
+}
 
-  var remPrompt='NZ remittance or payslip. Reply ONLY with JSON. No markdown. '+
-    'Single: {"gross_inc_gst":649.75,"gst_amount":84.75,"wht_amount":113.00,"net_paid":536.75,"wht_rate":20,"payment_date":"2026-06-04","payer":"Sky","invoice_number":"SKY-0127","payer_gst":null,"invoices":null,"total_net_paid":null} '+
-    'Multi: {"gross_inc_gst":null,"wht_rate":20,"payment_date":"2026-04-09","payer":"Sky","invoice_number":null,"payer_gst":null,"total_net_paid":880,"invoices":[{"invoice_number":"SKY-1726","gross_inc_gst":500,"gst_amount":65.22,"wht_amount":100,"net_paid":400},{"invoice_number":"SKY-1826","gross_inc_gst":600,"gst_amount":78.26,"wht_amount":120,"net_paid":480}]} '+
-    'Rules: GST=gross*3/23. WH on ex-GST base. net=gross-wht. null for missing.';
+function createMultiRemittance(){
+  var scan=window._lastRemittanceScan;
+  if(!scan||!scan.multiInvoices){showToast('No multi-invoice data');return;}
+  var payer=scan.payer||(document.getElementById('paid-client')||{}).value||'';
+  var paymentDate=scan.paymentDate||document.getElementById('paid-date').value||today();
+  var gstSetting='yes';
 
-  function doScanPDF(pdfB64){
-    var messages=[{role:'user',content:[
-      {type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfB64}},
-      {type:'text',text:remPrompt}
-    ]}];
-    fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages:messages})})
-    .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
-    .then(handleScanResponse)
-    .catch(function(e){
-      if(e.message!=='401'){
-        resultEl.className='ai-inv-result-err'; resultEl.style.display='block';
-        resultEl.textContent='Could not read: '+e.message;
-      }
-    })
-    .finally(function(){btn.disabled=false; btn.innerHTML='<span>&#x2736;</span> Read remittance';});
-  }
+  scan.multiInvoices.forEach(function(inv){
+    var gross=parseFloat(inv.gross_inc_gst)||0;
+    var wht=parseFloat(inv.wht_amount)||0;
+    var net=parseFloat(inv.net_paid)||(gross-wht);
+    var whtRate=gross>0?Math.round(wht/gross*100*100)/100:0;
+    var newInv={
+      id:'local_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      client:payer,
+      amount:gross,
+      date:paymentDate,
+      due_date:null,
+      invoice_number:inv.invoice_number||null,
+      gst:gstSetting,
+      wht_rate:whtRate,
+      wht_amount:wht,
+      status:'paid',
+      paid_date:paymentDate,
+      paid_amount:net,
+      source:'manual',
+      _localOnly:true,
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString()
+    };
+    if(window._paidFileData) newInv.remittance_image=window._paidFileData;
+    invoices.unshift(newInv);
+  });
 
-  function doScan(imgB64, imgMime){
-    var messages=[{role:'user',content:[
-      {type:'image',source:{type:'base64',media_type:imgMime,data:imgB64}},
-      {type:'text',text:remPrompt}
-    ]}];
-    fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages:messages})})
-    .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
-    .then(handleScanResponse)
-    .catch(function(e){
-      if(e.message!=='401'){resultEl.className='ai-inv-result-err';resultEl.style.display='block';resultEl.textContent='Could not read: '+e.message;console.error('Scan error:',e);}
-    })
-    .finally(function(){btn.disabled=false;btn.innerHTML='<span>&#x2736;</span> Read remittance';});
-  }
-
-  function handleScanResponse(resp){
-      if(resp.error) throw new Error('API: '+(resp.error.message||JSON.stringify(resp.error)));
-      var text=(resp.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
-      console.log('Scan raw:',text.slice(0,600));
-      if(!text) throw new Error('Empty response from Claude');
-      var ct=text.replace(/```json|```/gi,'').trim();
-      var js2=ct.indexOf('{'), je2=ct.lastIndexOf('}')+1;
-      if(js2===-1||je2===0) throw new Error('No JSON found. Got: '+ct.slice(0,80));
-      var parsed=JSON.parse(ct.slice(js2,je2));
-
-      window._lastRemittanceScan={
-        payer:parsed.payer||null,
-        whtRate:parsed.wht_rate||0,
-        payerGst:parsed.payer_gst||null,
-        multi:!!(parsed.invoices&&parsed.invoices.length>1)
-      };
-
-      if(parsed.invoices&&parsed.invoices.length>0){
-        window._lastRemittanceScan.multiInvoices=parsed.invoices;
-        window._lastRemittanceScan.paymentDate=parsed.payment_date;
-        var totalGross=parsed.invoices.reduce(function(s,inv){return s+(parseFloat(inv.gross_inc_gst)||0);},0);
-        var totalWht=parsed.invoices.reduce(function(s,inv){return s+(parseFloat(inv.wht_amount)||0);},0);
-        var totalNet=parsed.total_net_paid||parsed.invoices.reduce(function(s,inv){return s+(parseFloat(inv.net_paid)||0);},0);
-        resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
-        resultEl.innerHTML='<strong>'+parsed.invoices.length+' invoices found</strong> &nbsp;&middot;&nbsp; Total net: <strong>'+fmt(totalNet)+'</strong> &nbsp;&middot;&nbsp; W/H: <strong>'+fmt(totalWht)+'</strong><br>'
-          +'<div style="margin-top:8px">'+parsed.invoices.map(function(inv){
-            return '<span style="font-size:12px;color:var(--t2)">'+esc(inv.invoice_number||'?')+': '+fmt(inv.gross_inc_gst||0)+' &minus; W/H '+fmt(inv.wht_amount||0)+' = '+fmt(inv.net_paid||0)+'</span>';
-          }).join('<br>')+'</div>'
-          +'<button onclick="createMultiRemittance()" class="btn-primary" style="margin-top:10px;font-size:14px;padding:10px 16px">Create '+parsed.invoices.length+' invoices</button>';
-        document.getElementById('paid-net').value=String(totalNet);
-        document.getElementById('paid-wht').value=String(totalWht);
-        document.getElementById('paid-gross').value=String(totalGross);
-        if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
-        if(parsed.payer){var pc=document.getElementById('paid-client');if(pc)pc.value=parsed.payer;}
-        updatePaidSummary();
-      } else {
-        if(parsed.gross_inc_gst!=null) document.getElementById('paid-gross').value=String(parsed.gross_inc_gst);
-        if(parsed.gst_amount!=null) document.getElementById('paid-gst-amt').value=String(parsed.gst_amount);
-        if(parsed.wht_amount!=null) document.getElementById('paid-wht').value=String(parsed.wht_amount);
-        if(parsed.net_paid!=null) document.getElementById('paid-net').value=String(parsed.net_paid);
-        if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
-        if(parsed.payer){var pc2=document.getElementById('paid-client');if(pc2)pc2.value=parsed.payer;}
-        var pn=document.getElementById('paid-inv-num'); if(pn) pn.value=parsed.invoice_number||pn.value||'';
-        window._lastRemittanceScan.invoiceNumber=parsed.invoice_number||null;
-        window._lastRemittanceScan.grossIncGst=parsed.gross_inc_gst||null;
-        window._lastRemittanceScan.invoiceAmount=parsed.gross_inc_gst||null;
-        updatePaidSummary();
-        var parts=['Net: <strong>'+fmt(parsed.net_paid||0)+'</strong>'];
-        if(parsed.wht_amount) parts.push('W/H: <strong>'+fmt(parsed.wht_amount)+'</strong>');
-        if(parsed.gross_inc_gst) parts.push('Gross: <strong>'+fmt(parsed.gross_inc_gst)+'</strong>');
-        resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
-        resultEl.innerHTML='✓ '+parts.join(' &nbsp;&middot;&nbsp; ');
-      }
-  }
-
-
-  // Send PDF natively — claude-sonnet-4-6 supports document type
-  if(!isImage){
-    doScanPDF(b64);
-  } else {
-    doScan(b64, mime);
-  }
+  save(); renderAll(); closeModal('modal-paid');
+  showToast(scan.multiInvoices.length+' invoices saved from '+payer);
+  window._lastRemittanceScan=null;
+  window._newRemStub=null;
+  checkNewClient(payer);
 }
 
 function confirmMarkPaid(){
-  console.log('[confirmMarkPaid] START _paidInvId:',_paidInvId,'stub:',window._newRemStub?window._newRemStub.id:'none','invoices:',invoices.length);
-  // For new remittances use stub directly; for existing invoices use _paidInvId
   var inv=null;
-  if(window._newRemStub){
-    inv=window._newRemStub; // new remittance - stub takes priority
-  } else {
-    inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
-  }
-  console.log('[confirmMarkPaid] inv found:',!!inv,inv?inv.client:'','via stub:',!!window._newRemStub);
-  if(!inv){showToast('Error: invoice not found - try again');closeModal('modal-paid');return;}
+  if(window._newRemStub) inv=window._newRemStub;
+  else inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
+  if(!inv){showToast('Error: try again');closeModal('modal-paid');return;}
 
   var gross=parseFloat(document.getElementById('paid-gross').value)||0;
   var gstAmt=parseFloat(document.getElementById('paid-gst-amt').value)||0;
@@ -3621,22 +3379,17 @@ function confirmMarkPaid(){
   var wht=parseFloat(document.getElementById('paid-wht').value)||0;
   var dateVal=document.getElementById('paid-date').value;
   var extraFields=document.getElementById('paid-extra-fields');
-  var isNew=!!(window._newRemStub&&String(window._newRemStub.id)===String(_paidInvId));
+  var isNew=!!(window._newRemStub);
 
   // If new remittance — fill in stub invoice details
   if(isNew){
     var client=(document.getElementById('paid-client').value||'').trim();
     if(!client){showToast('Enter a client name');return;}
-    var grossField=parseFloat(document.getElementById('paid-gross').value)||0;
-    gross=grossField>0?grossField:(net+wht); // use outer gross var
+    var gross=net+wht;
     if(gross<=0&&net<=0){showToast('Enter the net received amount');return;}
-    // Now add the stub to invoices (was held in memory until we have real data)
-    if(window._newRemStub&&String(inv.id)===String(window._newRemStub.id)){
-      invoices.unshift(inv);
-      window._newRemStub=null;
-    }
+    if(window._newRemStub){invoices.unshift(inv);window._newRemStub=null;}
     inv.client=client;
-    inv.amount=gross;
+    inv.amount=gross>0?gross:net;
     inv.date=dateVal||today();
     inv.invoice_number=document.getElementById('paid-inv-num').value.trim()||null;
     inv.gst=document.getElementById('paid-gst').value;
@@ -3691,12 +3444,11 @@ function parseCSV(text){
   var iOpName=ci('op name'), iTpRef=ci('tp ref');
   // ANZ: single amount or credits column
   var iAmt=ci('amount'), iCred=ci('credits'), iOther=ci('other party');
-  var iDesc=ci('memo/description')>=0?ci('memo/description'):ci('description')>=0?ci('description'):ci('particulars');
+  var iDesc=ci('memo/description')>=0?ci('memo/description'):ci('description');
   var iRef=iTpRef>=0?iTpRef:(ci('reference')>=0?ci('reference'):ci('tp ref'));
-  // BNZ/Kiwibank business: Effective Date, Amount, Other Party Name, Description
-  var iBNZDate=ci('effective date'), iBNZOtherParty=ci('other party name'), iBNZRef=ci('reference');
-  var isBNZ=iBNZDate>=0&&iAmt>=0&&iBNZOtherParty>=0;
 
+  var iBNZDate=ci('effective date'), iBNZOtherParty=ci('other party name'), iBNZRef=ci('reference');
+  var isBNZ=iBNZDate>=0&&iAmt>=0&&iBNZOtherParty>=0&&!isKiwibank;
   var isKiwibank=iCredit>=0&&iDebit>=0;
   var imported=0,skipped=0,matched=0;
 
@@ -3723,14 +3475,11 @@ function parseCSV(text){
       desc=opName||memoClean;
       ref=clean(row[iTpRef]||'');
     } else if(isBNZ){
-      // BNZ / Kiwibank business format: Effective Date, Amount, Other Party Name
       var rawAmt=clean(row[iAmt]||'');
       if(!rawAmt){skipped++;continue;}
       amount=parseFloat(rawAmt.replace(/,/g,'')); if(isNaN(amount)){skipped++;continue;}
-      // Use Other Party Name as description, fall back to Description/Particulars
       var otherParty=clean(row[iBNZOtherParty]||'');
       var descField=clean(row[iDesc]||'');
-      // Extract meaningful part from the verbose description
       var descClean=descField.replace(/^Direct Credit\s+/i,'').replace(/^Automatic Payment\s+/i,'').split(/\s{2,}/)[0].trim();
       desc=otherParty||descClean;
       ref=clean(row[iBNZRef]||row[iRef]||'');
@@ -3747,28 +3496,41 @@ function parseCSV(text){
     // Skip exact duplicates already in bank list
     var dup=bankTxns.some(function(t){return t.date===isoDate&&t.amount===amount&&t.description===desc;});
     if(dup){skipped++;continue;}
-    // No auto-match on import — use Auto-match button to link manually
-    bankTxns.push({id:'bank_'+Date.now()+'_'+i,date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:null,source:isKiwibank?'kiwibank':isBNZ?'bnz':'anz',imported_at:new Date().toISOString()});
-    imported++;
-  }
-  if(imported===0&&matched===0&&skipped===0){
-    showToast('No rows found — check CSV format');
-    console.log('CSV header:',header);
-    return;
+    // Auto-match against paid invoices — avoids duplicating remittances already logged
+    var autoMatchId=null;
+    if(amount>0){
+      var txnD=new Date(isoDate);
+      var bestMatch=null,bestScore=Infinity;
+      invoices.forEach(function(inv){
+        if(inv.status!=='paid') return;
+        // Already linked to a bank txn?
+        if(bankTxns.some(function(t){return t.matched_invoice_id===inv.id;})) return;
+        var netPaid=inv.paid_amount!=null?parseFloat(inv.paid_amount):(parseFloat(inv.amount)||0)*(1-(parseFloat(inv.wht_rate)||0)/100);
+        var diff=Math.abs(amount-netPaid);
+        if(diff>Math.max(netPaid*0.02,0.10)) return; // within 2% or 10c
+        var daysDiff=Math.abs((txnD-new Date(inv.paid_date||inv.date))/86400000);
+        if(daysDiff>14) return; // within 14 days
+        var score=diff+daysDiff*0.5;
+        if(score<bestScore){bestScore=score;bestMatch=inv;}
+      });
+      if(bestMatch) autoMatchId=bestMatch.id;
+    }
+    bankTxns.push({id:'bank_'+Date.now()+'_'+i,date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:autoMatchId,source:isKiwibank?'kiwibank':isBNZ?'bnz':'anz',imported_at:new Date().toISOString()});
+    if(autoMatchId) matched++;
+    else imported++;
   }
   save();renderAll();
   var msg=imported+' imported';
+  if(matched) msg+=', '+matched+' auto-matched to existing invoices';
   if(skipped) msg+=' ('+skipped+' skipped)';
   showToast(msg);
-  console.log('CSV import: imported='+imported+' matched='+matched+' skipped='+skipped);
 }
 function csvRow(line){var r=[],cur='',inQ=false;for(var i=0;i<line.length;i++){var ch=line[i];if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){r.push(cur);cur='';}else{cur+=ch;}}r.push(cur);return r;}
 function clean(s){return String(s||'').trim().replace(/^"|"$/g,'');}
 function normDate(s){
   if(!s)return null;
-  // YYYY-MM-DD (ISO / BNZ)
-  var m0=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if(m0)return s;
+  // YYYY-MM-DD (ISO/BNZ)
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   // DD/MM/YYYY (ANZ)
   var m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if(m)return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
@@ -3834,17 +3596,11 @@ function openBankDetail(id){
       _pendingMatchTxnId=id;
       openModal('modal-invoice');
     }});
-    // Show unpaid + paid-but-unlinked invoices for manual matching
-    var matchable=invoices.filter(function(i){
-      if(i.status!=='paid') return true; // unpaid - can match and mark paid
-      // paid but not yet linked to a bank txn
-      return !bankTxns.some(function(t){return t!==txn&&String(t.matched_invoice_id)===String(i.id);});
-    }).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-    matchable.slice(0,8).forEach(function(inv){
-      var label=(inv.status==='paid'?'✓ ':'')+inv.client+' '+fmt(inv.amount)+(inv.invoice_number?' #'+inv.invoice_number:'');
-      actions.push({label:'Match → '+label,fn:function(){
-        txn.matched_invoice_id=inv.id;
-        if(inv.status!=='paid'){inv.status='paid';inv.paid_date=txn.date;inv.paid_amount=txn.amount;}
+    var unpaid=invoices.filter(function(i){return i.status!=='paid';}).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+    unpaid.slice(0,6).forEach(function(inv){
+      actions.push({label:'Match → '+inv.client+' '+fmt(inv.amount),fn:function(){
+        txn.matched_invoice_id=inv.id; inv.status='paid';
+        inv.paid_date=txn.date; inv.paid_amount=txn.amount;
         save(); renderAll(); showToast('Matched to '+inv.client);
       }});
     });
@@ -3860,7 +3616,6 @@ function openBankDetail(id){
 }
 function runAutoMatch(){
   var matched=0;
-  var claimedInvoiceIds=new Set(); // track invoices claimed in this pass
   bankTxns.forEach(function(txn){
     if(txn.matched_invoice_id) return;
     var credit=parseFloat(txn.amount)||0; if(credit<=0) return;
@@ -3874,25 +3629,21 @@ function runAutoMatch(){
 
       if(inv.status==='paid'){
         // Already paid — match bank txn to it if amounts align and not already bank-linked
-        var alreadyLinked=claimedInvoiceIds.has(String(inv.id))||bankTxns.some(function(t){return t!==txn&&String(t.matched_invoice_id)===String(inv.id);});
+        var alreadyLinked=bankTxns.some(function(t){return t!==txn&&t.matched_invoice_id===inv.id;});
         if(alreadyLinked) return;
         var diff=Math.abs(credit-netPaid);
-        if(diff>0.10) return; // exact match only
+        if(diff>Math.max(netPaid*0.02,0.10)) return;
         var daysDiff=Math.abs((txnDate-new Date(inv.paid_date||inv.date))/86400000);
-        if(daysDiff>7) return; // within 7 days of paid date
+        if(daysDiff>14) return;
         var score=diff+daysDiff*0.5+1; // slight penalty vs unpaid match
         if(score<bestScore){bestScore=score;best=inv;}
       } else {
-        // Unpaid — only match if amounts are very close (exact or rounding only)
-        var expectedNet=whtRate>0?invAmt*(1-whtRate/100):invAmt;
-        var diffNet=Math.abs(credit-expectedNet);
-        var diffGross=Math.abs(credit-invAmt);
-        var diff=Math.min(diffNet,diffGross);
-        // Strict: within $1 only — prevent false matches
-        if(diff>1.00) return;
+        // Unpaid — match and mark paid
+        var expectedNet=invAmt*(1-whtRate/100);
+        var diff=Math.min(Math.abs(credit-expectedNet),Math.abs(credit-invAmt));
+        if(diff>invAmt*0.05) return;
         var daysDiff=(txnDate-new Date(inv.date))/86400000;
-        // Must be after invoice date and within 60 days
-        if(daysDiff<0||daysDiff>60) return;
+        if(daysDiff<0||daysDiff>120) return;
         var score=diff+daysDiff*0.3;
         if(score<bestScore){bestScore=score;best=inv;}
       }
@@ -3900,7 +3651,6 @@ function runAutoMatch(){
 
     if(best){
       txn.matched_invoice_id=best.id;
-      claimedInvoiceIds.add(String(best.id));
       if(best.status!=='paid'){
         best.status='paid';
         best.paid_date=txn.date;
@@ -4202,87 +3952,6 @@ function saveQuickAdd(){
 }
 
 
-
-/* ── Receipts NZ Integration ── */
-var RECEIPTS_API='https://samuelreceipts.synology.me/api';
-var RECEIPTS_SECRET='6QwWzWg72ICMnQDiVsWj9mEW4Jv9i6UAbvFsjcBF';
-
-function receiptsAuthHeaders(){
-  // Share the same token — both apps use the same Synology server and user accounts
-  var token=localStorage.getItem('nzrt_token')||localStorage.getItem('nzin_token')||'';
-  return{'Content-Type':'application/json','x-api-secret':RECEIPTS_SECRET,'Authorization':'Bearer '+token};
-}
-
-function getReceiptsNZData(){
-  // Fallback: read from localStorage if Receipts NZ is open on same device
-  try{
-    var receipts=JSON.parse(localStorage.getItem('nzrt5_r')||'[]');
-    var mileage=JSON.parse(localStorage.getItem('nzrt5_m')||'[]');
-    return {receipts:receipts, mileage:mileage, available:receipts.length>0, source:'local'};
-  }catch(e){return {receipts:[],mileage:[],available:false};}
-}
-
-var _rxGSTCache=null, _rxGSTCacheTime=0;
-function fetchReceiptsGST(start, end, callback){
-  // Cache for 5 minutes to avoid hammering the server
-  var now=Date.now();
-  if(_rxGSTCache&&now-_rxGSTCacheTime<300000){
-    callback(calcInputGST(_rxGSTCache.receipts, start, end));
-    return;
-  }
-  fetch(API_BASE+'/receipts-gst',{headers:authHeaders()})
-  .then(function(r){return r.ok?r.json():null;})
-  .then(function(data){
-    if(!data||!data.receipts){
-      callback(calcInputGST(getReceiptsNZData().receipts, start, end));
-      return;
-    }
-    try{localStorage.setItem('nzrt5_r',JSON.stringify(data.receipts));}catch(e){}
-    _rxGSTCache={receipts:data.receipts}; _rxGSTCacheTime=Date.now();
-    callback(calcInputGST(data.receipts, start, end));
-  })
-  .catch(function(){
-    callback(calcInputGST(getReceiptsNZData().receipts, start, end));
-  });
-}
-
-function calcInputGST(receipts, start, end){
-  if(!receipts||!receipts.length) return {inputGST:0, totalExpenses:0, count:0, available:false};
-  // PAYMENTS BASIS: filter by date paid (receipt date = when you paid)
-  var periodR=receipts.filter(function(r){
-    var d=parseDate(r.date||r.created_at||'');
-    return d>=start&&d<=end;
-  });
-  var inputGST=periodR.reduce(function(s,r){return s+gstForReceiptsItem(r);},0);
-  var totalExpenses=periodR.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
-  return {inputGST:inputGST, totalExpenses:totalExpenses, count:periodR.length, available:true};
-}
-
-// Entertainment categories in Receipts NZ (mirrors BUILT_IN_CATS)
-var RECEIPTS_ENT_CATS=['meals'];
-
-function gstForReceiptsItem(r){
-  // Exact mirror of Receipts NZ gstForReceipt — must stay in sync
-  if(!r||r.gst==='no') return 0;
-  var amount=parseFloat(r.amount)||0;
-  // claimPct: custom % overrides; entertainment category defaults to 50%; otherwise 100%
-  var claimPct=1;
-  if(r.claimPct!=null&&r.claimPct>=0&&r.claimPct<=100){
-    claimPct=r.claimPct/100;
-  } else if(RECEIPTS_ENT_CATS.indexOf(r.category)!==-1){
-    claimPct=0.5;
-  }
-  var raw=r.gst==='partial'?amount*(3/23)*0.5:amount*(3/23);
-  return raw*claimPct;
-}
-
-// getReceiptsGSTForPeriod replaced by fetchReceiptsGST async
-
-function openReceiptsNZ(){
-  // Navigate to Receipts NZ
-  window.open('https://samuelmckay20-svg.github.io/receipts-nz/', '_blank');
-}
-
 /* ── Client Profiles ── */
 function getClientProfile(name){
   if(!name) return null;
@@ -4418,14 +4087,6 @@ function onClientBlur(inputId){
 
 function applyClientProfile(name, inputId){
   var profile=getClientProfile(name);
-  // If no formal profile, try to infer W/H rate from past invoices for this client
-  if(!profile){
-    var pastInvs=invoices.filter(function(i){return (i.client||'').toLowerCase()===name.toLowerCase()&&(parseFloat(i.wht_rate)||0)>0;});
-    if(pastInvs.length>0){
-      var inferredRate=parseFloat(pastInvs[0].wht_rate)||0;
-      profile={whtRate:inferredRate, gst:'yes', terms:30};
-    }
-  }
   if(!profile) return;
   // Apply to invoice form
   if(inputId==='f-client'||inputId.startsWith('f-')){
@@ -4505,18 +4166,6 @@ function pickExistingClient(wrongName){
   });
   actions.push({label:'Cancel',cls:'cancel'});
   showSheet('Which client is this?',actions);
-}
-
-
-function autoDetectModel(){
-  fetch(API_BASE+'/models',{headers:authHeaders()})
-  .then(function(r){return r.ok?r.json():null;})
-  .then(function(data){
-    if(!data||!data.model) return;
-    CLAUDE_MODEL=data.model;
-    console.log('Claude model:',CLAUDE_MODEL);
-  })
-  .catch(function(){});
 }
 
 /* ── Init pinch zoom on viewer ── */
