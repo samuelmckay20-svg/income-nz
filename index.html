@@ -3605,9 +3605,14 @@ function scanRemittance(){
 
 function confirmMarkPaid(){
   console.log('[confirmMarkPaid] START _paidInvId:',_paidInvId,'stub:',window._newRemStub?window._newRemStub.id:'none','invoices:',invoices.length);
-  var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
-  if(!inv&&window._newRemStub&&String(window._newRemStub.id)===String(_paidInvId)) inv=window._newRemStub;
-  console.log('[confirmMarkPaid] inv found:',!!inv,inv?inv.client:'');
+  // For new remittances use stub directly; for existing invoices use _paidInvId
+  var inv=null;
+  if(window._newRemStub){
+    inv=window._newRemStub; // new remittance - stub takes priority
+  } else {
+    inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
+  }
+  console.log('[confirmMarkPaid] inv found:',!!inv,inv?inv.client:'','via stub:',!!window._newRemStub);
   if(!inv){showToast('Error: invoice not found - try again');closeModal('modal-paid');return;}
 
   var gross=parseFloat(document.getElementById('paid-gross').value)||0;
