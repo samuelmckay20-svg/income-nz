@@ -2337,6 +2337,8 @@ function invCard(inv){
     ?parseFloat(inv.paid_amount)
     :amt;
   var whtBadge=wr>0?'<span class="badge" style="background:rgba(175,82,222,0.12);color:var(--purple)">W/H '+wr+'%</span>':'';
+  var isVerified=bankTxns.some(function(t){return t.matched_invoice_id&&(String(t.matched_invoice_id)===String(inv.id)||Number(t.matched_invoice_id)===Number(inv.id));});
+  var verifiedBadge=isVerified?'<span class="badge" style="background:rgba(52,199,89,.12);color:var(--green)">&#x2713; Verified</span>':'';
   var grossSub=inv.status==='paid'&&whtAmt>0?'<div style="font-size:11px;color:var(--t3);text-align:right">of '+fmt(amt)+'</div>':'';
   var html='<div class="r-card" data-iid="'+esc(String(inv.id))+'">';
   html+='<div class="r-bar" style="background:'+c+'"></div>';
