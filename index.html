@@ -2486,11 +2486,6 @@ function bankTxnCard(txn){
     :matched?'<span class="badge b-matched">Matched</span>'
     :isC?'<span class="badge b-unmatched">Unmatched</span>'
     :'<span class="badge b-debit">Debit</span>';
-  // Check if matched invoice is bank-verified
-  if(matched&&!excluded){
-    var isBankVerified=invoices.some(function(inv){return String(inv.id)===String(txn.matched_invoice_id);});
-    if(isBankVerified) badge+=' <span class="badge" style="background:rgba(52,199,89,.12);color:var(--green)">&#x2713; Verified</span>';
-  }
   var html='<div class="r-card" style="'+(excluded?'opacity:.7;':'')+'" data-bid="'+esc(txn.id)+'">';
   html+='<div class="r-bar" style="background:'+barC+'"></div>';
   html+='<div class="r-body"><div class="r-top"><div style="min-width:0">';
@@ -3796,8 +3791,12 @@ function parseCSV(text){
     }
 
     if(isNaN(amount)){skipped++;continue;}
-    // Skip exact duplicates already in bank list
-    var dup=bankTxns.some(function(t){return t.date===isoDate&&t.amount===amount&&t.description===desc;});
+    // Skip duplicates — match by date+amount+description OR date+amount+reference
+    var dup=bankTxns.some(function(t){
+      if(t.date!==isoDate||t.amount!==amount) return false;
+      if(ref&&t.reference&&t.reference===ref) return true; // same reference = same txn
+      return t.description===desc; // same description fallback
+    });
     if(dup){skipped++;continue;}
         bankTxns.push({id:'bank_'+Date.now()+'_'+i,date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:null,source:isKiwibank?'kiwibank':isBNZ?'bnz':'anz',imported_at:new Date().toISOString()});
     imported++;
@@ -3879,12 +3878,25 @@ function openBankDetail(id){
       _pendingMatchTxnId=id;
       openModal('modal-invoice');
     }});
+    var txnDate=new Date(txn.date);
     var matchable=invoices.filter(function(i){
-      if(i.status!=='paid') return true;
-      return !bankTxns.some(function(t){return t!==txn&&String(t.matched_invoice_id)===String(i.id);});
-    }).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-    matchable.slice(0,8).forEach(function(inv){
-      var label=(inv.status==='paid'?'✓ ':'')+inv.client+' '+fmt(inv.amount)+(inv.invoice_number?' #'+inv.invoice_number:'');
+      if(!i.client||!i.amount) return false; // skip empty stubs
+      if(bankTxns.some(function(t){return t!==txn&&String(t.matched_invoice_id)===String(i.id);})) return false;
+      return true;
+    }).map(function(i){
+      // Score by amount closeness and date proximity
+      var invAmt=parseFloat(i.amount)||0;
+      var wht=parseFloat(i.wht_amount)||0;
+      var net=wht>0?invAmt-wht:invAmt;
+      var amtDiff=Math.min(Math.abs(amt-invAmt),Math.abs(amt-net));
+      var daysDiff=Math.abs((txnDate-new Date(i.paid_date||i.date))/86400000);
+      return {inv:i, score:amtDiff*2+daysDiff*0.1, amtDiff:amtDiff};
+    }).sort(function(a,b){return a.score-b.score;})
+    .slice(0,6); // show top 6 closest matches only
+    matchable.forEach(function(m){
+      var inv=m.inv;
+      var amtNote=m.amtDiff<0.10?'':' (±'+fmt(m.amtDiff)+')';
+      var label=(inv.status==='paid'?'✓ ':'')+inv.client+' '+fmt(inv.amount)+amtNote+(inv.invoice_number?' #'+inv.invoice_number:'');
       (function(capturedInv){
         actions.push({label:'Match → '+label,fn:function(){
           txn.matched_invoice_id=capturedInv.id;
