@@ -3410,9 +3410,13 @@ function openMarkPaid(id){
   clearPaidFile();
   document.getElementById('paid-modal-title').textContent='Mark paid — '+inv.client;
   document.getElementById('paid-ai-result').style.display='none';
-  var whtAmt=Math.round((parseFloat(inv.amount)||0)*(parseFloat(inv.wht_rate)||0)/100*100)/100;
-  var net=Math.round(((parseFloat(inv.amount)||0)-whtAmt)*100)/100;
   var amt=parseFloat(inv.amount)||0;
+  var gstIncluded=inv.gst==='yes';
+  var base=gstIncluded?amt/1.15:amt; // ex-GST base
+  var whtAmt=inv.wht_amount&&parseFloat(inv.wht_amount)>0
+    ?parseFloat(inv.wht_amount)  // use stored amount if available
+    :Math.round(base*(parseFloat(inv.wht_rate)||0)/100*100)/100; // else calc from base
+  var net=Math.round((amt-whtAmt)*100)/100;
   document.getElementById('paid-gross').value=String(amt);
   document.getElementById('paid-gst-amt').value=inv.gst==='yes'?String(Math.round(amt*3/23*100)/100):'';
   document.getElementById('paid-net').value=whtAmt>0?String(net):'';
