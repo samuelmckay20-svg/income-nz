@@ -1559,7 +1559,7 @@ function manualSync(){
   .then(function(data){
     if(!data) return;
     var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
-    var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
+    var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id))&&i.client&&parseFloat(i.amount)>0;});
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
     var unsyncedLocal=invoices.filter(function(i){return String(i.id).startsWith('local_')&&!serverIds.has(String(i.id));});
     invoices=serverInvoices.concat(unsyncedLocal);
@@ -1782,7 +1782,7 @@ function loadFromServer(){
   .then(function(data){
     if(!data)return;
     var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
-    var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
+    var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id))&&i.client&&parseFloat(i.amount)>0;});
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
     // Keep genuinely unsynced local items
     // Keep all local_ items — includes stubs being filled AND unsynced invoices
@@ -2771,9 +2771,9 @@ function openNewRemittance(){
     status:'unpaid',source:'manual',_localOnly:true,
     created_at:new Date().toISOString(),updated_at:new Date().toISOString()
   };
-  invoices.unshift(stub); // Add to array immediately so loadFromServer keeps it
+  invoices.unshift(stub); // In memory only — NOT saved/synced until confirmMarkPaid
   _paidInvId=stub.id;
-  window._newRemStub=null; // not using stub pattern - using invoices array directly
+  window._newRemStub=stub; // keep reference so onClosePaidModal can remove it
   clearPaidFile();
   document.getElementById('paid-modal-title').textContent='New remittance';
   document.getElementById('paid-ai-result').style.display='none'; document.getElementById('paid-ai-result').innerHTML='';
