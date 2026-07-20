@@ -97,7 +97,7 @@ body{
 }
 
 /* ── Tab content ── */
-.tab-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
+.tab-content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;min-height:0}
 .tab-panel{display:none;padding-bottom:28px}
 .tab-panel.active{display:block}
 
@@ -4152,8 +4152,8 @@ function renderOverviewExtras(fyInvoices){
   var total=sorted.reduce(function(s,c){return s+c[1];},0);
   var colours=['#007AFF','#34C759','#FF9500','#AF52DE','#FF3B30','#5AC8FA','#FF2D55','#FF6B35'];
 
-  // Build SVG donut
-  var cx=80,cy2=80,outerR=70,innerR=54,startAngle=-Math.PI/2;
+  // Build SVG donut — centred, larger
+  var size=180,cx=90,cy2=90,outerR=82,innerR=62,startAngle=-Math.PI/2;
   var slices='',legend='';
   sorted.forEach(function(pair,i){
     var col=colours[i%colours.length];
@@ -4173,24 +4173,26 @@ function renderOverviewExtras(fyInvoices){
         +' L'+ix1+','+iy1+' A'+innerR+','+innerR+' 0 '+large+',0 '+ix2+','+iy2+' Z"'
         +' fill="'+col+'" stroke="var(--surface)" stroke-width="2"/>';
     }
-    legend+='<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid var(--sep)">'
-      +'<div style="display:flex;align-items:center;gap:8px">'
+    // Compact legend row: colour dot | truncated name | pct | amount
+    var shortName=pair[0].length>22?pair[0].slice(0,20)+'…':pair[0];
+    legend+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--sep)">'
       +'<div style="width:8px;height:8px;border-radius:2px;background:'+col+';flex-shrink:0"></div>'
-      +'<span style="font-size:13px;color:var(--t1)">'+esc(pair[0])+'</span></div>'
-      +'<div style="display:flex;align-items:center;gap:8px">'
-      +'<span style="font-size:11px;color:var(--t3)">'+Math.round(pct*100)+'%</span>'
-      +'<span style="font-size:13px;font-weight:600;color:var(--t1)">'+fmt(pair[1])+'</span>'
-      +'</div></div>';
+      +'<span style="font-size:13px;color:var(--t1);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(pair[0])+'</span>'
+      +'<span style="font-size:12px;color:var(--t3);flex-shrink:0;width:32px;text-align:right">'+Math.round(pct*100)+'%</span>'
+      +'<span style="font-size:13px;font-weight:600;color:var(--t1);flex-shrink:0;min-width:70px;text-align:right">'+fmt(pair[1])+'</span>'
+      +'</div>';
     startAngle=endAngle;
   });
 
-  var centreLabel='<text x="'+cx+'" y="'+(cy2-8)+'" text-anchor="middle" font-size="9" fill="var(--t3)" font-family="system-ui" font-weight="600" letter-spacing="1">NET</text>'
-    +'<text x="'+cx+'" y="'+(cy2+8)+'" text-anchor="middle" font-size="16" font-weight="700" fill="var(--t1)" font-family="system-ui">'+fmtShort(total)+'</text>';
+  var centreLabel='<text x="'+cx+'" y="'+(cy2-10)+'" text-anchor="middle" font-size="9" fill="var(--t3)" font-family="system-ui" font-weight="600" letter-spacing="1">NET</text>'
+    +'<text x="'+cx+'" y="'+(cy2+10)+'" text-anchor="middle" font-size="20" font-weight="700" fill="var(--t1)" font-family="system-ui">'+fmtShort(total)+'</text>';
 
-  donutEl.innerHTML='<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">'
-    +'<svg width="160" height="160" viewBox="0 0 160 160" style="flex-shrink:0">'+slices+centreLabel+'</svg>'
-    +'<div style="flex:1;min-width:0">'+legend+'</div>'
-    +'</div>';
+  // Donut centred on top, legend below — no side-by-side squashing
+  donutEl.innerHTML=
+    '<div style="display:flex;justify-content:center;padding-bottom:12px">'
+      +'<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'+slices+centreLabel+'</svg>'
+    +'</div>'
+    +'<div>'+legend+'</div>';
 }
 
 /* ── Change password ── */
