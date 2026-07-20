@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Income NZ">
@@ -238,6 +238,7 @@ body{
 
 /* ── Tab bar ── */
 .tab-bar{
+  touch-action:manipulation;
   display:flex;
   background:rgba(245,245,247,0.94);
   -webkit-backdrop-filter:saturate(200%) blur(24px);
@@ -247,7 +248,7 @@ body{
   flex-shrink:0;z-index:100;
 }
 @media(prefers-color-scheme:dark){.tab-bar{background:rgba(17,17,19,0.94)}}
-.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 0 4px;background:none;border:none;cursor:pointer;font-family:inherit;color:var(--t3);font-size:10px;font-weight:500;gap:3px;transition:color .18s}
+.tab-btn{touch-action:manipulation;flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 0 4px;background:none;border:none;cursor:pointer;font-family:inherit;color:var(--t3);font-size:10px;font-weight:500;gap:3px;transition:color .18s}
 .tab-btn.on{color:var(--blue)}
 .tab-icon{font-size:22px;line-height:1}
 .tab-iw{position:relative;display:inline-flex}
