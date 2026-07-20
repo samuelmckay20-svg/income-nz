@@ -3654,6 +3654,65 @@ function createMultiRemittance(){
 }
 
 function confirmMarkPaid(){
+  // Get the invoice — new remittances use the in-memory stub
+  var isNew=!!(window._newRemStub);
+  var inv=isNew?window._newRemStub:invoices.find(function(i){return String(i.id)===String(_paidInvId);});
+  if(!inv){showToast('Error: try again');closeModal('modal-paid');return;}
+
+  var grossField=parseFloat(document.getElementById('paid-gross').value)||0;
+  var gstAmt=parseFloat(document.getElementById('paid-gst-amt').value)||0;
+  var net=parseFloat(document.getElementById('paid-net').value)||0;
+  var wht=parseFloat(document.getElementById('paid-wht').value)||0;
+  var dateVal=document.getElementById('paid-date').value;
+
+  if(isNew){
+    var client=(document.getElementById('paid-client').value||'').trim();
+    if(!client){showToast('Enter a client name');return;}
+    // gross = field value, or net+wht, or just net
+    var gross=grossField>0?grossField:(wht>0?net+wht:net);
+    if(gross<=0&&net<=0){showToast('Enter the net received amount');return;}
+    inv.client=client;
+    inv.amount=gross;
+    inv.date=dateVal||today();
+    inv.invoice_number=document.getElementById('paid-inv-num').value.trim()||null;
+    inv.gst=document.getElementById('paid-gst').value;
+    inv.wht_rate=wht>0&&gross>0?Math.round(wht/gross*100*100)/100:0;
+    // Add to invoices array now that we have real data
+    invoices.unshift(inv);
+    window._newRemStub=null;
+  }
+
+  inv.status='paid';
+  inv.paid_date=dateVal||today();
+  // Use invoice date = paid date for remittances
+  if(isNew) inv.date=inv.paid_date;
+  inv.paid_amount=net>0?net:parseFloat(inv.amount)||0;
+  if(gstAmt>0) inv.gst_amount=gstAmt;
+  if(wht>0){
+    inv.wht_amount=wht;
+    var scanData=window._lastRemittanceScan;
+    if(scanData&&scanData.whtRate>0) inv.wht_rate=scanData.whtRate;
+  }
+  // Store remittance image if uploaded
+  if(window._paidFileData) inv.remittance_image=window._paidFileData;
+  // Invoice number from field takes priority
+  var invNumField=document.getElementById('paid-inv-num');
+  if(invNumField&&invNumField.value.trim()) inv.invoice_number=invNumField.value.trim();
+  // Client GST from scan
+  var scanD=window._lastRemittanceScan;
+  if(scanD&&scanD.payerGst) inv.client_gst=scanD.payerGst;
+
+  inv.updated_at=new Date().toISOString();
+
+  save();
+  closeModal('modal-paid');
+  renderAll();
+  showToast((isNew?'Remittance saved':'Payment recorded')+' — '+inv.client);
+  window._lastRemittanceScan=null;
+  if(isNew) checkNewClient(inv.client);
+}
+
+function confirmMarkPaid(){
   var inv=null;
   if(window._newRemStub) inv=window._newRemStub;
   else inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
