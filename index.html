@@ -1522,12 +1522,6 @@ function save(){ saveLocal(); syncToServer(); }
 
 /* ── Sync ── */
 
-function autoDetectModel(){
-  fetch(API_BASE+'/models',{headers:authHeaders()})
-  .then(function(r){return r.ok?r.json():null;})
-  .then(function(data){if(data&&data.model) CLAUDE_MODEL=data.model;})
-  .catch(function(){});
-}
 
 function manualSync(){
   var btn=document.getElementById('nav-sync-btn');
@@ -3539,7 +3533,7 @@ function scanRemittance(){
   var resultEl=document.getElementById('paid-ai-result');
   btn.disabled=true;
   btn.innerHTML='<span class="spinner"></span> Reading remittance...';
-  resultEl.style.display='none';
+  resultEl.style.display='none'; resultEl.innerHTML='';
   // Clear ALL fields so stale data doesn't persist between scans
   ['paid-gross','paid-gst-amt','paid-wht','paid-net'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
@@ -3566,11 +3560,16 @@ function scanRemittance(){
     isImage?{type:'image',source:{type:'base64',media_type:mime,data:b64}}:{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
     {type:'text',text:remPrompt}
   ]}];
-  fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:300,messages:messages})})
+  fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:1024,messages:messages})})
   .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
   .then(function(resp){
+    if(resp.error) throw new Error('API: '+(resp.error.message||'error'));
     var text=(resp.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
-    var parsed=JSON.parse(text.replace(/```json|```/gi,'').trim());
+    if(!text) throw new Error('Empty response from Claude');
+    var ct=text.replace(/```json|```/gi,'').trim();
+    var js2=ct.indexOf('{'),je2=ct.lastIndexOf('}')+1;
+    if(js2===-1||je2===0) throw new Error('No JSON in response: '+ct.slice(0,60));
+    var parsed=JSON.parse(ct.slice(js2,je2));
     if(parsed.gross_inc_gst!=null) document.getElementById('paid-gross').value=String(parsed.gross_inc_gst);
     if(parsed.gst_amount!=null) document.getElementById('paid-gst-amt').value=String(parsed.gst_amount);
     if(parsed.wht_amount!=null) document.getElementById('paid-wht').value=String(parsed.wht_amount);
@@ -3607,7 +3606,7 @@ function scanRemittance(){
   .catch(function(e){
     if(e.message!=='401'){
       resultEl.className='ai-inv-result-err'; resultEl.style.display='block';
-      resultEl.textContent='Could not read — enter amounts manually above.';
+      resultEl.textContent='Could not read: '+e.message;
     }
   })
   .finally(function(){btn.disabled=false; btn.innerHTML='<span>&#x2736;</span> Read remittance';});
