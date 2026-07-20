@@ -531,17 +531,17 @@ body{
             <div class="tax-sc-icon" style="background:rgba(255,59,48,0.12)">🧾</div>
             <div class="tax-sc-info">
               <div class="tax-sc-lbl">IRD income tax</div>
-              <div class="tax-sc-sub" id="inc-tax-sub">Based on taxable income this FY</div>
+              <div class="tax-sc-sub" id="inc-tax-sub">Income tax this FY</div>
             </div>
             <div class="tax-sc-amount c-red" id="inc-tax-total">$0</div>
           </div>
           <div class="tax-sc-divider"></div>
           <div class="tax-sc-stats">
-            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Taxable income</div><div class="tax-sc-stat-val c-blue" id="inc-tax-gross">$0</div></div>
+            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Earned (ex-GST)</div><div class="tax-sc-stat-val c-blue" id="inc-tax-gross">$0</div></div>
             <div class="tax-sc-stat-sep"></div>
-            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Residual tax</div><div class="tax-sc-stat-val c-orange" id="inc-tax-residual">$0</div></div>
+            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">W/H already paid</div><div class="tax-sc-stat-val c-green" id="inc-tax-residual">$0</div></div>
             <div class="tax-sc-stat-sep"></div>
-            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Set aside/mo</div><div class="tax-sc-stat-val c-red" id="inc-tax-monthly">$0</div></div>
+            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Still owe IRD</div><div class="tax-sc-stat-val c-red" id="inc-tax-monthly">$0</div></div>
           </div>
           <div class="tax-sc-divider"></div>
           <div style="padding:2px 0 4px">
@@ -4688,6 +4688,13 @@ function confirmScanMatch(invId){
   closeModal('modal-match');
   showToast('Invoice updated');
 }
+  // Prevent double-tap zoom on iOS (user-scalable=no ignored since iOS 10)
+  var lastTap=0;
+  document.addEventListener('touchend',function(e){
+    var now=Date.now();
+    if(now-lastTap<300){e.preventDefault();}
+    lastTap=now;
+  },{passive:false});
 </script>
 </body>
 </html>
