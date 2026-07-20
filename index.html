@@ -683,7 +683,11 @@ body{
       <!-- ── GST return ── -->
       <div class="shdr-row">
         <span class="shdr">GST return</span>
-        <select id="gst-period-select" class="g-select" style="font-size:12px;width:auto;max-width:180px" onchange="renderTaxTab()"></select>
+        <div style="display:flex;align-items:center;gap:4px">
+          <button onclick="gstPeriodStep(-1)" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--fill);color:var(--t2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">&#x2039;</button>
+          <span id="gst-period-chip" style="font-size:12px;font-weight:600;color:var(--blue);padding:0 4px;cursor:pointer" onclick="gstPeriodReset()">Current</span>
+          <button onclick="gstPeriodStep(1)" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--fill);color:var(--t2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">&#x203A;</button>
+        </div>
       </div>
       <div style="margin:0 16px 8px;background:var(--surface);border-radius:16px;overflow:hidden;box-shadow:var(--sh)">
         <div id="gst-due-banner" style="padding:12px 16px;border-bottom:0.5px solid var(--sep);display:flex;justify-content:space-between;align-items:center">
@@ -1628,24 +1632,50 @@ function getSelectedGSTPeriod(){
   return periods[idx]||currentGSTPeriod();
 }
 
-function populateGSTPeriodSelector(){
-  var sel=document.getElementById('gst-period-select');
-  if(!sel) return;
+var _gstPeriodOffset=0; // 0=current, -1=previous, +1=next
+
+function gstPeriodStep(dir){
   var periods=getGSTSchedule();
   var now=new Date();
-  var curVal=sel.value;
-  sel.innerHTML='';
-  periods.forEach(function(p,idx){
-    var isCurrent=p.start<=now&&p.end>=now;
-    var isPast=p.end<now;
-    var label=p.start.toLocaleDateString('en-NZ',{day:'numeric',month:'short'})+' – '+p.end.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});
-    if(isCurrent) label+=' (current)';
-    var opt=document.createElement('option');
-    opt.value=idx;
-    opt.textContent=label;
-    if(isCurrent&&!curVal) opt.selected=true;
-    sel.appendChild(opt);
-  });
+  var curIdx=periods.findIndex(function(p){return p.start<=now&&p.end>=now;});
+  if(curIdx===-1) curIdx=0;
+  _gstPeriodOffset+=dir;
+  // Clamp: can't go past newest (idx 0) or oldest
+  var targetIdx=curIdx-_gstPeriodOffset;
+  if(targetIdx<0){_gstPeriodOffset=curIdx;} // too far forward
+  if(targetIdx>=periods.length){_gstPeriodOffset=curIdx-(periods.length-1);} // too far back
+  renderTaxTab();
+}
+
+function gstPeriodReset(){
+  _gstPeriodOffset=0;
+  renderTaxTab();
+}
+
+function getSelectedGSTPeriod(){
+  var periods=getGSTSchedule();
+  var now=new Date();
+  var curIdx=periods.findIndex(function(p){return p.start<=now&&p.end>=now;});
+  if(curIdx===-1) curIdx=0;
+  var targetIdx=Math.max(0,Math.min(periods.length-1, curIdx-_gstPeriodOffset));
+  return periods[targetIdx]||periods[0]||currentGSTPeriod();
+}
+
+function populateGSTPeriodSelector(){
+  // Update the chip label to show current selection
+  var p=getSelectedGSTPeriod();
+  var now=new Date();
+  var isCurrent=p.start<=now&&p.end>=now;
+  var chip=document.getElementById('gst-period-chip');
+  if(chip){
+    chip.textContent=isCurrent?'Current':p.start.toLocaleDateString('en-NZ',{month:'short',year:'numeric'});
+    chip.style.color=isCurrent?'var(--blue)':'var(--t2)';
+  }
+  // Update chevron states
+  var periods=getGSTSchedule();
+  var curIdx=periods.findIndex(function(p2){return p2.start<=now&&p2.end>=now;});
+  if(curIdx===-1) curIdx=0;
+  var targetIdx=curIdx-_gstPeriodOffset;
 }
 
 function nextGSTDue(){
@@ -2306,7 +2336,11 @@ function invCard(inv){
   var amt=parseFloat(inv.amount)||0;
   var wr=parseFloat(inv.wht_rate)||0;
   var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):Math.round(amt*wr/100*100)/100;
-  var displayAmt=whtAmt>0?(inv.status==='paid'&&inv.paid_amount!=null?parseFloat(inv.paid_amount):amt-whtAmt):amt;
+  // Use paid_amount if explicitly set (most accurate — direct from remittance)
+  // Fall back to gross only — never derive net from rate*gross as it gives wrong results
+  var displayAmt=inv.status==='paid'&&inv.paid_amount!=null&&inv.paid_amount!==''
+    ?parseFloat(inv.paid_amount)
+    :amt;
   var whtBadge=wr>0?'<span class="badge" style="background:rgba(175,82,222,0.12);color:var(--purple)">W/H '+wr+'%</span>':'';
   var grossSub=inv.status==='paid'&&whtAmt>0?'<div style="font-size:11px;color:var(--t3);text-align:right">of '+fmt(amt)+'</div>':'';
   var html='<div class="r-card" data-iid="'+esc(String(inv.id))+'">';
