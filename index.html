@@ -2763,26 +2763,26 @@ function openNewInvoice(){
 }
 
 function openNewRemittance(){
-  // Open a blank invoice pre-set to "paid" with the mark-paid modal ready
   editingId=null;
-  // First create a stub invoice, then open mark-paid on it
   var stub={
     id:'local_'+Date.now(),client:'',amount:0,date:today(),due_date:null,
     invoice_number:null,gst:'yes',wht_rate:0,wht_amount:0,
     status:'unpaid',source:'manual',_localOnly:true,
     created_at:new Date().toISOString(),updated_at:new Date().toISOString()
   };
-  window._newRemStub=stub;
+  invoices.unshift(stub); // Add to array immediately so loadFromServer keeps it
   _paidInvId=stub.id;
+  window._newRemStub=null; // not using stub pattern - using invoices array directly
   clearPaidFile();
   document.getElementById('paid-modal-title').textContent='New remittance';
-  document.getElementById('paid-ai-result').style.display='none';
+  document.getElementById('paid-ai-result').style.display='none'; document.getElementById('paid-ai-result').innerHTML='';
   document.getElementById('paid-gross').value='';
   document.getElementById('paid-gst-amt').value='';
   document.getElementById('paid-net').value='';
   document.getElementById('paid-wht').value='';
   document.getElementById('paid-date').value=today();
-  var dateLbl=document.getElementById('paid-date-lbl'); if(dateLbl) dateLbl.textContent='Payment date';
+  var pc=document.getElementById('paid-client'); if(pc) pc.value='';
+  var pn=document.getElementById('paid-inv-num'); if(pn) pn.value='';
   updatePaidSummary();
   var extraFields=document.getElementById('paid-extra-fields');
   if(extraFields) extraFields.style.display='block';
@@ -3514,7 +3514,16 @@ function renderPaidPDFPreview(dataUrl){
 function viewPaidFile(){ openViewer(window._paidFileData,'Remittance'); }
 
 function onClosePaidModal(){
-  if(window._newRemStub){window._newRemStub=null;}
+  // If closed without saving, remove the empty stub from invoices
+  if(_paidInvId){
+    var stub=invoices.find(function(i){return String(i.id)===String(_paidInvId)&&i.amount===0&&i.client==='';});
+    if(stub){
+      invoices=invoices.filter(function(i){return i.id!==stub.id;});
+      saveLocal();
+    }
+  }
+  window._newRemStub=null;
+  _paidInvId=null;
 }
 
 function clearPaidFile(){
@@ -3654,6 +3663,60 @@ function createMultiRemittance(){
 }
 
 function confirmMarkPaid(){
+  // Find the invoice by ID (stub is already in invoices array)
+  var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
+  if(!inv){showToast('Error: try again');closeModal('modal-paid');return;}
+
+  var grossField=parseFloat(document.getElementById('paid-gross').value)||0;
+  var gstAmt=parseFloat(document.getElementById('paid-gst-amt').value)||0;
+  var net=parseFloat(document.getElementById('paid-net').value)||0;
+  var wht=parseFloat(document.getElementById('paid-wht').value)||0;
+  var dateVal=document.getElementById('paid-date').value;
+  var extraFields=document.getElementById('paid-extra-fields');
+  var isNew=!!(extraFields&&extraFields.style.display!=='none'&&inv.amount===0);
+
+  if(isNew){
+    var client=(document.getElementById('paid-client').value||'').trim();
+    if(!client){showToast('Enter a client name');return;}
+    var gross=grossField>0?grossField:(wht>0?net+wht:net);
+    if(gross<=0&&net<=0){showToast('Enter the net received amount');return;}
+    inv.client=client;
+    inv.amount=gross;
+    inv.date=dateVal||today();
+    inv.invoice_number=(document.getElementById('paid-inv-num').value||'').trim()||null;
+    inv.gst=document.getElementById('paid-gst')?document.getElementById('paid-gst').value:'yes';
+    inv.wht_rate=wht>0&&gross>0?Math.round(wht/gross*100*100)/100:0;
+    if(extraFields) extraFields.style.display='none';
+  }
+
+  inv.status='paid';
+  inv.paid_date=dateVal||today();
+  if(isNew) inv.date=inv.paid_date; // use paid date as invoice date for remittances
+  inv.paid_amount=net>0?net:parseFloat(inv.amount)||0;
+  if(gstAmt>0) inv.gst_amount=gstAmt;
+  if(wht>0){
+    inv.wht_amount=wht;
+    var scanD=window._lastRemittanceScan;
+    if(scanD&&scanD.whtRate>0) inv.wht_rate=scanD.whtRate;
+    else if(!inv.wht_rate&&inv.amount>0) inv.wht_rate=Math.round(wht/inv.amount*100*100)/100;
+  }
+  if(window._paidFileData) inv.remittance_image=window._paidFileData;
+  var invNumField=document.getElementById('paid-inv-num');
+  if(invNumField&&invNumField.value.trim()) inv.invoice_number=invNumField.value.trim();
+  var scanD2=window._lastRemittanceScan;
+  if(scanD2&&scanD2.payerGst) inv.client_gst=scanD2.payerGst;
+  inv.updated_at=new Date().toISOString();
+
+  save();
+  closeModal('modal-paid');
+  renderAll();
+  showToast((isNew?'Remittance saved':'Payment recorded')+' — '+inv.client);
+  window._lastRemittanceScan=null;
+  window._newRemStub=null;
+  if(isNew) checkNewClient(inv.client);
+}
+
+function confirmMarkPaid(){
   // Get the invoice — new remittances use the in-memory stub
   var isNew=!!(window._newRemStub);
   var inv=isNew?window._newRemStub:invoices.find(function(i){return String(i.id)===String(_paidInvId);});
@@ -3703,7 +3766,6 @@ function confirmMarkPaid(){
   if(scanD&&scanD.payerGst) inv.client_gst=scanD.payerGst;
 
   inv.updated_at=new Date().toISOString();
-
   save();
   closeModal('modal-paid');
   renderAll();
