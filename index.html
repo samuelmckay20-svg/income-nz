@@ -1534,7 +1534,7 @@ function manualSync(){
   },30);
   var deletedIds=invBin.map(function(i){return String(i.id);}).filter(function(id){return !id.startsWith('local_');});
   var payload={
-    invoices:invoices.map(function(inv){var out=Object.assign({},inv);delete out.image;delete out.remittance_image;return out;}),
+    invoices:invoices.filter(function(inv){return inv.client&&inv.amount>0;}).map(function(inv){var out=Object.assign({},inv);delete out.image;delete out.remittance_image;return out;}),
     bankTxns:bankTxns,settings:settings,deletedInvoiceIds:deletedIds
   };
   fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
@@ -1561,7 +1561,7 @@ function manualSync(){
     var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
     var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
-    var unsyncedLocal=invoices.filter(function(i){return i._localOnly&&String(i.id).startsWith('local_')&&!serverIds.has(String(i.id));});
+    var unsyncedLocal=invoices.filter(function(i){return String(i.id).startsWith('local_')&&!serverIds.has(String(i.id));});
     invoices=serverInvoices.concat(unsyncedLocal);
     var sBank=data.bankTxns||[];
     var lBankMap={};
@@ -1747,7 +1747,7 @@ function syncToServer(){
   _syncInFlight=true;
   var deletedIds=invBin.map(function(i){return String(i.id);}).filter(function(id){return !id.startsWith('local_');});
   var payload={
-    invoices:invoices.map(function(inv){var out=Object.assign({},inv);if(inv.image&&_imgCache.get(inv.id)===inv.image.length)delete out.image;return out;}),
+    invoices:invoices.filter(function(inv){return inv.client&&inv.amount>0;}).map(function(inv){var out=Object.assign({},inv);if(inv.image&&_imgCache.get(inv.id)===inv.image.length)delete out.image;return out;}),
     bankTxns:bankTxns,settings:settings,deletedInvoiceIds:deletedIds
   };
   fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
@@ -1785,8 +1785,9 @@ function loadFromServer(){
     var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id));});
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
     // Keep genuinely unsynced local items
+    // Keep all local_ items — includes stubs being filled AND unsynced invoices
     var unsyncedLocal=invoices.filter(function(i){
-      return i._localOnly&&String(i.id).startsWith('local_')&&!serverIds.has(String(i.id));
+      return String(i.id).startsWith('local_')&&!serverIds.has(String(i.id));
     });
     invoices=serverInvoices.concat(unsyncedLocal);
     // Preserve excluded + matched flags from local bank data
