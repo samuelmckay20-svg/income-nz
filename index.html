@@ -2331,11 +2331,12 @@ function invCard(inv){
   var amt=parseFloat(inv.amount)||0;
   var wr=parseFloat(inv.wht_rate)||0;
   var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):Math.round(amt*wr/100*100)/100;
-  // Use paid_amount if explicitly set (most accurate — direct from remittance)
-  // Fall back to gross only — never derive net from rate*gross as it gives wrong results
-  var displayAmt=inv.status==='paid'&&inv.paid_amount!=null&&inv.paid_amount!==''
-    ?parseFloat(inv.paid_amount)
-    :amt;
+  // Display amount priority: paid_amount > gross-wht_amount > gross
+  var displayAmt=amt; // default to gross
+  if(inv.status==='paid'){
+    if(inv.paid_amount!=null&&inv.paid_amount!=='') displayAmt=parseFloat(inv.paid_amount);
+    else if(whtAmt>0) displayAmt=Math.round((amt-whtAmt)*100)/100; // derive from stored wht
+  }
   var whtBadge=wr>0?'<span class="badge" style="background:rgba(175,82,222,0.12);color:var(--purple)">W/H '+wr+'%</span>':'';
   var isVerified=bankTxns.some(function(t){return t.matched_invoice_id&&(String(t.matched_invoice_id)===String(inv.id)||Number(t.matched_invoice_id)===Number(inv.id));});
   var verifiedBadge=isVerified?'<span class="badge" style="background:rgba(52,199,89,.12);color:var(--green)">&#x2713; Verified</span>':'';
