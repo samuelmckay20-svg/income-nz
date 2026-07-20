@@ -3412,8 +3412,9 @@ function openMarkPaid(id){
   document.getElementById('paid-ai-result').style.display='none';
   var whtAmt=Math.round((parseFloat(inv.amount)||0)*(parseFloat(inv.wht_rate)||0)/100*100)/100;
   var net=Math.round(((parseFloat(inv.amount)||0)-whtAmt)*100)/100;
-  document.getElementById('paid-gross').value=whtAmt>0?String(amt):'';
-  document.getElementById('paid-gst-amt').value=inv&&inv.gst==='yes'?String(Math.round(amt*3/23*100)/100):'';
+  var amt=parseFloat(inv.amount)||0;
+  document.getElementById('paid-gross').value=String(amt);
+  document.getElementById('paid-gst-amt').value=inv.gst==='yes'?String(Math.round(amt*3/23*100)/100):'';
   document.getElementById('paid-net').value=whtAmt>0?String(net):'';
   document.getElementById('paid-wht').value=whtAmt>0?String(whtAmt):'';
   document.getElementById('paid-date').value=today();
