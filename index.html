@@ -1473,7 +1473,7 @@ function doLogin(){
     clearTimeout(timer);
     btn.disabled=false; btn.textContent='Sign In';
     if(e.name==='AbortError'){
-      errEl.textContent='Server not reachable — is port 3457 forwarded on your router?';
+      errEl.textContent='Server not reachable — is port 3458 forwarded on your router?';
     } else {
       errEl.textContent='Cannot connect to server — '+e.message;
     }
@@ -2078,11 +2078,13 @@ function daysAhead(n){return new Date(Date.now()+n*86400000).toISOString().slice
 function renderSummary(){
   var fil=invoices.filter(function(i){return inPeriod(i.date);});
   var gross=0,rec=0,out=0;
-  fil.forEach(function(i){
+  // Use invoice date for gross/outstanding, paid_date for received (payments basis)
+  var allFY=invoices.filter(function(i){var d=parseDate(i.date);return d>=FY.start&&d<=FY.end;});
+  allFY.forEach(function(i){
     var a=parseFloat(i.amount)||0;
     if(i.status==='paid'){
-      gross+=a; // full invoice amount of paid invoices
-      rec+=parseFloat(i.paid_amount||a)||0; // net after W/H
+      gross+=a;
+      rec+=parseFloat(i.paid_amount||a)||0;
     } else {
       out+=a;
     }
@@ -2199,9 +2201,9 @@ function renderIncomeTab(){
 
 /* ── Client colour helper ── */
 function clientColour(name){
-  var colours=['#007AFF','#34C759','#FF9500','#AF52DE','#FF3B30','#5AC8FA','#FF2D55'];
-  var hash=0; for(var i=0;i<name.length;i++) hash=(hash+name.charCodeAt(i))%colours.length;
-  return colours[hash];
+  var colours=['#007AFF','#34C759','#FF9500','#AF52DE','#FF3B30','#5AC8FA','#FF2D55','#30B0C7','#32ADE6','#64D2FF','#BF5AF2','#FF6961','#FFD60A','#30D158'];
+  var hash=0; for(var i=0;i<name.length;i++) hash=(hash*31+name.charCodeAt(i))&0xFFFF;
+  return colours[hash%colours.length];
 }
 
 function clientId(name){
@@ -2788,8 +2790,9 @@ function renderBank(){
 
 /* ── NZ Income Tax Calculation (2025/26 rates) ── */
 function calcIncomeTax(income){
-  // NZ individual tax rates FY2025-26
-  var brackets=[
+  // NZ individual tax rates — update when IRD changes brackets
+  // FY2025-26 rates (check ird.govt.nz for updates each budget)
+  var brackets=settings.taxBrackets||[
     {min:0,      max:14000,  rate:0.105},
     {min:14000,  max:48000,  rate:0.175},
     {min:48000,  max:70000,  rate:0.30},
@@ -2984,14 +2987,15 @@ function _renderTaxTabInner(){
 
 }
 
-/* ── Render GST (legacy — now part of Tax tab) ── */
-function renderGST(){ renderTaxTab(); }
 
 /* ── Render All ── */
 function renderAll(){
   if(currentTab==='overview'){renderIncomeTab();}
   else if(currentTab==='clients'){renderSummary();renderClientsTab();}
-  else{renderSummary();renderInvoices();renderBank();if(currentTab==='gst')renderTaxTab();}
+  else if(currentTab==='invoices'){renderSummary();renderInvoices();}
+  else if(currentTab==='bank'){renderSummary();renderBank();}
+  else if(currentTab==='gst'){renderSummary();renderTaxTab();}
+  else{renderSummary();renderInvoices();renderBank();}
   var unpaid=invoices.filter(function(i){return i.status==='unpaid'||isOverdue(i);}).length;
   setBadge('badge-inv',unpaid);
   var unmatched=bankTxns.filter(function(t){return!t.matched_invoice_id&&parseFloat(t.amount)>0;}).length;
@@ -3781,16 +3785,13 @@ function renderPaidPDFPreview(dataUrl){
 function viewPaidFile(){ openViewer(window._paidFileData,'Remittance'); }
 
 function onClosePaidModal(){
-  // If closed without saving, remove the empty stub from invoices
+  // Remove empty stub if modal closed without saving
   if(_paidInvId){
     var stub=invoices.find(function(i){return String(i.id)===String(_paidInvId)&&i.amount===0&&i.client==='';});
-    if(stub){
-      invoices=invoices.filter(function(i){return i.id!==stub.id;});
-      saveLocal();
-    }
+    if(stub){invoices=invoices.filter(function(i){return i.id!==stub.id;});saveLocal();}
   }
   window._newRemStub=null;
-  _paidInvId=null;
+  _paidInvId=null; // always reset so next modal open starts clean
 }
 
 function clearPaidFile(){
@@ -4136,7 +4137,9 @@ function openBankDetail(id){
       _pendingMatchTxnId=id;
       openModal('modal-invoice');
     }});
-    var txnDate=new Date(txn.date);
+    // Pre-build set of invoice IDs already matched to OTHER transactions
+  var _linkedInvIds=new Set(bankTxns.filter(function(t){return t!==txn&&t.matched_invoice_id;}).map(function(t){return String(t.matched_invoice_id);}));
+  var txnDate=new Date(txn.date);
     var matchable=invoices.filter(function(i){
       if(!i.client||!i.amount) return false; // skip empty stubs
       if(bankTxns.some(function(t){return t!==txn&&String(t.matched_invoice_id)===String(i.id);})) return false;
@@ -4235,7 +4238,15 @@ function runAutoMatch(){
 }
 
 /* ── GST Settings ── */
-function saveSettings(){settings.gstFreq=document.getElementById('gst-freq').value;settings.gstNum=document.getElementById('gst-num').value.trim();var ar=document.getElementById('acc-rate');if(ar)settings.accRate=ar.value;var sl=document.getElementById('sl-toggle');if(sl)settings.studentLoan=sl.value;var se=document.getElementById('sl-extra');if(se&&se.value)settings.slExtra=se.value;var pt=document.getElementById('prov-toggle');if(pt)settings.provTax=pt.value;save();}
+function saveSettings(){
+  var gf=document.getElementById('gst-freq'); if(gf) settings.gstFreq=gf.value;
+  var gn=document.getElementById('gst-num'); if(gn) settings.gstNum=gn.value.trim();
+  var ar=document.getElementById('acc-rate'); if(ar) settings.accRate=ar.value;
+  var sl=document.getElementById('sl-toggle'); if(sl) settings.studentLoan=sl.value;
+  var se=document.getElementById('sl-extra'); if(se&&se.value) settings.slExtra=se.value;
+  var pt=document.getElementById('prov-toggle'); if(pt) settings.provTax=pt.value;
+  save();
+}
 
 /* ── Account ── */
 function copyBCC(){var addr=document.getElementById('acct-email').textContent;if(navigator.clipboard){navigator.clipboard.writeText(addr).then(function(){showToast('BCC address copied');});}else{showToast('BCC: '+addr);}}
@@ -4697,6 +4708,7 @@ function applyClientProfile(name, inputId){
 function checkNewClient(clientName){
   if(!clientName) return;
   var profile=getClientProfile(clientName);
+  if(profile) return; // already known — skip scanning
   // Get all known client names from invoices + profiles
   var allClients=Array.from(new Set(
     invoices.map(function(i){return i.client||'';}).concat(Object.values(clientProfiles).map(function(p){return p.name||'';}))
