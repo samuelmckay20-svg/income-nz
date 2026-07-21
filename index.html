@@ -627,7 +627,41 @@ body{
 
     <div id="tab-gst" class="tab-panel">
 
-      <!-- ── INCOME TAX (combined hero + detail) ── -->
+      <!-- ── Tax set-aside tracker ── -->
+      <div class="hero-wrap" style="padding-bottom:4px">
+        <div class="hero-card">
+          <div class="hero-lbl">Set aside for tax</div>
+          <div class="hero-amount" id="setaside-total" style="color:var(--orange)">$0</div>
+          <div class="hero-period" id="setaside-sub">Income tax + GST this period + ACC</div>
+          <div class="hero-divider"></div>
+          <div style="background:var(--fill);border-radius:12px;overflow:hidden">
+        <!-- Breakdown rows -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1)">Income tax</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:1px" id="setaside-tax-sub">Residual after W/H credit</div>
+          </div>
+          <div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums" id="setaside-tax">$0</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1)">GST this period</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:1px" id="setaside-gst-sub">Current unfiled period</div>
+          </div>
+          <div style="font-size:17px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums" id="setaside-gst">$0</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1)">ACC levies</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:1px">Earner + working cover</div>
+          </div>
+          <div style="font-size:17px;font-weight:700;color:var(--purple);font-variant-numeric:tabular-nums" id="setaside-acc">$0</div>
+        </div>
+
+        <!-- Monthly suggestion -->
+      </div>
+      </div><!-- /set-aside hero-wrap -->
+
       <div class="hero-wrap" style="padding-bottom:4px">
         <div class="hero-card" style="border-image:linear-gradient(90deg,var(--red),var(--orange)) 1">
           <div class="hero-lbl">Tax still owed</div>
@@ -674,48 +708,8 @@ body{
             <div class="tax-prov-row" style="border-top:0.5px solid var(--sep)"><span class="tax-prov-date">15 Jan <span id="prov-yr2"></span></span><span class="tax-prov-lbl">Instalment 2</span><span class="tax-prov-val c-orange" id="prov-2">—</span></div>
             <div class="tax-prov-row" style="border-top:0.5px solid var(--sep)"><span class="tax-prov-date">7 May <span id="prov-yr3"></span></span><span class="tax-prov-lbl">Instalment 3</span><span class="tax-prov-val c-orange" id="prov-3">—</span></div>
           </div>
-        </div>
-      </div>
-
-      <!-- hidden elements still needed by JS -->
-      <span id="tax-income-total" style="display:none"></span>
-      <span id="tax-income-sub" style="display:none"></span>
-
-      <!-- ── Tax set-aside tracker ── -->
-      <div class="shdr">Set aside tracker</div>
-      <div style="margin:0 16px 16px;background:var(--surface);border-radius:16px;overflow:hidden;box-shadow:var(--sh)">
-        <!-- Big number -->
-        <div style="padding:20px 20px 12px;border-bottom:0.5px solid var(--sep)">
-          <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">You should have set aside</div>
-          <div style="font-size:38px;font-weight:700;letter-spacing:-1.5px;font-variant-numeric:tabular-nums" id="setaside-total">$0</div>
-          <div style="font-size:12px;color:var(--t3);margin-top:4px" id="setaside-sub">Based on income earned to date</div>
-        </div>
-        <!-- Breakdown rows -->
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--t1)">Income tax</div>
-            <div style="font-size:11px;color:var(--t3);margin-top:1px" id="setaside-tax-sub">Residual after W/H credit</div>
           </div>
-          <div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums" id="setaside-tax">$0</div>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--t1)">GST this period</div>
-            <div style="font-size:11px;color:var(--t3);margin-top:1px" id="setaside-gst-sub">Current unfiled period</div>
-          </div>
-          <div style="font-size:17px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums" id="setaside-gst">$0</div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--t1)">ACC levies</div>
-            <div style="font-size:11px;color:var(--t3);margin-top:1px">Earner + working cover</div>
-          </div>
-          <div style="font-size:17px;font-weight:700;color:var(--purple);font-variant-numeric:tabular-nums" id="setaside-acc">$0</div>
-        </div>
-
-        <!-- Monthly suggestion -->
-      </div>
-
       <!-- ── GST return ── -->
       <div class="shdr-row">
         <span class="shdr">GST return</span>
@@ -913,6 +907,7 @@ body{
       </div>
 
 
+    </div><!-- /tab-gst -->
     </div>
 
   </div><!-- /tab-content -->
