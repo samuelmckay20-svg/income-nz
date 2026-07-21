@@ -1513,7 +1513,13 @@ function switchTab(name){
   document.getElementById('summary-bar').style.display=isIncome?'none':'block';
   document.getElementById('fab').classList.toggle('hidden',isIncome||name==='gst');
   var qf=document.getElementById('fab-quick'); if(qf) qf.style.display=name==='gst'||name==='bank'?'none':'flex';
-  refreshFY(); renderAll();
+  refreshFY();
+  // Only render what's needed for the active tab
+  if(name==='overview') renderIncomeTab();
+  else if(name==='clients'){renderSummary();renderClientsTab();}
+  else{renderSummary();renderInvoices();renderBank();if(name==='gst')renderTaxTab();}
+  var unpaid=invoices.filter(function(i){return i.status==='unpaid'||isOverdue(i);}).length; setBadge('badge-inv',unpaid);
+  var unmatched=bankTxns.filter(function(t){return!t.matched_invoice_id&&parseFloat(t.amount)>0;}).length; setBadge('badge-bank',unmatched);
 }
 
 function setPeriod(p,btn){ currentPeriod=p; document.querySelectorAll('#period-chips .chip').forEach(function(c){c.classList.toggle('on',c===btn);}); renderAll(); }
@@ -1668,13 +1674,6 @@ function currentGSTPeriod(){
   var now=new Date();
   var cur=periods.slice().reverse().find(function(p){return p.end>=now&&p.start<=now;});
   return cur||periods[0]||{start:FY.start,end:FY.end,due:new Date()};
-}
-
-function getSelectedGSTPeriod(){
-  var sel=document.getElementById('gst-period-select');
-  var periods=getGSTSchedule();
-  var idx=sel?parseInt(sel.value)||0:0;
-  return periods[idx]||currentGSTPeriod();
 }
 
 var _gstPeriodOffset=0; // 0=current, -1=previous, +1=next
@@ -2319,7 +2318,7 @@ function renderSources(fyInvoices){
     var matchRate=c.invoiced>0?Math.round((c.received/c.invoiced)*100):0;
     var initials=name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
     var col=clientColour(name);
-    var outstanding=fy.filter(function(i){return i.client===name&&i.status!=='paid';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
+    var outstanding=fyInvoices.filter(function(i){return i.client===name&&i.status!=='paid';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
     var id=clientId(name);
 
     html+='<div class="client-card" id="'+id+'" data-client="'+esc(name)+'">';
@@ -2375,23 +2374,6 @@ function renderSources(fyInvoices){
 }
 
 /* ── Next GST due ── */
-function currentGSTPeriod(){
-  var freq=settings.gstFreq||'2monthly';
-  var now=new Date(), m=now.getMonth(), y=now.getFullYear();
-  var months=freq==='1monthly'?1:freq==='6monthly'?6:2;
-  var periodEnds=freq==='1monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:freq==='6monthly'?[3,9]:[0,2,4,6,8,10];
-  for(var i=0;i<24;i++){
-    var pm=(m+i)%12, py=y+Math.floor((m+i)/12);
-    if(periodEnds.indexOf(pm)!==-1){
-      var end=new Date(py,pm+1,0);
-      if(end>=now){
-        var start=new Date(py,pm+1-months,1);
-        return{start:start,end:end};
-      }
-    }
-  }
-  return{start:FY.start,end:FY.end};
-}
 
 function nextGSTDue(){
   var freq=settings.gstFreq||'2monthly';
@@ -2566,9 +2548,32 @@ function renderInvoices(){
     });
   }
   fil.sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  // Pre-build matched invoice ID set for O(1) verified badge lookup
+  window._matchedInvIds=new Set(bankTxns.filter(function(t){return t.matched_invoice_id;}).map(function(t){return String(t.matched_invoice_id);}));
   var listEl=document.getElementById('invoices-list');
-  listEl.innerHTML=fil.length?fil.map(invCard).join(''):emptyState('&#x1F9FE;','No invoices',q?'No results for "'+q+'"':'Nothing matches this filter');
+  var PAGE=50;
+  var showing=Math.min(PAGE, fil.length);
+  var html=fil.slice(0,showing).map(invCard).join('');
+  if(fil.length>showing){
+    html+='<div style="padding:16px;text-align:center"><button onclick="loadMoreInvoices()" style="padding:10px 28px;border-radius:20px;border:none;background:var(--fill);color:var(--blue);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">Load more ('+fil.length+' total)</button></div>';
+  }
+  listEl.innerHTML=fil.length?html:emptyState('&#x1F9FE;','No invoices',q?'No results for "'+q+'"':'Nothing matches this filter');
   listEl.onclick=function(e){var card=e.target.closest('[data-iid]');if(card)openInvDetail(card.dataset.iid);};
+  listEl._allFil=fil; listEl._showing=showing;
+}
+
+
+function loadMoreInvoices(){
+  var listEl=document.getElementById('invoices-list');
+  if(!listEl||!listEl._allFil) return;
+  var fil=listEl._allFil;
+  var PAGE=50;
+  listEl._showing=Math.min(listEl._showing+PAGE, fil.length);
+  var html=fil.slice(0,listEl._showing).map(invCard).join('');
+  if(fil.length>listEl._showing){
+    html+='<div style="padding:16px;text-align:center"><button onclick="loadMoreInvoices()" style="padding:10px 28px;border-radius:20px;border:none;background:var(--fill);color:var(--blue);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">Load more ('+fil.length+' total)</button></div>';
+  }
+  listEl.innerHTML=html;
 }
 
 function invCard(inv){
@@ -2586,7 +2591,7 @@ function invCard(inv){
     else if(whtAmt>0) displayAmt=Math.round((amt-whtAmt)*100)/100; // derive from stored wht
   }
   var whtBadge=wr>0?'<span class="badge" style="background:rgba(175,82,222,0.12);color:var(--purple)">W/H '+wr+'%</span>':'';
-  var isVerified=bankTxns.some(function(t){return t.matched_invoice_id&&(String(t.matched_invoice_id)===String(inv.id)||Number(t.matched_invoice_id)===Number(inv.id));});
+  var isVerified=window._matchedInvIds?window._matchedInvIds.has(String(inv.id)):bankTxns.some(function(t){return t.matched_invoice_id&&String(t.matched_invoice_id)===String(inv.id);});
   var verifiedBadge=isVerified?'<span class="badge" style="background:rgba(52,199,89,.12);color:var(--green)">&#x2713; Verified</span>':'';
   var grossSub=inv.status==='paid'&&whtAmt>0?'<div style="font-size:11px;color:var(--t3);text-align:right">of '+fmt(amt)+'</div>':'';
   var html='<div class="r-card" data-iid="'+esc(String(inv.id))+'">';
@@ -2759,7 +2764,8 @@ function renderBank(){
     return;
   }
   if(btn) btn.style.display='flex';
-  var sorted=bankTxns.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  // Sort once and cache — avoid re-sorting on every render
+  var sorted=bankTxns.slice().sort(function(a,b){return (b.date>a.date)?1:(b.date<a.date)?-1:0;});
   var unverified=sorted.filter(function(t){return !t.excluded;});
   var excluded=sorted.filter(function(t){return t.excluded;});
   // Hero stats
