@@ -1486,7 +1486,7 @@ function afterLogin(data){
   document.getElementById('nav-avatar').textContent=uname.charAt(0).toUpperCase();
   document.getElementById('acct-name').textContent=uname;
   document.getElementById('acct-email').textContent=etoken?'Receipts2026+'+etoken+'@gmail.com':'(loading\u2026)';
-  refreshFY(); loadLocal(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
+  refreshFY(); loadLocal(); repairInvoiceGST(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
 }
 
 function doLogout(){
@@ -1525,6 +1525,17 @@ function saveLocal(){
   var slim=invoices.map(function(i){var c=Object.assign({},i);delete c.image;return c;});
   LS.set(LS_INVOICES,JSON.stringify(slim)); LS.set(LS_BANK,JSON.stringify(bankTxns)); LS.set(LS_SETTINGS,JSON.stringify(settings)); LS.set('nzin_invbin',JSON.stringify(invBin));
 }
+function repairInvoiceGST(){
+  // Fix invoices where gst field got corrupted to a number by export bug
+  var repaired=0;
+  invoices.forEach(function(inv){
+    if(typeof inv.gst === 'number'||inv.gst===undefined||inv.gst===null){
+      inv.gst='yes'; repaired++;
+    }
+  });
+  if(repaired>0){saveLocal();console.warn('Repaired '+repaired+' corrupted gst fields');}
+}
+
 function loadLocal(){
   try{invoices=JSON.parse(LS.get(LS_INVOICES)||'[]');}catch(e){invoices=[];}
   try{bankTxns=JSON.parse(LS.get(LS_BANK)||'[]');}catch(e){bankTxns=[];}
@@ -2009,7 +2020,7 @@ function loadFromServer(){
     sBank.forEach(function(t){delete lBankMap[t.id];});
     Object.values(lBankMap).forEach(function(t){bankTxns.push(t);});
     settings=data.settings||settings;
-    saveLocal(); renderAll();
+    repairInvoiceGST(); saveLocal(); renderAll();
     if(unsyncedLocal.length||binnedIds.size) syncToServer();
   })
   .catch(function(e){console.warn('Load:',e);});
