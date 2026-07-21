@@ -1857,9 +1857,10 @@ function exportAnnualSummary(){
   y+=3; doc.line(M,y,W-M,y); y+=4;
 
   doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-  fyInvoices.forEach(function(inv,idx){
+  fyInvoices.forEach(function(invOrig,idx){
+    var inv=Object.assign({},invOrig); // copy — never mutate originals
     if(y>275){doc.addPage();y=18;}
-    var gst=inv.gst='yes'?Math.round((parseFloat(inv.amount)||0)*3/23*100)/100:0;
+    var gst=inv.gst==='yes'?Math.round((parseFloat(inv.amount)||0)*3/23*100)/100:0;
     var wht=parseFloat(inv.wht_amount)||0;
     var net=inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):(parseFloat(inv.amount)||0)-wht;
     if(idx%2===0){doc.setFillColor(248,248,250);doc.rect(M,y-3.5,cw,6.5,'F');}
