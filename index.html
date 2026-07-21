@@ -2319,7 +2319,7 @@ function renderSources(fyInvoices){
     var matchRate=c.invoiced>0?Math.round((c.received/c.invoiced)*100):0;
     var initials=name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
     var col=clientColour(name);
-    var outstanding=Math.max(0,c.invoiced-c.received);
+    var outstanding=fyInvoices.filter(function(i){return i.client===name&&i.status!=='paid';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
     var id=clientId(name);
 
     html+='<div class="client-card" id="'+id+'" data-client="'+esc(name)+'">';
@@ -2660,7 +2660,7 @@ function renderClientsTab(){
     var matchRate=c.invoiced>0?Math.round((c.received/c.invoiced)*100):0;
     var initials=name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
     var col=clientColour(name);
-    var outstanding=Math.max(0,c.invoiced-c.received);
+    var outstanding=fyInvoices.filter(function(i){return i.client===name&&i.status!=='paid';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
     var id=clientId(name);
 
     // Status badges
