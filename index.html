@@ -1543,7 +1543,23 @@ function loadLocal(){
   try{invBin=JSON.parse(LS.get('nzin_invbin')||'[]');}catch(e){invBin=[];}
   try{clientProfiles=JSON.parse(LS.get('nzin_cp')||'{}');}catch(e){clientProfiles={}; }
 }
-function save(){ saveLocal(); syncToServer(); }
+function sanitizeInvoice(inv){
+  // Only fix fields that are definitely wrong type — never change valid values
+  // gst: must be string 'yes', 'no', or 'zero' — if it's a number (export bug) fix it
+  if(typeof inv.gst !== 'string' || ['yes','no','zero'].indexOf(inv.gst) === -1) inv.gst = 'yes';
+  // status: only fix if genuinely corrupt (not a string at all) — don't reset paid->unpaid
+  var validStatuses = ['unpaid','paid','overdue','draft'];
+  if(typeof inv.status !== 'string' || validStatuses.indexOf(inv.status) === -1) inv.status = 'unpaid';
+  // amounts: ensure numeric — parseFloat of a valid number returns same value
+  if(inv.amount != null && typeof inv.amount !== 'number') inv.amount = parseFloat(inv.amount) || 0;
+  if(inv.wht_rate != null && typeof inv.wht_rate !== 'number') inv.wht_rate = parseFloat(inv.wht_rate) || 0;
+  return inv;
+}
+
+function save(){
+  invoices.forEach(sanitizeInvoice); // validate before every save
+  saveLocal(); syncToServer();
+}
 
 /* ── Sync ── */
 
