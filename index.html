@@ -756,11 +756,6 @@ body{
       <div id="gst-box7b" style="display:none"></div>
       <div id="gst-input" style="display:none"></div>
 
-      <!-- Annual tax summary export -->
-      <button onclick="exportAnnualSummary()" style="margin:0 16px 16px;width:calc(100% - 32px);padding:14px;border-radius:14px;border:none;background:rgba(255,59,48,.08);color:var(--red);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-        <span>&#x1F4C4;</span> Export annual tax summary PDF
-      </button>
-
       <!-- ── ACC ── -->
       <div class="shdr">ACC levies</div>
       <div class="tax-section-card">
@@ -880,6 +875,14 @@ body{
           <span class="g-val" style="color:var(--blue)">Copy</span>
         </div>
       </div>
+      <div class="shdr">Export</div>
+      <div class="g-list" style="margin-bottom:8px">
+        <div class="g-row" style="cursor:pointer" onclick="closeModal('modal-account');exportAnnualSummary()">
+          <div class="g-icon" style="background:rgba(255,59,48,.12)">&#x1F4C4;</div>
+          <span class="g-lbl">Annual tax summary</span>
+          <span class="g-val" style="color:var(--blue)">&#x203A;</span>
+        </div>
+      </div>
       <div class="shdr">App</div>
       <div class="g-list">
         <div class="g-row"><div class="g-icon" style="background:var(--fill)">ℹ️</div><span class="g-lbl">Version</span><span class="g-val">1.0.0</span></div>
@@ -893,6 +896,7 @@ body{
         </div>
       </div>
       <div style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px">
+      </div>
         <button class="btn-primary" style="background:var(--red)" onclick="doLogout()">Sign out</button>
       </div>
     </div>
@@ -1694,7 +1698,7 @@ function nextGSTDue(){
 }
 
 /* ── Receipts NZ Integration ── */
-var _rxGSTCache=null, _rxGSTCacheTime=0;
+var _rxGSTCache=null, _rxGSTCacheTime=0, _rxGSTCacheKey='';
 
 function getReceiptsNZData(){
   try{
@@ -1727,7 +1731,8 @@ function calcInputGST(receipts,start,end){
 
 function fetchReceiptsGST(start,end,callback){
   var now=Date.now();
-  if(_rxGSTCache&&now-_rxGSTCacheTime<300000){
+  var cacheKey=start.toISOString().slice(0,10)+end.toISOString().slice(0,10);
+  if(_rxGSTCache&&now-_rxGSTCacheTime<300000&&_rxGSTCacheKey===cacheKey){
     callback(calcInputGST(_rxGSTCache.receipts,start,end));
     return;
   }
@@ -1739,7 +1744,7 @@ function fetchReceiptsGST(start,end,callback){
       return;
     }
     try{localStorage.setItem('nzrt5_r',JSON.stringify(data.receipts));}catch(e){}
-    _rxGSTCache={receipts:data.receipts}; _rxGSTCacheTime=Date.now();
+    _rxGSTCache={receipts:data.receipts}; _rxGSTCacheTime=Date.now(); _rxGSTCacheKey=cacheKey;
     callback(calcInputGST(data.receipts,start,end));
   })
   .catch(function(){callback(calcInputGST(getReceiptsNZData().receipts,start,end));});
@@ -2886,7 +2891,7 @@ function renderTaxTab(){
   fetchReceiptsGST(gstPer.start, gstPer.end, function(rxData){
     if(rxData&&rxData.available){
       var box13=rxData.inputGST, box11=rxData.totalExpenses||0;
-      var box15=Math.max(0,_box7snap-box13);
+      var box15=Math.round((_box7snap-box13)*100)/100; // can be negative (refund)
       gset('gst-box11',box11>0?fmt(box11):'—');
       gset('gst-box13',fmt(box13));
       gset('gst-box15',fmt(box15));
