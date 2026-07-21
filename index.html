@@ -700,8 +700,8 @@ body{
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--t1)">GST owing</div>
-            <div style="font-size:11px;color:var(--t3);margin-top:1px">Output tax on paid invoices</div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1)">GST this period</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:1px" id="setaside-gst-sub">Current unfiled period</div>
           </div>
           <div style="font-size:17px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums" id="setaside-gst">$0</div>
         </div>
@@ -712,23 +712,8 @@ body{
           </div>
           <div style="font-size:17px;font-weight:700;color:var(--purple);font-variant-numeric:tabular-nums" id="setaside-acc">$0</div>
         </div>
-        <div id="setaside-sl-row" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--t1)">Student loan</div>
-            <div style="font-size:11px;color:var(--t3);margin-top:1px">12% on income over $24,128</div>
-          </div>
-          <div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums" id="setaside-sl">$0</div>
-        </div>
+
         <!-- Monthly suggestion -->
-        <div style="padding:12px 16px;background:rgba(0,122,255,.05)">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-size:13px;font-weight:600;color:var(--blue)">Set aside per month</div>
-              <div style="font-size:11px;color:var(--t3);margin-top:1px" id="setaside-monthly-sub">For rest of FY</div>
-            </div>
-            <div style="font-size:17px;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums" id="setaside-monthly">$0</div>
-          </div>
-        </div>
       </div>
 
       <!-- ── GST return ── -->
@@ -881,6 +866,7 @@ body{
               </div>
               <div class="g-row"><div class="g-icon">&#x1F4F1;</div><span class="g-lbl">Business use %</span><input class="g-input" id="asset-biz-pct" type="text" inputmode="numeric" placeholder="100" style="max-width:80px;text-align:right"></div>
               <div class="g-row"><div class="g-icon">&#x1F4B3;</div><span class="g-lbl">Price includes GST?</span><select class="g-select" id="asset-gst" style="font-size:13px;width:auto"><option value="yes">Yes — I'm GST registered</option><option value="no">No — ex-GST price</option></select></div>
+              <div class="g-row" id="asset-boost-row"><div class="g-icon">&#x26A1;</div><span class="g-lbl">Investment Boost (20%)?</span><select class="g-select" id="asset-boost" style="font-size:13px;width:auto"><option value="no">No</option><option value="yes">Yes — new asset after 22 May 2025</option></select></div>
             </div>
             <div style="margin-top:12px;padding:12px;background:var(--fill);border-radius:12px;font-size:12px;color:var(--t3)">
               Diminishing value method. IRD rates sourced from <strong>ird.govt.nz/depreciation</strong>. Low-value assets under $1,000 can be written off immediately.
@@ -3105,35 +3091,96 @@ function syncAssetsToServer(){
 }
 
 function calcDepreciation(asset, forFY){
+  // IRD-compliant calculation per ird.govt.nz/depreciation:
+  // 1. GST-registered: use ex-GST cost as depreciable base
+  // 2. Year 1: pro-rate by MONTHS, count part-months as whole months
+  // 3. Subsequent years: full year DV on closing book value from prior year
+  // 4. Investment Boost (assets purchased on/after 22 May 2025): optional 20%
+  //    immediate deduction in year 1, then DV on remaining 80%
+
   var fy = forFY || FY;
   var costRaw = parseFloat(asset.cost)||0;
-  // IRD depreciation is on ex-GST cost (GST-registered entities claim GST separately)
+  // Ex-GST cost is the depreciable base for GST-registered taxpayers
   var cost = asset.gstIncluded!==false ? Math.round(costRaw/1.15*100)/100 : costRaw;
-  var rate = parseFloat(asset.rate)||0;
+  var dvRate = (parseFloat(asset.rate)||0)/100;
   var bizPct = (parseFloat(asset.bizPct)||100)/100;
   var purchaseDate = parseDate(asset.date);
 
-  // Only depreciate from purchase date
-  var deprStart = purchaseDate < fy.start ? fy.start : purchaseDate;
-  if(deprStart > fy.end) return 0;
+  // Asset not yet purchased when this FY started (relative to purchase year)
+  if(purchaseDate > fy.end) return {depr:0, bookOpen:cost, bookClose:cost};
 
-  // Days in FY this asset is owned
-  var daysOwned = Math.ceil((fy.end - deprStart) / 86400000);
-  var daysInFY = Math.ceil((fy.end - fy.start) / 86400000);
-  var yearFraction = daysOwned / daysInFY;
+  // Investment Boost: available for new assets purchased on or after 22 May 2025
+  var investBoostCutoff = new Date(2025,4,22); // 22 May 2025
+  var qualifiesForBoost = asset.investmentBoost && purchaseDate >= investBoostCutoff;
 
-  // Calculate book value at start of this FY using DV method
-  var bookValue = cost;
-  var fyYear = fy.start.getFullYear();
+  // Build a year-by-year schedule to get the correct book value for any FY
+  // Start from the purchase FY and work forward
+  var purchaseFYStart, purchaseFYEnd;
+  // NZ FY: 1 Apr to 31 Mar
+  var purchaseMonth = purchaseDate.getMonth(); // 0=Jan
   var purchaseYear = purchaseDate.getFullYear();
-  for(var yr = purchaseYear; yr < fyYear; yr++){
-    bookValue = bookValue * (1 - rate/100);
+  if(purchaseMonth >= 3){ // Apr or later = this calendar year starts FY
+    purchaseFYStart = new Date(purchaseYear, 3, 1);
+    purchaseFYEnd = new Date(purchaseYear+1, 2, 31);
+  } else { // Jan-Mar = previous calendar year started FY
+    purchaseFYStart = new Date(purchaseYear-1, 3, 1);
+    purchaseFYEnd = new Date(purchaseYear, 2, 31);
   }
 
-  // DV depreciation for this FY
-  var annualDepr = bookValue * (rate/100);
-  var depr = annualDepr * yearFraction * bizPct;
-  return Math.round(depr * 100) / 100;
+  var bookValue = cost;
+  var investBoostClaimed = false;
+
+  // Simulate each FY from purchase year until the target FY
+  var simFYStart = purchaseFYStart;
+  while(simFYStart <= fy.start){
+    var simFYEnd = new Date(simFYStart.getFullYear()+1, 2, 31);
+    var isFirstFY = (simFYStart.getTime() === purchaseFYStart.getTime());
+    var istargetFY = (simFYStart.getTime() === fy.start.getTime());
+
+    var deprBase = bookValue;
+
+    // Investment Boost: 20% of original cost ex-GST, claimed in purchase year only
+    var boostAmount = 0;
+    if(isFirstFY && qualifiesForBoost && !investBoostClaimed){
+      boostAmount = Math.round(cost * 0.20 * 100) / 100;
+      deprBase = cost - boostAmount; // DV applies to 80% of cost going forward
+      bookValue = deprBase;
+      investBoostClaimed = true;
+    }
+
+    // Months held this FY
+    var monthsHeld;
+    if(isFirstFY){
+      // Count months from purchase month to end of FY
+      // Part-months count as whole months per IRD
+      var startMonth = purchaseDate.getMonth(); // 0-indexed
+      var endMonth = 2; // March = index 2
+      var startYear = purchaseDate.getFullYear();
+      var endYear = simFYEnd.getFullYear();
+      monthsHeld = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
+      monthsHeld = Math.min(monthsHeld, 12);
+    } else {
+      monthsHeld = 12;
+    }
+
+    var annualDepr = Math.round(deprBase * dvRate * (monthsHeld/12) * bizPct * 100) / 100;
+
+    if(istargetFY){
+      return {
+        depr: annualDepr + (istargetFY && isFirstFY ? boostAmount : 0),
+        deprDVOnly: annualDepr,
+        boostAmount: boostAmount,
+        bookOpen: bookValue,
+        bookClose: Math.round((bookValue - annualDepr) * 100) / 100,
+        monthsHeld: monthsHeld
+      };
+    }
+
+    bookValue = Math.round((bookValue - annualDepr) * 100) / 100;
+    simFYStart = new Date(simFYStart.getFullYear()+1, 3, 1);
+  }
+
+  return {depr:0, bookOpen:bookValue, bookClose:bookValue};
 }
 
 function renderAssets(){
@@ -3152,20 +3199,17 @@ function renderAssets(){
   var totalDepr = 0;
   var html = '';
   assets.forEach(function(asset, idx){
-    var depr = calcDepreciation(asset);
-    var cost = parseFloat(asset.cost)||0;
-    var bookVal = cost;
-    var purchaseYear = parseDate(asset.date).getFullYear();
-    for(var yr = purchaseYear; yr < FY.start.getFullYear(); yr++){
-      bookVal = bookVal * (1 - (parseFloat(asset.rate)||0)/100);
-    }
-    bookVal = Math.round(bookVal * 100) / 100;
+    var result = calcDepreciation(asset);
+    var depr = result.depr||0;
+    var bookVal = result.bookOpen||0;
+    var cost = parseFloat(asset.cost)||0; // original purchase price for display
     totalDepr += depr;
 
     html += '<div style="background:var(--surface);border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:var(--sh)">';
     html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--sep)">';
+    var boostBadge = asset.investmentBoost ? ' · ⚡ Boost' : '';
     html += '<div><div style="font-size:14px;font-weight:600;color:var(--t1)">'+esc(asset.name)+'</div>';
-    html += '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+esc(asset.label)+' · '+( parseFloat(asset.bizPct)||100)+'% business · '+parseFloat(asset.rate)+'% DV</div></div>';
+    html += '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+esc(asset.label)+' · '+(parseFloat(asset.bizPct)||100)+'% business · '+parseFloat(asset.rate)+'% DV'+boostBadge+'</div></div>';
     html += '<button onclick="deleteAsset('+idx+')" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,59,48,.1);color:var(--red);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">&#x2715;</button>';
     html += '</div>';
     html += '<div style="display:flex;gap:0">';
@@ -3214,30 +3258,18 @@ function deleteAsset(idx){
 }
 
 /* ── Tax Set-Aside Tracker ── */
-function renderSetAside(grossIncome, tax, whtPaid, accTotal, gstOwingFY, hasLoan){
+function renderSetAside(grossIncome, tax, whtPaid, accTotal, gstCurrentPeriod){
   var residualTax = Math.max(0, tax.total - whtPaid);
-  var slThreshold = 24128, slRate = 0.12;
-  var slAmount = hasLoan ? Math.max(0, grossIncome - slThreshold) * slRate : 0;
-  var total = residualTax + gstOwingFY + accTotal + slAmount;
+  var total = residualTax + gstCurrentPeriod + accTotal;
 
-  var now = new Date();
-  var monthsLeft = Math.max(1, Math.ceil((FY.end - now) / (30.5 * 24 * 3600 * 1000)));
-  var monthly = total / Math.max(1, monthsLeft);
 
   var gs = function(id, val){ var e=document.getElementById(id); if(e) e.textContent=val; };
   gs('setaside-total', fmt(total));
   gs('setaside-tax', fmt(residualTax));
   gs('setaside-tax-sub', 'After W/H credit of ' + fmt(whtPaid));
-  gs('setaside-gst', fmt(gstOwingFY));
+  gs('setaside-gst', fmt(gstCurrentPeriod));
   gs('setaside-acc', fmt(accTotal));
-  gs('setaside-sl', fmt(slAmount));
-  gs('setaside-monthly', fmt(monthly) + '/mo');
-  gs('setaside-monthly-sub', monthsLeft + ' months left in FY');
 
-  var slRow = document.getElementById('setaside-sl-row');
-  if(slRow) slRow.style.display = hasLoan ? 'flex' : 'none';
-
-  // Colour the total based on urgency
   var totalEl = document.getElementById('setaside-total');
   if(totalEl) totalEl.style.color = total > 10000 ? 'var(--red)' : total > 5000 ? 'var(--orange)' : 'var(--green)';
 }
@@ -3422,9 +3454,14 @@ function _renderTaxTabInner(){
 
   // ── Set-aside tracker ──
   // GST owing for full FY (not just current period) — all paid invoices
-  var gstOwingFY=fy.filter(function(i){return i.status==='paid'&&i.gst==='yes';})
-    .reduce(function(s,i){return s+Math.round((parseFloat(i.amount)||0)*3/23*100)/100;},0);
-  renderSetAside(grossIncome, tax, whtPaid, accTotal, gstOwingFY, settings.studentLoan!=='no');
+  // GST set-aside = current unfiled period only (already-filed periods are paid)
+  var currentPer=currentGSTPeriod();
+  var gstCurrentPeriod=invoices.filter(function(i){
+    if(i.status!=='paid'||i.gst!=='yes') return false;
+    var pd=parseDate(i.paid_date||i.date);
+    return pd>=currentPer.start&&pd<=currentPer.end;
+  }).reduce(function(s,i){return s+Math.round((parseFloat(i.amount)||0)*3/23*100)/100;},0);
+  renderSetAside(grossIncome, tax, whtPaid, accTotal, gstCurrentPeriod);
 }
 
 
