@@ -743,6 +743,10 @@ body{
             <span style="font-size:13px;color:var(--t3)">Expense data</span>
             <span style="font-size:13px;font-weight:600;color:var(--blue)" id="receipts-link-lbl">Open Receipts NZ →</span>
           </div>
+        <!-- Copy for myIR button -->
+        <button onclick="copyForMyIR()" style="width:100%;margin-top:4px;padding:14px;border-radius:14px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <span>&#x1F4CB;</span> Copy GST return for myIR
+        </button>
         </div>
       </div>
       <!-- compat hidden elements -->
@@ -751,6 +755,11 @@ body{
       <div id="gst-current-period" style="display:none"></div>
       <div id="gst-box7b" style="display:none"></div>
       <div id="gst-input" style="display:none"></div>
+
+      <!-- Annual tax summary export -->
+      <button onclick="exportAnnualSummary()" style="margin:0 16px 16px;width:calc(100% - 32px);padding:14px;border-radius:14px;border:none;background:rgba(255,59,48,.08);color:var(--red);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+        <span>&#x1F4C4;</span> Export annual tax summary PDF
+      </button>
 
       <!-- ── ACC ── -->
       <div class="shdr">ACC levies</div>
@@ -1736,6 +1745,193 @@ function fetchReceiptsGST(start,end,callback){
   .catch(function(){callback(calcInputGST(getReceiptsNZData().receipts,start,end));});
 }
 
+
+
+function exportAnnualSummary(){
+  var jspdf=window.jspdf||window.jsPDF;
+  if(!jspdf){showToast('PDF library not loaded');return;}
+  var doc=new jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  var W=210,M=18,cw=W-M*2,y=M;
+  var fyLabel='FY '+FY.start.getFullYear()+'–'+(FY.end.getFullYear());
+  var fyInvoices=invoices.filter(function(i){
+    var d=parseDate(i.date); return d>=FY.start&&d<=FY.end&&i.status==='paid';
+  }).sort(function(a,b){return new Date(a.paid_date||a.date)-new Date(b.paid_date||b.date);});
+
+  // Totals
+  var totGross=fyInvoices.reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
+  var totGST=fyInvoices.reduce(function(s,i){var a=parseFloat(i.amount)||0;return s+(i.gst==='yes'?Math.round(a*3/23*100)/100:0);},0);
+  var totWHT=fyInvoices.reduce(function(s,i){return s+(parseFloat(i.wht_amount)||0);},0);
+  var totNet=fyInvoices.reduce(function(s,i){
+    if(i.paid_amount!=null&&i.paid_amount!=='') return s+parseFloat(i.paid_amount);
+    var wht=parseFloat(i.wht_amount)||0;
+    return s+(wht>0?(parseFloat(i.amount)||0)-wht:(parseFloat(i.amount)||0));
+  },0);
+  var totTaxable=fyInvoices.reduce(function(s,i){var a=parseFloat(i.amount)||0;return s+(i.gst==='yes'?a/1.15:a);},0);
+
+  // ── HEADER ──
+  doc.setFillColor(240,22,124); // Sam's brand pink
+  doc.rect(0,0,W,28,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text('Annual Tax Summary',M,12);
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text(fyLabel+'  ·  Shrimpy Camera Dept',M,20);
+  doc.text('Generated '+ new Date().toLocaleDateString('en-NZ',{day:'numeric',month:'long',year:'numeric'}),W-M,20,{align:'right'});
+  doc.setTextColor(0,0,0);
+  y=36;
+
+  // ── SUMMARY CARDS ──
+  var cards=[
+    {label:'Total invoiced',val:fmt(totGross),sub:'Gross inc GST',col:[0,122,255]},
+    {label:'GST collected',val:fmt(totGST),sub:'Payable to IRD',col:[255,149,0]},
+    {label:'W/H tax deducted',val:fmt(totWHT),sub:'By clients',col:[175,82,222]},
+    {label:'Net received',val:fmt(totNet),sub:'Banked after W/H',col:[52,199,89]}
+  ];
+  var cw4=(cw-9)/4;
+  cards.forEach(function(c2,i){
+    var cx=M+i*(cw4+3);
+    doc.setFillColor(245,245,247);
+    doc.roundedRect(cx,y,cw4,24,2,2,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.setTextColor(c2.col[0],c2.col[1],c2.col[2]);
+    doc.text(c2.val,cx+cw4/2,y+13,{align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    doc.setTextColor(100,100,100);
+    doc.text(c2.label,cx+cw4/2,y+7,{align:'center'});
+    doc.text(c2.sub,cx+cw4/2,y+20,{align:'center'});
+  });
+  doc.setTextColor(0,0,0);
+  y+=30;
+
+  // Taxable income highlight
+  doc.setFillColor(0,122,255);
+  doc.roundedRect(M,y,cw,10,2,2,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255,255,255);
+  doc.text('Taxable income (ex-GST): '+fmt(totTaxable),M+4,y+6.5);
+  doc.text('GST number: '+(settings.gstNum||'—'),W-M-4,y+6.5,{align:'right'});
+  doc.setTextColor(0,0,0);
+  y+=16;
+
+  // ── INCOME BY CLIENT ──
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('Income by client',M,y); y+=5;
+  doc.setDrawColor(200,200,200); doc.line(M,y,W-M,y); y+=4;
+
+  var byClient={};
+  fyInvoices.forEach(function(i){
+    var net=i.paid_amount!=null&&i.paid_amount!==''?parseFloat(i.paid_amount):(parseFloat(i.amount)||0)-(parseFloat(i.wht_amount)||0);
+    byClient[i.client]=(byClient[i.client]||0)+net;
+  });
+  var clientList=Object.entries(byClient).sort(function(a,b){return b[1]-a[1];});
+  clientList.forEach(function(pair){
+    var pct=Math.round(pair[1]/totNet*100);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text(pair[0],M+2,y);
+    doc.text(pct+'%',M+cw*0.7,y,{align:'right'});
+    doc.setFont('helvetica','bold');
+    doc.text(fmt(pair[1]),W-M,y,{align:'right'});
+    y+=6;
+  });
+  y+=4;
+
+  // ── INVOICE LIST ──
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('Invoice detail',M,y); y+=5;
+  doc.line(M,y,W-M,y); y+=4;
+
+  // Table header
+  var cols={date:M,inv:M+22,client:M+36,gross:M+108,gst:M+128,wht:M+148,net:W-M};
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(120,120,128);
+  doc.text('Date',cols.date,y);
+  doc.text('Inv#',cols.inv,y);
+  doc.text('Client',cols.client,y);
+  doc.text('Gross',cols.gross,y,{align:'right'});
+  doc.text('GST',cols.gst,y,{align:'right'});
+  doc.text('W/H',cols.wht,y,{align:'right'});
+  doc.text('Net',cols.net,y,{align:'right'});
+  y+=3; doc.line(M,y,W-M,y); y+=4;
+
+  doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+  fyInvoices.forEach(function(inv,idx){
+    if(y>275){doc.addPage();y=18;}
+    var gst=inv.gst='yes'?Math.round((parseFloat(inv.amount)||0)*3/23*100)/100:0;
+    var wht=parseFloat(inv.wht_amount)||0;
+    var net=inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):(parseFloat(inv.amount)||0)-wht;
+    if(idx%2===0){doc.setFillColor(248,248,250);doc.rect(M,y-3.5,cw,6.5,'F');}
+    doc.text(fmtDate(inv.paid_date||inv.date),cols.date,y);
+    doc.text((inv.invoice_number||'—').toString().slice(0,8),cols.inv,y);
+    var clientStr=(inv.client||'—').slice(0,28);
+    doc.text(clientStr,cols.client,y);
+    doc.text(fmt(inv.amount),cols.gross,y,{align:'right'});
+    doc.text(fmt(gst),cols.gst,y,{align:'right'});
+    doc.text(wht>0?fmt(wht):'—',cols.wht,y,{align:'right'});
+    doc.text(fmt(net),cols.net,y,{align:'right'});
+    y+=6.5;
+  });
+
+  // Totals row
+  y+=2; doc.line(M,y,W-M,y); y+=5;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8);
+  doc.text('TOTAL',cols.client,y);
+  doc.text(fmt(totGross),cols.gross,y,{align:'right'});
+  doc.text(fmt(totGST),cols.gst,y,{align:'right'});
+  doc.text(fmt(totWHT),cols.wht,y,{align:'right'});
+  doc.text(fmt(totNet),cols.net,y,{align:'right'});
+
+  // Footer on every page
+  var pageCount=doc.internal.getNumberOfPages();
+  for(var p=1;p<=pageCount;p++){
+    doc.setPage(p);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(160,160,160);
+    doc.text('Income NZ · Shrimpy Camera Dept · '+fyLabel,M,290);
+    doc.text('Page '+p+' of '+pageCount,W-M,290,{align:'right'});
+  }
+
+  doc.save('Tax-Summary-'+fyLabel.replace('/','-')+'.pdf');
+  showToast('PDF downloaded');
+}
+
+function copyForMyIR(){
+  var gstNum=(settings.gstNum||"").trim()||"[your GST number]";
+  var period=document.getElementById("gst-period-label");
+  var due=document.getElementById("gst-due-label");
+  var b5=document.getElementById("gst-box5");
+  var b7=document.getElementById("gst-box7");
+  var b11=document.getElementById("gst-box11");
+  var b13=document.getElementById("gst-box13");
+  var b15=document.getElementById("gst-box15b");
+  var nl="\n";
+  var text="GST RETURN FOR myIR"+nl
+    +"==================="+nl
+    +"GST Number: "+gstNum+nl
+    +"Period: "+(period?period.textContent:"")+nl
+    +"Due: "+(due?due.textContent.replace(/^\d+ days \u2014 /,"").replace(/^Due today! /,"").replace(/^Overdue \u2014 /,""):"")+nl
+    +nl
+    +"Box 5  Total sales and income:   "+(b5?b5.textContent:"")+nl
+    +"Box 6  Zero-rated supplies:      $0.00"+nl
+    +"Box 7  GST collected on sales:   "+(b7?b7.textContent:"")+nl
+    +"Box 11 Total purchases/expenses: "+(b11&&b11.textContent!=="Link Receipts NZ"?b11.textContent:"—")+nl
+    +"Box 13 GST claimed on purchases: "+(b13&&b13.textContent!=="Link Receipts NZ"?b13.textContent:"$0.00")+nl
+    +"Box 15 Resident withholding tax: $0.00"+nl
+    +"Box 16 Amount to pay/refund:     "+(b15?b15.textContent:"")+nl
+    +nl
+    +"Accounting basis: Payments basis"+nl
+    +"Generated by Income NZ on "+new Date().toLocaleDateString("en-NZ",{day:"numeric",month:"long",year:"numeric"});
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text)
+      .then(function(){showToast("\uD83D\uDCCB Copied! Paste into myIR GST return");}).catch(function(){fallbackCopy(text);});
+  } else {fallbackCopy(text);}
+}
+
+function fallbackCopy(text){
+  var ta=document.createElement("textarea");
+  ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{document.execCommand("copy");showToast("\uD83D\uDCCB Copied!");}
+  catch(e){showToast("Could not copy");}
+  document.body.removeChild(ta);
+}
+
 function openReceiptsNZ(){
   window.open('https://samuelmckay20-svg.github.io/receipts-nz/','_blank');
 }
@@ -2653,7 +2849,7 @@ function renderTaxTab(){
     return pd>=gstPer.start&&pd<=gstPer.end&&i.gst==='yes';
   });
   var box5=paidInPeriod.reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
-  var box7=box5*3/23;
+  var box7=Math.round(box5*3/23*100)/100;
 
   // Period label + due date
   var periodLabel=gstPer.start.toLocaleDateString('en-NZ',{day:'numeric',month:'short'})+' – '+gstPer.end.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});
