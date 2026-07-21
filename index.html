@@ -540,118 +540,20 @@ body{
             <div class="tax-sc-amount c-red" id="inc-tax-total">$0</div>
           </div>
           <div class="tax-sc-divider"></div>
-          <div class="tax-sc-stats">
-            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Earned (ex-GST)</div><div class="tax-sc-stat-val c-blue" id="inc-tax-gross">$0</div></div>
-            <div class="tax-sc-stat-sep"></div>
-            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">W/H already paid</div><div class="tax-sc-stat-val c-green" id="inc-tax-residual">$0</div></div>
-            <div class="tax-sc-stat-sep"></div>
-            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Still owe IRD</div><div class="tax-sc-stat-val c-red" id="inc-tax-monthly">$0</div></div>
-          </div>
-          <div class="tax-sc-divider"></div>
-          <div style="padding:2px 0 4px">
-            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">Bracket breakdown</div>
-            <div id="inc-tax-brackets"></div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ── INVOICES ── -->
-    <div id="tab-invoices" class="tab-panel">
-      <!-- Search bar -->
-      <div style="padding:12px 16px 0;display:flex;gap:8px;align-items:center">
-        <div style="flex:1;background:var(--fill);border-radius:12px;display:flex;align-items:center;padding:8px 12px;gap:8px">
-          <span style="font-size:14px;opacity:.5">&#x1F50D;</span>
-          <input id="inv-search" type="text" placeholder="Search invoices&#x2026;" autocomplete="off" autocorrect="off"
-            style="background:none;border:none;outline:none;font-size:15px;color:var(--t1);width:100%;font-family:inherit"
-            oninput="invSearchQuery=this.value;renderInvoiceList()">
-        </div>
-      </div>
-      <!-- Export + Bin row -->
-      <div style="padding:8px 16px 0;display:flex;gap:8px">
-        <button onclick="openExportSheet()" style="display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:20px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x2B06; Export</button>
-        <button onclick="openInvBin()" style="display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:20px;border:none;background:rgba(255,59,48,.08);color:var(--red);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x1F5D1; Bin</button>
-      </div>
-      <!-- Filter chips -->
-      <div class="chips" id="status-chips" style="padding-top:8px">
-        <button class="chip on" onclick="setFilter('all',this)">All</button>
-        <button class="chip" onclick="setFilter('unpaid',this)">Unpaid</button>
-        <button class="chip" onclick="setFilter('overdue',this)">Overdue</button>
-        <button class="chip" onclick="setFilter('paid',this)">Paid</button>
-        <button class="chip" onclick="setFilter('review',this)">Review</button>
-      </div>
-      <div id="invoices-list"></div>
-    </div>
-
-    <!-- ── CLIENTS ── -->
-    <div id="tab-clients" class="tab-panel">
-      <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center">
-        <button onclick="openClientProfile('')" style="flex-shrink:0;padding:7px 14px;border-radius:20px;border:none;background:rgba(52,199,89,.1);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x2795; Add client</button>
-        <div style="flex:1;background:var(--fill);border-radius:12px;display:flex;align-items:center;padding:8px 12px;gap:8px">
-          <span style="font-size:14px;opacity:.5">🔍</span>
-          <input id="client-search" type="text" placeholder="Search clients…"
-            style="background:none;border:none;outline:none;font-size:15px;color:var(--t1);width:100%"
-            oninput="renderClientsTab()" autocomplete="off" autocorrect="off">
-        </div>
-      </div>
-      <div class="chips" id="client-chips" style="padding-top:8px">
-        <button class="chip on" data-cf="all"    onclick="setClientFilter('all',this)">All</button>
-        <button class="chip"    data-cf="unpaid"  onclick="setClientFilter('unpaid',this)">Has unpaid</button>
-        <button class="chip"    data-cf="overdue" onclick="setClientFilter('overdue',this)">Has overdue</button>
-        <button class="chip"    data-cf="wht"     onclick="setClientFilter('wht',this)">W/H tax</button>
-      </div>
-      <div id="clients-list" style="padding:4px 0"></div>
-    </div>
-
-    <!-- ── BANK ── -->
-    <!-- ── BANK ── -->
-    <div id="tab-bank" class="tab-panel">
-      <!-- Hero -->
-      <div class="hero-wrap" style="padding-bottom:4px">
-        <div class="hero-card" style="padding:18px 20px">
-          <div class="hero-lbl">Unverified transactions</div>
-          <div class="hero-amount c-orange" id="bank-unverified-count">0</div>
-          <div class="hero-period" id="bank-unverified-sub">No transactions imported</div>
-        </div>
-      </div>
-      <!-- Buttons row -->
-      <div style="padding:4px 16px 0;display:flex;gap:8px;align-items:center">
-        <button onclick="document.getElementById('csv-input').click()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x1F3E6; Import CSV</button>
-        <button id="automatch-btn" onclick="runAutoMatch()" style="display:none;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:rgba(52,199,89,.12);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;margin-left:auto">&#x2728; Auto-match</button>
-      </div>
-      <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="onCSV(this)">
-      <div class="shdr" style="margin-top:4px">Needs review</div>
-      <div id="bank-list"></div>
-      <div id="bank-approved-section" style="display:none">
-        <div class="shdr" style="margin-top:8px;color:var(--red)">Excluded from income</div>
-        <div id="bank-approved-list"></div>
-      </div>
-    </div>
-
-    <div id="tab-gst" class="tab-panel">
-
-      <!-- ── INCOME TAX (combined hero + detail) ── -->
-      <div class="hero-wrap" style="padding-bottom:4px">
-        <div class="hero-card" style="border-image:linear-gradient(90deg,var(--red),var(--orange)) 1">
-          <div class="hero-lbl">Tax still owed</div>
-          <div class="hero-amount c-red" id="tax-still-owe">$0</div>
-          <div class="hero-period" id="tax-total-sub">This financial year</div>
-          <div class="hero-divider"></div>
-          <div class="hero-stats">
-            <div class="hero-stat">
-              <div class="hs-lbl">Taxable income</div>
-              <div class="hs-val c-blue" id="tax-gross">$0</div>
+          <div class="hero-stats" style="gap:0">
+            <div class="hero-stat" style="flex:1;min-width:0">
+              <div class="hs-lbl" style="font-size:9px">Taxable income</div>
+              <div style="font-size:13px;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums;letter-spacing:-0.3px" id="tax-gross">$0</div>
             </div>
             <div class="hero-stat-sep"></div>
-            <div class="hero-stat" style="padding-left:16px">
-              <div class="hs-lbl">Total tax</div>
-              <div class="hs-val c-red" id="tax-total-all">$0</div>
+            <div class="hero-stat" style="flex:1;min-width:0;padding-left:10px">
+              <div class="hs-lbl" style="font-size:9px">Total tax</div>
+              <div style="font-size:13px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums;letter-spacing:-0.3px" id="tax-total-all">$0</div>
             </div>
             <div class="hero-stat-sep"></div>
-            <div class="hero-stat" style="padding-left:16px">
-              <div class="hs-lbl">W/H paid</div>
-              <div class="hs-val c-green" id="tax-wht-paid">$0</div>
+            <div class="hero-stat" style="flex:1;min-width:0;padding-left:10px">
+              <div class="hs-lbl" style="font-size:9px">W/H paid</div>
+              <div style="font-size:13px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;letter-spacing:-0.3px" id="tax-wht-paid">$0</div>
             </div>
           </div>
           <div class="hero-divider" style="margin-top:16px"></div>
@@ -659,6 +561,8 @@ body{
           <span id="tax-on-income" style="display:none"></span>
           <span id="tax-monthly" style="display:none"></span>
           <span id="tax-residual" style="display:none"></span>
+          <span id="tax-still-owe" style="display:none"></span>
+          <span id="tax-total-sub" style="display:none"></span>
           <!-- Bracket breakdown -->
           <div style="padding:8px 0 4px">
             <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">Bracket breakdown</div>
@@ -2148,6 +2052,7 @@ function renderIncomeTab(){
   var monthlyInc=residualInc/Math.max(1,monthsLeftInc);
 
   var itEl=document.getElementById('inc-tax-total'); if(itEl) itEl.textContent=fmt(incTax.total);
+  var itEl2=document.getElementById('inc-tax-total2'); if(itEl2) itEl2.textContent=fmt(incTax.total);
   var itSub=document.getElementById('inc-tax-sub'); if(itSub) itSub.textContent='On '+fmt(grossIncome)+' taxable income this FY';
   var itGross=document.getElementById('inc-tax-gross'); if(itGross) itGross.textContent=fmt(grossIncome);
   var itRes=document.getElementById('inc-tax-residual'); if(itRes) itRes.textContent=fmt(residualInc);
@@ -2832,16 +2737,17 @@ function renderTaxTab(){
   // Update hero
   // ── Income tax display ──
   // tax-income-total removed — use inc-tax-total instead
-  document.getElementById('tax-gross').textContent=fmt(grossIncome);
-  document.getElementById('tax-on-income').textContent=fmt(tax.total);
-  document.getElementById('tax-wht-paid').textContent=fmt(whtPaid);
-  document.getElementById('tax-still-owe').textContent=fmt(stillOwe);
-  document.getElementById('tax-residual').textContent=fmt(stillOwe);
+  var tg=document.getElementById('tax-gross'); if(tg) tg.textContent=fmt(grossIncome);
+  var tti=document.getElementById('tax-on-income'); if(tti) tti.textContent=fmt(tax.total);
+  var tta=document.getElementById('tax-total-all'); if(tta) tta.textContent=fmt(tax.total);
+  var twh=document.getElementById('tax-wht-paid'); if(twh) twh.textContent=fmt(whtPaid);
+  var tso=document.getElementById('tax-still-owe'); if(tso) tso.textContent=fmt(stillOwe);
+  var tr=document.getElementById('tax-residual'); if(tr) tr.textContent=fmt(stillOwe);
 
   var now=new Date();
   var monthsLeft=Math.max(1,Math.ceil((FY.end-now)/(30.5*24*3600*1000)));
   var incomeMonthly=(tax.total-whtPaid)/Math.max(1,monthsLeft);
-  document.getElementById('tax-monthly').textContent=fmt(Math.max(0,incomeMonthly))+'/mo';
+  var tm=document.getElementById('tax-monthly'); if(tm) tm.textContent=fmt(Math.max(0,incomeMonthly))+'/mo';
 
   // Bracket breakdown
   var bracketHTML=tax.breakdown.filter(function(b){return b.taxable>0;}).map(function(b){
