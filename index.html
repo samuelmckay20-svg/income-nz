@@ -1526,14 +1526,14 @@ function saveLocal(){
   LS.set(LS_INVOICES,JSON.stringify(slim)); LS.set(LS_BANK,JSON.stringify(bankTxns)); LS.set(LS_SETTINGS,JSON.stringify(settings)); LS.set('nzin_invbin',JSON.stringify(invBin));
 }
 function repairInvoiceGST(){
-  // Fix invoices where gst field got corrupted to a number by export bug
   var repaired=0;
   invoices.forEach(function(inv){
-    if(typeof inv.gst === 'number'||inv.gst===undefined||inv.gst===null){
+    // Fix any gst that is not exactly the string 'yes', 'no', or 'zero'
+    if(typeof inv.gst !== 'string'||['yes','no','zero'].indexOf(inv.gst)===-1){
       inv.gst='yes'; repaired++;
     }
   });
-  if(repaired>0){saveLocal();console.warn('Repaired '+repaired+' corrupted gst fields');}
+  if(repaired>0){saveLocal();renderAll();showToast('Fixed '+repaired+' invoice GST fields');}
 }
 
 function loadLocal(){
