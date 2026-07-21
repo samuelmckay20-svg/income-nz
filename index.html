@@ -681,6 +681,56 @@ body{
       <span id="tax-income-total" style="display:none"></span>
       <span id="tax-income-sub" style="display:none"></span>
 
+      <!-- ── Tax set-aside tracker ── -->
+      <div class="shdr">Set aside tracker</div>
+      <div style="margin:0 16px 16px;background:var(--surface);border-radius:16px;overflow:hidden;box-shadow:var(--sh)">
+        <!-- Big number -->
+        <div style="padding:20px 20px 12px;border-bottom:0.5px solid var(--sep)">
+          <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">You should have set aside</div>
+          <div style="font-size:38px;font-weight:700;letter-spacing:-1.5px;font-variant-numeric:tabular-nums" id="setaside-total">$0</div>
+          <div style="font-size:12px;color:var(--t3);margin-top:4px" id="setaside-sub">Based on income earned to date</div>
+        </div>
+        <!-- Breakdown rows -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1)">Income tax</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:1px" id="setaside-tax-sub">Residual after W/H credit</div>
+          </div>
+          <div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums" id="setaside-tax">$0</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1)">GST owing</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:1px">Output tax on paid invoices</div>
+          </div>
+          <div style="font-size:17px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums" id="setaside-gst">$0</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1)">ACC levies</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:1px">Earner + working cover</div>
+          </div>
+          <div style="font-size:17px;font-weight:700;color:var(--purple);font-variant-numeric:tabular-nums" id="setaside-acc">$0</div>
+        </div>
+        <div id="setaside-sl-row" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1)">Student loan</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:1px">12% on income over $24,128</div>
+          </div>
+          <div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums" id="setaside-sl">$0</div>
+        </div>
+        <!-- Monthly suggestion -->
+        <div style="padding:12px 16px;background:rgba(0,122,255,.05)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--blue)">Set aside per month</div>
+              <div style="font-size:11px;color:var(--t3);margin-top:1px" id="setaside-monthly-sub">For rest of FY</div>
+            </div>
+            <div style="font-size:17px;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums" id="setaside-monthly">$0</div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── GST return ── -->
       <div class="shdr-row">
         <span class="shdr">GST return</span>
@@ -790,6 +840,58 @@ body{
       </div>
 
       <!-- ── STUDENT LOAN ── -->
+      <!-- ── Asset Depreciation ── -->
+      <div class="shdr-row">
+        <span class="shdr">Asset depreciation</span>
+        <button onclick="openAddAsset()" style="padding:6px 14px;border-radius:16px;border:none;background:rgba(52,199,89,.1);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">+ Add asset</button>
+      </div>
+      <div id="asset-list" style="padding:0 16px 4px">
+        <div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">No assets added yet</div>
+      </div>
+      <div id="asset-summary-row" style="display:none;margin:0 16px 16px;background:var(--surface);border-radius:14px;padding:14px 16px;box-shadow:var(--sh);display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--t1)">Total depreciation this FY</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px">Claimable as business expense</div>
+        </div>
+        <div style="font-size:19px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums" id="asset-total-depr">$0</div>
+      </div>
+
+      <!-- Add asset modal -->
+      <div class="modal-bd" id="modal-asset">
+        <div class="modal-sheet" id="modal-asset-sheet">
+          <div class="modal-hdr">
+            <div class="modal-title">Add asset</div>
+            <button class="modal-close" onclick="closeModal('modal-asset')">&#x2715;</button>
+          </div>
+          <div class="modal-scroll" style="padding:16px">
+            <div class="g-list">
+              <div class="g-row"><div class="g-icon">&#x1F4DD;</div><span class="g-lbl">Asset name</span><input class="g-input" id="asset-name" type="text" placeholder="e.g. MacBook Pro" style="max-width:180px;text-align:right"></div>
+              <div class="g-row"><div class="g-icon">&#x1F4B0;</div><span class="g-lbl">Purchase price</span><input class="g-input" id="asset-cost" type="text" inputmode="decimal" placeholder="$0.00" style="max-width:120px;text-align:right"></div>
+              <div class="g-row"><div class="g-icon">&#x1F4C5;</div><span class="g-lbl">Purchase date</span><input class="g-input" id="asset-date" type="date" style="max-width:160px;text-align:right"></div>
+              <div class="g-row"><div class="g-icon">&#x1F4CA;</div><span class="g-lbl">IRD category</span>
+                <select class="g-select" id="asset-category" style="font-size:13px;max-width:200px">
+                  <option value="67" data-label="Computers &amp; laptops">Computers &amp; laptops (67%)</option>
+                  <option value="50" data-label="Camera equipment">Camera equipment (50%)</option>
+                  <option value="30" data-label="Motor vehicles">Motor vehicles (30%)</option>
+                  <option value="40" data-label="Office furniture">Office furniture (40%)</option>
+                  <option value="48" data-label="Audio equipment">Audio equipment (48%)</option>
+                  <option value="25" data-label="Tools &amp; equipment">Tools &amp; equipment (25%)</option>
+                  <option value="100" data-label="Low value (under $1,000)">Low value under $1,000 (100%)</option>
+                </select>
+              </div>
+              <div class="g-row"><div class="g-icon">&#x1F4F1;</div><span class="g-lbl">Business use %</span><input class="g-input" id="asset-biz-pct" type="text" inputmode="numeric" placeholder="100" style="max-width:80px;text-align:right"></div>
+              <div class="g-row"><div class="g-icon">&#x1F4B3;</div><span class="g-lbl">Price includes GST?</span><select class="g-select" id="asset-gst" style="font-size:13px;width:auto"><option value="yes">Yes — I'm GST registered</option><option value="no">No — ex-GST price</option></select></div>
+            </div>
+            <div style="margin-top:12px;padding:12px;background:var(--fill);border-radius:12px;font-size:12px;color:var(--t3)">
+              Diminishing value method. IRD rates sourced from <strong>ird.govt.nz/depreciation</strong>. Low-value assets under $1,000 can be written off immediately.
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn-primary" onclick="saveAsset()">Add asset</button>
+          </div>
+        </div>
+      </div>
+
       <div class="shdr">Student loan</div>
       <div class="tax-section-card">
         <div class="tax-sc-header">
@@ -877,6 +979,11 @@ body{
       </div>
       <div class="shdr">Export</div>
       <div class="g-list" style="margin-bottom:8px">
+        <div class="g-row" style="cursor:pointer" onclick="closeModal('modal-account');exportPLReport()" style="border-bottom:0.5px solid var(--sep)">
+          <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F4C8;</div>
+          <span class="g-lbl">Profit & Loss report PDF</span>
+          <span class="g-val" style="color:var(--blue)">&#x203A;</span>
+        </div>
         <div class="g-row" style="cursor:pointer" onclick="closeModal('modal-account');exportAnnualSummary()">
           <div class="g-icon" style="background:rgba(255,59,48,.12)">&#x1F4C4;</div>
           <span class="g-lbl">Annual tax summary</span>
@@ -1486,7 +1593,7 @@ function afterLogin(data){
   document.getElementById('nav-avatar').textContent=uname.charAt(0).toUpperCase();
   document.getElementById('acct-name').textContent=uname;
   document.getElementById('acct-email').textContent=etoken?'Receipts2026+'+etoken+'@gmail.com':'(loading\u2026)';
-  refreshFY(); loadLocal(); repairInvoiceGST(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
+  refreshFY(); loadLocal(); loadAssets(); repairInvoiceGST(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
 }
 
 function doLogout(){
@@ -1941,6 +2048,173 @@ function exportAnnualSummary(){
 
   doc.save('Tax-Summary-'+fyLabel.replace('/','-')+'.pdf');
   showToast('PDF downloaded');
+}
+
+
+function exportPLReport(){
+  var jspdf=window.jspdf||window.jsPDF;
+  if(!jspdf){showToast('PDF library not loaded');return;}
+  var doc=new jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  var W=210,M=18,cw=W-M*2,y=M;
+  var fyLabel='FY '+FY.start.getFullYear()+'–'+FY.end.getFullYear();
+
+  // Get FY invoices
+  var fyInv=invoices.filter(function(i){var d=parseDate(i.date);return d>=FY.start&&d<=FY.end&&i.status==='paid';});
+
+  // Income
+  var totalIncome=fyInv.reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
+  var totalGST=fyInv.filter(function(i){return i.gst==='yes';}).reduce(function(s,i){return s+Math.round((parseFloat(i.amount)||0)*3/23*100)/100;},0);
+  var totalWHT=fyInv.reduce(function(s,i){var w=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;return s+w;},0);
+  var netIncome=totalIncome-totalGST;
+  var received=fyInv.reduce(function(s,i){return s+(i.paid_amount!=null&&i.paid_amount!==''?parseFloat(i.paid_amount):(parseFloat(i.amount)||0)-((parseFloat(i.wht_amount)||0)));},0);
+
+  // Expenses from Receipts NZ localStorage
+  var expenses=[];
+  try{expenses=JSON.parse(localStorage.getItem('nzrt5_r')||'[]');}catch(e){}
+  var fyExp=expenses.filter(function(r){var d=parseDate(r.date||r.created_at||'1970-01-01');return d>=FY.start&&d<=FY.end;});
+  var totalExpenses=fyExp.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
+  var totalExpGST=fyExp.reduce(function(s,r){if(r.gst==='no') return s; var a=parseFloat(r.amount)||0; var cp=r.claimPct!=null?r.claimPct/100:1; return s+Math.round(a*3/23*cp*100)/100;},0);
+  var netExpenses=totalExpenses-totalExpGST;
+  var netProfit=netIncome-netExpenses;
+
+  // Month-by-month arrays
+  var months=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+  var incByMonth=new Array(12).fill(0);
+  var expByMonth=new Array(12).fill(0);
+  fyInv.forEach(function(i){
+    var pd=parseDate(i.paid_date||i.date);
+    var mi=(pd.getMonth()-3+12)%12;
+    incByMonth[mi]+=(parseFloat(i.amount)||0)-(i.gst==='yes'?Math.round((parseFloat(i.amount)||0)*3/23*100)/100:0);
+  });
+  fyExp.forEach(function(r){
+    var rd=parseDate(r.date||r.created_at||'1970-01-01');
+    var mi=(rd.getMonth()-3+12)%12;
+    expByMonth[mi]+=(parseFloat(r.amount)||0);
+  });
+
+  // ── HEADER ──
+  doc.setFillColor(240,22,124);
+  doc.rect(0,0,W,28,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text('Profit & Loss Report',M,12);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text(fyLabel+'  ·  Shrimpy Camera Dept',M,20);
+  doc.text('Generated '+new Date().toLocaleDateString('en-NZ',{day:'numeric',month:'long',year:'numeric'}),W-M,20,{align:'right'});
+  doc.setTextColor(0,0,0);
+  y=38;
+
+  // ── SUMMARY HERO ──
+  var cols3=(cw-8)/3;
+  [['Total income',fmt(netIncome),'ex-GST',[0,122,255]],
+   ['Total expenses',fmt(netExpenses),'ex-GST',[255,149,0]],
+   ['Net profit',fmt(netProfit),netProfit>=0?'Profit':'Loss',[52,199,89]]
+  ].forEach(function(item,i){
+    var cx=M+i*(cols3+4);
+    doc.setFillColor(245,245,247);
+    doc.roundedRect(cx,y,cols3,22,2,2,'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(120,120,128);
+    doc.text(item[0],cx+cols3/2,y+6,{align:'center'});
+    doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.setTextColor(item[3][0],item[3][1],item[3][2]);
+    doc.text(item[1],cx+cols3/2,y+15,{align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(120,120,128);
+    doc.text(item[2],cx+cols3/2,y+21,{align:'center'});
+  });
+  doc.setTextColor(0,0,0);
+  y+=30;
+
+  // ── INCOME SECTION ──
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('Income',M,y); y+=4;
+  doc.setDrawColor(200,200,200); doc.line(M,y,W-M,y); y+=5;
+
+  var incRows=[
+    ['Gross invoiced (inc GST)',fmt(totalIncome)],
+    ['Less: GST collected','('+fmt(totalGST)+')'],
+    ['Net income (ex-GST)',fmt(netIncome)],
+    ['W/H tax deducted by clients','('+fmt(totalWHT)+')'],
+    ['Cash received',fmt(received)]
+  ];
+  incRows.forEach(function(row,idx){
+    if(idx===2||idx===4) doc.setFont('helvetica','bold'); else doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text(row[0],M+2,y);
+    doc.text(row[1],W-M,y,{align:'right'});
+    if(idx===2){doc.setDrawColor(200,200,200);doc.line(M,y+2,W-M,y+2);}
+    y+=7;
+  });
+  y+=4;
+
+  // ── EXPENSES SECTION ──
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('Expenses (from Receipts NZ)',M,y); y+=4;
+  doc.line(M,y,W-M,y); y+=5;
+
+  if(!fyExp.length){
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120,120,128);
+    doc.text('No expense data — link Receipts NZ',M+2,y); doc.setTextColor(0,0,0); y+=7;
+  } else {
+    // Group expenses by category
+    var byCategory={};
+    fyExp.forEach(function(r){var cat=r.category||'Uncategorised';byCategory[cat]=(byCategory[cat]||0)+(parseFloat(r.amount)||0);});
+    Object.entries(byCategory).sort(function(a,b){return b[1]-a[1];}).forEach(function(pair){
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      doc.text(pair[0],M+2,y);
+      doc.text(fmt(pair[1]),W-M,y,{align:'right'});
+      y+=6;
+    });
+    doc.setDrawColor(200,200,200); doc.line(M,y,W-M,y); y+=5;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('Total expenses (inc GST)',M+2,y); doc.text(fmt(totalExpenses),W-M,y,{align:'right'}); y+=6;
+    doc.text('Less: GST claimable',M+2,y); doc.text('('+fmt(totalExpGST)+')',W-M,y,{align:'right'}); y+=6;
+    doc.text('Net expenses (ex-GST)',M+2,y); doc.text(fmt(netExpenses),W-M,y,{align:'right'}); y+=8;
+  }
+
+  // ── NET PROFIT ──
+  doc.setFillColor(netProfit>=0?52:255, netProfit>=0?199:59, netProfit>=0?89:48);
+  doc.roundedRect(M,y,cw,12,2,2,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(255,255,255);
+  doc.text('Net '+(netProfit>=0?'Profit':'Loss')+' (ex-GST)',M+4,y+8);
+  doc.text(fmt(Math.abs(netProfit)),W-M-4,y+8,{align:'right'});
+  doc.setTextColor(0,0,0);
+  y+=20;
+
+  // ── MONTHLY BREAKDOWN ──
+  if(y>220){doc.addPage();y=18;}
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('Monthly breakdown',M,y); y+=4;
+  doc.line(M,y,W-M,y); y+=5;
+
+  // Table header
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(120,120,128);
+  var mc={month:M,income:M+40,expenses:M+85,profit:W-M};
+  doc.text('Month',mc.month,y); doc.text('Income (ex-GST)',mc.income,y); doc.text('Expenses',mc.expenses,y); doc.text('Profit',mc.profit,y,{align:'right'});
+  y+=3; doc.line(M,y,W-M,y); y+=4; doc.setTextColor(0,0,0);
+
+  months.forEach(function(m,i){
+    if(y>275){doc.addPage();y=18;}
+    var inc=incByMonth[i], exp=expByMonth[i], profit=inc-exp;
+    if(inc===0&&exp===0) return;
+    if(i%2===0){doc.setFillColor(248,248,250);doc.rect(M,y-3.5,cw,6.5,'F');}
+    doc.setFont('helvetica',i===((new Date().getMonth()-3+12)%12)?'bold':'normal'); doc.setFontSize(8);
+    doc.text(m+' '+( i<9?FY.start.getFullYear():FY.end.getFullYear()),mc.month,y);
+    doc.text(fmt(inc),mc.income,y); doc.text(exp>0?fmt(exp):'—',mc.expenses,y);
+    if(profit>=0) doc.setTextColor(52,199,89); else doc.setTextColor(255,59,48);
+    doc.text(fmt(profit),mc.profit,y,{align:'right'});
+    doc.setTextColor(0,0,0); y+=6.5;
+  });
+
+  // Footer
+  var pg=doc.internal.getNumberOfPages();
+  for(var p=1;p<=pg;p++){
+    doc.setPage(p); doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(160,160,160);
+    doc.text('Income NZ · Shrimpy Camera Dept · '+fyLabel,M,290);
+    doc.text('Page '+p+' of '+pg,W-M,290,{align:'right'});
+  }
+
+  doc.save('PL-Report-'+fyLabel.replace('/','-')+'.pdf');
+  showToast('P&L report downloaded');
 }
 
 function copyForMyIR(){
@@ -2810,6 +3084,164 @@ function calcIncomeTax(income){
   return{total:total,breakdown:breakdown};
 }
 
+
+
+/* ── Asset Depreciation ── */
+var assets = [];
+
+function loadAssets(){
+  try{ assets=JSON.parse(localStorage.getItem('nzin_assets')||'[]'); }catch(e){ assets=[]; }
+}
+
+function saveAssets(){
+  localStorage.setItem('nzin_assets', JSON.stringify(assets));
+  syncAssetsToServer();
+}
+
+function syncAssetsToServer(){
+  // Piggyback on settings sync
+  settings.assets = assets;
+  save();
+}
+
+function calcDepreciation(asset, forFY){
+  var fy = forFY || FY;
+  var costRaw = parseFloat(asset.cost)||0;
+  // IRD depreciation is on ex-GST cost (GST-registered entities claim GST separately)
+  var cost = asset.gstIncluded!==false ? Math.round(costRaw/1.15*100)/100 : costRaw;
+  var rate = parseFloat(asset.rate)||0;
+  var bizPct = (parseFloat(asset.bizPct)||100)/100;
+  var purchaseDate = parseDate(asset.date);
+
+  // Only depreciate from purchase date
+  var deprStart = purchaseDate < fy.start ? fy.start : purchaseDate;
+  if(deprStart > fy.end) return 0;
+
+  // Days in FY this asset is owned
+  var daysOwned = Math.ceil((fy.end - deprStart) / 86400000);
+  var daysInFY = Math.ceil((fy.end - fy.start) / 86400000);
+  var yearFraction = daysOwned / daysInFY;
+
+  // Calculate book value at start of this FY using DV method
+  var bookValue = cost;
+  var fyYear = fy.start.getFullYear();
+  var purchaseYear = purchaseDate.getFullYear();
+  for(var yr = purchaseYear; yr < fyYear; yr++){
+    bookValue = bookValue * (1 - rate/100);
+  }
+
+  // DV depreciation for this FY
+  var annualDepr = bookValue * (rate/100);
+  var depr = annualDepr * yearFraction * bizPct;
+  return Math.round(depr * 100) / 100;
+}
+
+function renderAssets(){
+  loadAssets();
+  var el = document.getElementById('asset-list');
+  var summaryRow = document.getElementById('asset-summary-row');
+  var totalEl = document.getElementById('asset-total-depr');
+  if(!el) return;
+
+  if(!assets.length){
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">No assets added yet — tap + Add asset</div>';
+    if(summaryRow) summaryRow.style.display='none';
+    return;
+  }
+
+  var totalDepr = 0;
+  var html = '';
+  assets.forEach(function(asset, idx){
+    var depr = calcDepreciation(asset);
+    var cost = parseFloat(asset.cost)||0;
+    var bookVal = cost;
+    var purchaseYear = parseDate(asset.date).getFullYear();
+    for(var yr = purchaseYear; yr < FY.start.getFullYear(); yr++){
+      bookVal = bookVal * (1 - (parseFloat(asset.rate)||0)/100);
+    }
+    bookVal = Math.round(bookVal * 100) / 100;
+    totalDepr += depr;
+
+    html += '<div style="background:var(--surface);border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:var(--sh)">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--sep)">';
+    html += '<div><div style="font-size:14px;font-weight:600;color:var(--t1)">'+esc(asset.name)+'</div>';
+    html += '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+esc(asset.label)+' · '+( parseFloat(asset.bizPct)||100)+'% business · '+parseFloat(asset.rate)+'% DV</div></div>';
+    html += '<button onclick="deleteAsset('+idx+')" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,59,48,.1);color:var(--red);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">&#x2715;</button>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:0">';
+    html += '<div style="flex:1;padding:10px 16px;border-right:0.5px solid var(--sep)"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">Cost</div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">'+fmt(cost)+'</div></div>';
+    html += '<div style="flex:1;padding:10px 16px;border-right:0.5px solid var(--sep)"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">Book value</div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">'+fmt(bookVal)+'</div></div>';
+    html += '<div style="flex:1;padding:10px 16px"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">This FY</div><div style="font-size:13px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums">'+fmt(depr)+'</div></div>';
+    html += '</div></div>';
+  });
+
+  el.innerHTML = html;
+  if(totalEl) totalEl.textContent = fmt(totalDepr);
+  if(summaryRow) summaryRow.style.display = 'flex';
+}
+
+function openAddAsset(){
+  document.getElementById('asset-name').value = '';
+  document.getElementById('asset-cost').value = '';
+  document.getElementById('asset-date').value = today();
+  document.getElementById('asset-biz-pct').value = '100';
+  openModal('modal-asset');
+}
+
+function saveAsset(){
+  var name = document.getElementById('asset-name').value.trim();
+  var cost = document.getElementById('asset-cost').value.replace(/[^0-9.]/g,'');
+  var date = document.getElementById('asset-date').value;
+  var catEl = document.getElementById('asset-category');
+  var rate = catEl ? parseFloat(catEl.value) : 67;
+  var label = catEl ? (catEl.options[catEl.selectedIndex]||{}).text || '' : '';
+  var bizPct = document.getElementById('asset-biz-pct').value || '100';
+  if(!name){ showToast('Enter asset name'); return; }
+  if(!cost||isNaN(+cost)||+cost<=0){ showToast('Enter purchase price'); return; }
+  var gstInc = (document.getElementById('asset-gst')||{}).value !== 'no';
+  assets.push({ name:name, cost:+cost, date:date, rate:rate, label:label.replace(/\s*\(.*\)/,'').trim(), bizPct:+bizPct, gstIncluded:gstInc });
+  saveAssets();
+  renderAssets();
+  closeModal('modal-asset');
+  showToast(name + ' added');
+}
+
+function deleteAsset(idx){
+  showSheet('Remove ' + (assets[idx]||{}).name + '?', [
+    {label:'Remove asset', cls:'danger', fn:function(){ assets.splice(idx,1); saveAssets(); renderAssets(); showToast('Asset removed'); }},
+    {label:'Cancel', cls:'cancel'}
+  ]);
+}
+
+/* ── Tax Set-Aside Tracker ── */
+function renderSetAside(grossIncome, tax, whtPaid, accTotal, gstOwingFY, hasLoan){
+  var residualTax = Math.max(0, tax.total - whtPaid);
+  var slThreshold = 24128, slRate = 0.12;
+  var slAmount = hasLoan ? Math.max(0, grossIncome - slThreshold) * slRate : 0;
+  var total = residualTax + gstOwingFY + accTotal + slAmount;
+
+  var now = new Date();
+  var monthsLeft = Math.max(1, Math.ceil((FY.end - now) / (30.5 * 24 * 3600 * 1000)));
+  var monthly = total / Math.max(1, monthsLeft);
+
+  var gs = function(id, val){ var e=document.getElementById(id); if(e) e.textContent=val; };
+  gs('setaside-total', fmt(total));
+  gs('setaside-tax', fmt(residualTax));
+  gs('setaside-tax-sub', 'After W/H credit of ' + fmt(whtPaid));
+  gs('setaside-gst', fmt(gstOwingFY));
+  gs('setaside-acc', fmt(accTotal));
+  gs('setaside-sl', fmt(slAmount));
+  gs('setaside-monthly', fmt(monthly) + '/mo');
+  gs('setaside-monthly-sub', monthsLeft + ' months left in FY');
+
+  var slRow = document.getElementById('setaside-sl-row');
+  if(slRow) slRow.style.display = hasLoan ? 'flex' : 'none';
+
+  // Colour the total based on urgency
+  var totalEl = document.getElementById('setaside-total');
+  if(totalEl) totalEl.style.color = total > 10000 ? 'var(--red)' : total > 5000 ? 'var(--orange)' : 'var(--green)';
+}
+
 /* ── Render Tax Tab ── */
 function renderTaxTab(){
   try{ _renderTaxTabInner(); } catch(e){ console.error('renderTaxTab error:',e); var el=document.getElementById('tax-still-owe'); if(el) el.textContent='Error'; showToast('Tax tab error — try syncing'); }
@@ -2985,6 +3417,14 @@ function _renderTaxTabInner(){
   document.getElementById('tax-total-all').textContent=fmt(tax.total);
   document.getElementById('tax-total-sub').textContent=FY.label;
 
+  // ── Asset depreciation ──
+  loadAssets(); renderAssets();
+
+  // ── Set-aside tracker ──
+  // GST owing for full FY (not just current period) — all paid invoices
+  var gstOwingFY=fy.filter(function(i){return i.status==='paid'&&i.gst==='yes';})
+    .reduce(function(s,i){return s+Math.round((parseFloat(i.amount)||0)*3/23*100)/100;},0);
+  renderSetAside(grossIncome, tax, whtPaid, accTotal, gstOwingFY, settings.studentLoan!=='no');
 }
 
 
