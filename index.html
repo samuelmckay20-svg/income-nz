@@ -317,12 +317,12 @@ body{
 .tax-sc-amount { font-size:24px;font-weight:700;letter-spacing:-0.8px;font-variant-numeric:tabular-nums;flex-shrink:0; }
 .tax-sc-divider { height:0.5px;background:var(--sep);margin:14px 0 10px; }
 .tax-sc-stats { display:flex;align-items:stretch; }
-.tax-sc-stat { flex:1;padding:2px 4px; }
+.tax-sc-stat { flex:1;padding:2px 4px;min-width:0; }
 .tax-sc-stat:first-child { padding-left:0; }
 .tax-sc-stat:last-child { padding-right:0; }
 .tax-sc-stat-sep { width:0.5px;background:var(--sep);flex-shrink:0;margin:2px 0; }
-.tax-sc-stat-lbl { font-size:10px;font-weight:500;color:var(--t3);margin-bottom:5px;letter-spacing:0.1px; }
-.tax-sc-stat-val { font-size:16px;font-weight:700;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;color:var(--t1); }
+.tax-sc-stat-lbl { font-size:9px;font-weight:500;color:var(--t3);margin-bottom:3px;letter-spacing:0.1px;line-height:1.3; }
+.tax-sc-stat-val { font-size:14px;font-weight:700;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;color:var(--t1); }
 .tax-prov-row { display:flex;align-items:center;padding:9px 0;gap:10px; }
 .tax-prov-date { font-size:12px;color:var(--t3);width:72px;flex-shrink:0; }
 .tax-prov-lbl { font-size:13px;color:var(--t2);flex:1; }
@@ -469,7 +469,11 @@ body{
       <div class="sum-card"><div class="sum-lbl">Outstanding</div><div class="sum-val c-orange" id="sum-outstanding">$0</div></div>
     </div>
     <div class="chips" id="period-chips">
-      <button class="chip on" onclick="setPeriod('fy',this)">FY 25–26</button>
+      <div style="display:inline-flex;align-items:center;gap:2px;background:var(--chip-bg);border-radius:20px;padding:2px 4px;margin-right:4px">
+        <button onclick="stepFY(-1)" style="width:24px;height:24px;border:none;background:none;color:var(--t2);font-size:15px;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">&#x2039;</button>
+        <button class="chip on" id="fy-chip" onclick="setPeriod('fy',this)" style="margin:0;border-radius:16px">FY 25–26</button>
+        <button onclick="stepFY(1)" id="fy-next-btn" style="width:24px;height:24px;border:none;background:none;color:var(--t2);font-size:15px;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">&#x203A;</button>
+      </div>
       <button class="chip" onclick="setPeriod('month',this)">This month</button>
       <button class="chip" onclick="setPeriod('lastmonth',this)">Last month</button>
       <button class="chip" onclick="setPeriod('q1',this)">Q1</button>
@@ -1409,17 +1413,39 @@ var _syncInFlight=false, _syncPending=false, _imgCache=new Map(), _syncRetryTime
 var invSearchQuery='';
 
 /* ── NZ Financial Year ── */
-function getFY(){
+var _fyOffset=0; // 0=current FY, -1=previous, etc.
+
+function getFY(offset){
+  var off=offset!==undefined?offset:_fyOffset;
   var n=new Date(), m=n.getMonth()+1, y=n.getFullYear();
-  var sy=m<4?y-1:y;
+  var sy=(m<4?y-1:y)+off;
   return{
     start:new Date(sy,3,1), end:new Date(sy+1,2,31,23,59,59),
-    label:'FY\u00a0'+sy+'\u2013'+String(sy+1).slice(2),
-    range:'1\u00a0Apr\u00a0'+sy+'\u00a0\u2013\u00a031\u00a0Mar\u00a0'+(sy+1),
+    label:'FY '+sy+'–'+String(sy+1).slice(2),
+    range:'1 Apr '+sy+' – 31 Mar '+(sy+1),
     startYear:sy
   };
 }
-function refreshFY(){ FY=getFY(); var c=document.querySelector('#period-chips .chip'); if(c)c.textContent=FY.label; }
+
+function stepFY(dir){
+  _fyOffset+=dir;
+  if(_fyOffset>0) _fyOffset=0;
+  if(_fyOffset<-5) _fyOffset=-5;
+  FY=getFY();
+  var chip=document.getElementById('fy-chip');
+  if(chip) chip.textContent=FY.label;
+  var nextBtn=document.getElementById('fy-next-btn');
+  if(nextBtn) nextBtn.style.opacity=_fyOffset===0?'0.3':'1';
+  setPeriod('fy',chip);
+}
+
+function refreshFY(){
+  FY=getFY();
+  var chip=document.getElementById('fy-chip');
+  if(chip) chip.textContent=FY.label;
+  var nextBtn=document.getElementById('fy-next-btn');
+  if(nextBtn) nextBtn.style.opacity=_fyOffset===0?'0.3':'1';
+}
 
 function periodRange(p){
   var now=new Date(),y=now.getFullYear(),m=now.getMonth(),sy=FY.startYear;
