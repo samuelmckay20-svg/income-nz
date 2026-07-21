@@ -1405,7 +1405,7 @@ var LS_INVOICES='nzin_invoices', LS_BANK='nzin_bank', LS_SETTINGS='nzin_settings
 /* ── State ── */
 var invoices=[], bankTxns=[], invBin=[], clientProfiles={}, settings={}, _pendingMatchTxnId=null, _scanImageData=null, _scanMimeType=null;
 var FY, currentPeriod='fy', statusFilter='all', currentTab='overview', editingId=null;
-var _syncInFlight=false, _syncPending=false, _imgCache=new Map(), _syncRetryTimer=null;
+var _syncInFlight=false, _syncPending=false, _imgCache=new Map(), _syncRetryTimer=null, _lastSyncTime=0;
 var invSearchQuery='';
 
 /* ── NZ Financial Year ── */
@@ -1522,6 +1522,7 @@ function onFab(){ if(currentTab==='invoices')openAddInvoice(); else if(currentTa
 
 /* ── Storage ── */
 function saveLocal(){
+  if(invBin.length>50) invBin=invBin.slice(invBin.length-50); // keep last 50 deleted invoices only
   var slim=invoices.map(function(i){var c=Object.assign({},i);delete c.image;return c;});
   try{
     LS.set(LS_INVOICES,JSON.stringify(slim)); LS.set(LS_BANK,JSON.stringify(bankTxns)); LS.set(LS_SETTINGS,JSON.stringify(settings)); LS.set('nzin_invbin',JSON.stringify(invBin)); LS.set('nzin_cp',JSON.stringify(clientProfiles));
@@ -1541,7 +1542,7 @@ function repairInvoiceGST(){
       inv.gst='yes'; repaired++;
     }
   });
-  if(repaired>0){saveLocal();renderAll();showToast('Fixed '+repaired+' invoice GST fields');}
+  if(repaired>0){saveLocal();showToast('Fixed '+repaired+' invoice GST fields');}
 }
 
 function loadLocal(){
@@ -1735,6 +1736,16 @@ function nextGSTDue(){
 
 /* ── Receipts NZ Integration ── */
 var _rxGSTCache=null, _rxGSTCacheTime=0, _rxGSTCacheKey='';
+function _loadRxCache(){
+  try{
+    var raw=JSON.parse(localStorage.getItem('nzin_rxcache')||'null');
+    if(raw&&raw.t&&Date.now()-raw.t<3600000){_rxGSTCache={receipts:raw.r};_rxGSTCacheTime=raw.t;_rxGSTCacheKey=raw.k||'';}
+  }catch(e){}
+}
+function _saveRxCache(receipts,key){
+  try{localStorage.setItem('nzin_rxcache',JSON.stringify({r:receipts,t:Date.now(),k:key}));}catch(e){}
+}
+_loadRxCache();
 
 function getReceiptsNZData(){
   try{
@@ -1780,7 +1791,7 @@ function fetchReceiptsGST(start,end,callback){
       return;
     }
     try{localStorage.setItem('nzrt5_r',JSON.stringify(data.receipts));}catch(e){}
-    _rxGSTCache={receipts:data.receipts}; _rxGSTCacheTime=Date.now(); _rxGSTCacheKey=cacheKey;
+    _rxGSTCache={receipts:data.receipts}; _rxGSTCacheTime=Date.now(); _rxGSTCacheKey=cacheKey; _saveRxCache(data.receipts,cacheKey);
     callback(calcInputGST(data.receipts,start,end));
   })
   .catch(function(){callback(calcInputGST(getReceiptsNZData().receipts,start,end));});
@@ -2001,6 +2012,7 @@ function syncToServer(){
       });
     }
     invoices.forEach(function(inv){if(!String(inv.id).startsWith('local_')&&inv._localOnly) delete inv._localOnly;});
+    _lastSyncTime=Date.now();
     saveLocal();
     if(_syncRetryTimer){clearTimeout(_syncRetryTimer);_syncRetryTimer=null;}
   })
@@ -2791,6 +2803,9 @@ function calcIncomeTax(income){
 
 /* ── Render Tax Tab ── */
 function renderTaxTab(){
+  try{ _renderTaxTabInner(); } catch(e){ console.error('renderTaxTab error:',e); }
+}
+function _renderTaxTabInner(){
   var fy=invoices.filter(function(i){var d=parseDate(i.date);return d>=FY.start&&d<=FY.end;});
 
   // Gross income = ex-GST income on PAID invoices only (what IRD actually sees as received)
@@ -4158,50 +4173,58 @@ function openBankDetail(id){
 function runAutoMatch(){
   var matched=0;
   var claimedInvoiceIds=new Set();
+
+  // Pre-index invoices by rounded net amount for O(1) lookup instead of O(n) scan
+  var invByAmt={};
+  invoices.forEach(function(inv){
+    var invAmt=parseFloat(inv.amount)||0; if(!invAmt) return;
+    var whtRate=parseFloat(inv.wht_rate)||0;
+    var net=inv.paid_amount!=null?parseFloat(inv.paid_amount):Math.round(invAmt*(1-whtRate/100)*100)/100;
+    // Index by rounded amount (within $1) - bucket by floor dollar
+    var bucket=Math.floor(net);
+    if(!invByAmt[bucket]) invByAmt[bucket]=[];
+    invByAmt[bucket].push({inv:inv,net:net});
+  });
+
   bankTxns.forEach(function(txn){
     if(txn.matched_invoice_id) return;
     var credit=parseFloat(txn.amount)||0; if(credit<=0) return;
     var txnDate=new Date(txn.date);
     var best=null,bestScore=Infinity;
+    var bucket=Math.floor(credit);
 
-    invoices.forEach(function(inv){
-      var invAmt=parseFloat(inv.amount)||0;
-      var whtRate=parseFloat(inv.wht_rate)||0;
-      var netPaid=inv.paid_amount!=null?parseFloat(inv.paid_amount):invAmt*(1-whtRate/100);
+    // Only check invoices within $2 of the bank amount
+    for(var b=bucket-2;b<=bucket+2;b++){
+      if(!invByAmt[b]) continue;
+      invByAmt[b].forEach(function(entry){
+        var inv=entry.inv, net=entry.net;
+        if(claimedInvoiceIds.has(String(inv.id))) return;
+        var diff=Math.abs(credit-net);
+        if(diff>1.00) return;
 
-      if(inv.status==='paid'){
-        // Already paid — match bank txn to it if amounts align and not already bank-linked
-        var alreadyLinked=bankTxns.some(function(t){return t!==txn&&t.matched_invoice_id===inv.id;});
-        if(alreadyLinked) return;
-        var diff=Math.abs(credit-netPaid);
-        if(diff>Math.max(netPaid*0.02,0.10)) return;
-        var daysDiff=Math.abs((txnDate-new Date(inv.paid_date||inv.date))/86400000);
-        if(daysDiff>14) return;
-        var score=diff+daysDiff*0.5+1; // slight penalty vs unpaid match
-        if(score<bestScore){bestScore=score;best=inv;}
-      } else {
-        // Unpaid — match and mark paid
-        var expectedNet=invAmt*(1-whtRate/100);
-        var diff=Math.min(Math.abs(credit-expectedNet),Math.abs(credit-invAmt));
-        if(diff>1.00) return; // max $1 tolerance
-        var daysDiff=(txnDate-new Date(inv.date))/86400000;
-        if(daysDiff<0||daysDiff>60) return;
-        var score=diff+daysDiff*0.3;
-        if(score<bestScore){bestScore=score;best=inv;}
-      }
-    });
+        if(inv.status==='paid'){
+          var alreadyLinked=bankTxns.some(function(t){return t!==txn&&String(t.matched_invoice_id)===String(inv.id);});
+          if(alreadyLinked) return;
+          var daysDiff=Math.abs((txnDate-new Date(inv.paid_date||inv.date))/86400000);
+          if(daysDiff>14) return;
+          var score=diff+daysDiff*0.5+1;
+          if(score<bestScore){bestScore=score;best=inv;}
+        } else {
+          var daysDiff=(txnDate-new Date(inv.date))/86400000;
+          if(daysDiff<0||daysDiff>60) return;
+          var score=diff+daysDiff*0.3;
+          if(score<bestScore){bestScore=score;best=inv;}
+        }
+      });
+    }
 
     if(best){
       txn.matched_invoice_id=best.id; claimedInvoiceIds.add(String(best.id));
-      if(best.status!=='paid'){
-        best.status='paid';
-        best.paid_date=txn.date;
-        best.paid_amount=txn.amount;
-      }
+      if(best.status!=='paid'){best.status='paid';best.paid_date=txn.date;best.paid_amount=String(Math.abs(credit));}
       matched++;
     }
   });
-  save();renderAll();
+  save(); renderBank(); renderInvoices();
   showToast(matched?matched+' transaction'+(matched>1?'s':'')+' matched':'No confident matches found');
 }
 
@@ -4499,7 +4522,14 @@ function saveQuickAdd(){
 /* ── Client Profiles ── */
 function getClientProfile(name){
   if(!name) return null;
-  return clientProfiles[name.toLowerCase().trim()]||null;
+  var key=name.toLowerCase().trim();
+  // Exact match first, then partial match
+  if(clientProfiles[key]) return clientProfiles[key];
+  var keys=Object.keys(clientProfiles);
+  for(var i=0;i<keys.length;i++){
+    if(key.indexOf(keys[i])!==-1||keys[i].indexOf(key)!==-1) return clientProfiles[keys[i]];
+  }
+  return null;
 }
 
 function setClientProfile(name, profile){
