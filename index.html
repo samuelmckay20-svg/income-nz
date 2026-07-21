@@ -635,19 +635,19 @@ body{
           <div class="hero-period" id="tax-total-sub">This financial year</div>
           <div class="hero-divider"></div>
           <div class="hero-stats">
-            <div class="hero-stat">
-              <div class="hs-lbl">Taxable income</div>
-              <div class="hs-val c-blue" id="tax-gross">$0</div>
+            <div class="hero-stat" style="min-width:0">
+              <div class="hs-lbl" style="font-size:9px">Taxable income</div>
+              <div class="hs-val c-blue" style="font-size:15px;letter-spacing:-0.4px" id="tax-gross">$0</div>
             </div>
             <div class="hero-stat-sep"></div>
-            <div class="hero-stat" style="padding-left:16px">
-              <div class="hs-lbl">Total tax</div>
-              <div class="hs-val c-red" id="tax-total-all">$0</div>
+            <div class="hero-stat" style="padding-left:10px;min-width:0">
+              <div class="hs-lbl" style="font-size:9px">Total tax</div>
+              <div class="hs-val c-red" style="font-size:15px;letter-spacing:-0.4px" id="tax-total-all">$0</div>
             </div>
             <div class="hero-stat-sep"></div>
-            <div class="hero-stat" style="padding-left:16px">
-              <div class="hs-lbl">W/H paid</div>
-              <div class="hs-val c-green" id="tax-wht-paid">$0</div>
+            <div class="hero-stat" style="padding-left:10px;min-width:0">
+              <div class="hs-lbl" style="font-size:9px">W/H paid</div>
+              <div class="hs-val c-green" style="font-size:15px;letter-spacing:-0.4px" id="tax-wht-paid">$0</div>
             </div>
           </div>
           <div class="hero-divider" style="margin-top:16px"></div>
@@ -1523,7 +1523,15 @@ function onFab(){ if(currentTab==='invoices')openAddInvoice(); else if(currentTa
 /* ── Storage ── */
 function saveLocal(){
   var slim=invoices.map(function(i){var c=Object.assign({},i);delete c.image;return c;});
-  LS.set(LS_INVOICES,JSON.stringify(slim)); LS.set(LS_BANK,JSON.stringify(bankTxns)); LS.set(LS_SETTINGS,JSON.stringify(settings)); LS.set('nzin_invbin',JSON.stringify(invBin));
+  try{
+    LS.set(LS_INVOICES,JSON.stringify(slim)); LS.set(LS_BANK,JSON.stringify(bankTxns)); LS.set(LS_SETTINGS,JSON.stringify(settings)); LS.set('nzin_invbin',JSON.stringify(invBin)); LS.set('nzin_cp',JSON.stringify(clientProfiles));
+    // Warn if approaching 5MB localStorage limit
+    var used=Object.keys(localStorage).reduce(function(s,k){return s+(localStorage[k]||'').length;},0);
+    if(used>4000000) showToast('⚠️ Storage nearly full ('+Math.round(used/1024)+'KB) — sync and clear old data');
+  } catch(e){
+    showToast('⚠️ Storage full! Data may not be saved. Please sync immediately.');
+    console.error('saveLocal failed:',e);
+  }
 }
 function repairInvoiceGST(){
   var repaired=0;
@@ -1576,7 +1584,7 @@ function manualSync(){
   var deletedIds=invBin.map(function(i){return String(i.id);}).filter(function(id){return !id.startsWith('local_');});
   var payload={
     invoices:invoices.filter(function(inv){return inv.client&&inv.amount>0;}).map(function(inv){var out=Object.assign({},inv);delete out.image;delete out.remittance_image;return out;}),
-    bankTxns:bankTxns,settings:settings,deletedInvoiceIds:deletedIds
+    bankTxns:bankTxns,settings:settings,clientProfiles:clientProfiles,deletedInvoiceIds:deletedIds
   };
   fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
   .then(function(r){
@@ -1615,6 +1623,7 @@ function manualSync(){
     sBank.forEach(function(t){delete lBankMap[t.id];});
     Object.values(lBankMap).forEach(function(t){bankTxns.push(t);});
     settings=data.settings||settings;
+    if(data.clientProfiles&&Object.keys(data.clientProfiles).length>0) clientProfiles=data.clientProfiles;
     saveLocal(); renderAll();
     showToast('Synced ✓');
   })
@@ -1972,13 +1981,13 @@ function openReceiptsNZ(){
 /* ── NZ CSV normDate ── */
 
 function syncToServer(){
-  if(_syncInFlight){_syncPending=true;return;}
-  if(!LS.get(LS_TOKEN))return;
+  // Thin wrapper — delegates to manualSync but suppresses the toast and UI spinner
+  if(_syncInFlight||_syncPending){_syncPending=true;return;}
   _syncInFlight=true;
   var deletedIds=invBin.map(function(i){return String(i.id);}).filter(function(id){return !id.startsWith('local_');});
   var payload={
     invoices:invoices.filter(function(inv){return inv.client&&inv.amount>0;}).map(function(inv){var out=Object.assign({},inv);if(inv.image&&_imgCache.get(inv.id)===inv.image.length)delete out.image;return out;}),
-    bankTxns:bankTxns,settings:settings,deletedInvoiceIds:deletedIds
+    bankTxns:bankTxns,settings:settings,clientProfiles:clientProfiles,deletedInvoiceIds:deletedIds
   };
   fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
   .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
@@ -1991,15 +2000,11 @@ function syncToServer(){
         if(inv){inv.id=data.idMap[localId];delete inv._localOnly;}
       });
     }
-    // Clear _localOnly from anything with a real server ID
-    invoices.forEach(function(inv){
-      if(!String(inv.id).startsWith('local_')&&inv._localOnly) delete inv._localOnly;
-    });
+    invoices.forEach(function(inv){if(!String(inv.id).startsWith('local_')&&inv._localOnly) delete inv._localOnly;});
     saveLocal();
     if(_syncRetryTimer){clearTimeout(_syncRetryTimer);_syncRetryTimer=null;}
   })
-  .catch(function(e){
-    console.warn('Sync failed, retrying in 30s');
+  .catch(function(){
     if(!_syncRetryTimer) _syncRetryTimer=setTimeout(function(){_syncRetryTimer=null;syncToServer();},30000);
   })
   .finally(function(){_syncInFlight=false;if(_syncPending){_syncPending=false;syncToServer();}});
@@ -2036,6 +2041,7 @@ function loadFromServer(){
     sBank.forEach(function(t){delete lBankMap[t.id];});
     Object.values(lBankMap).forEach(function(t){bankTxns.push(t);});
     settings=data.settings||settings;
+    if(data.clientProfiles&&Object.keys(data.clientProfiles).length>0) clientProfiles=data.clientProfiles;
     repairInvoiceGST(); saveLocal(); renderAll();
     if(unsyncedLocal.length||binnedIds.size) syncToServer();
   })
@@ -3414,7 +3420,7 @@ function markInvUnpaid(id){
   var inv=invoices.find(function(i){return String(i.id)===String(id);});
   if(!inv) return;
   inv.status='unpaid'; inv.paid_date=null; inv.paid_amount=null;
-  save(); renderAll(); showToast('Marked as unpaid');
+  save(); renderSummary(); renderInvoices(); showToast('Marked as unpaid');
 }
 
 function editInvoice(id){
@@ -3440,7 +3446,7 @@ function deleteInvoice(id){
       if(inv){
         invBin.unshift(Object.assign({},inv,{deletedAt:new Date().toISOString()}));
         invoices=invoices.filter(function(i){return String(i.id)!==String(id);});
-        save(); renderAll(); showToast('Moved to bin');
+        save(); renderSummary(); renderInvoices(); showToast('Moved to bin');
       }
     }},
     {label:'Cancel',cls:'cancel'}
@@ -3475,7 +3481,7 @@ function renderInvBin(){
     var i=parseInt(btn.dataset.bi);
     if(btn.classList.contains('bin-restore')){
       var r=invBin[i]; delete r.deletedAt; invoices.unshift(r); invBin.splice(i,1);
-      save(); renderAll(); renderInvBin(); showToast('Invoice restored');
+      save(); renderSummary(); renderInvoices(); renderInvBin(); showToast('Invoice restored');
     }
     if(btn.classList.contains('bin-perm')){
       if(!confirm('Permanently delete? Cannot be undone.')) return;
@@ -3895,7 +3901,7 @@ function createMultiRemittance(){
     invoices.unshift(newInv);
   });
 
-  save(); renderAll(); closeModal('modal-paid');
+  save(); renderSummary(); renderInvoices(); closeModal('modal-paid');
   showToast(scan.multiInvoices.length+' invoices saved from '+payer);
   window._lastRemittanceScan=null;
   window._newRemStub=null;
@@ -4064,7 +4070,7 @@ function openBankDetail(id){
   // Exclude/restore toggle
   if(txn.excluded){
     actions.push({label:'Restore — count as income',fn:function(){
-      delete txn.excluded; save(); renderAll(); showToast('Restored');
+      delete txn.excluded; save(); renderBank(); showToast('Restored');
     }});
     actions.push({label:'Cancel',cls:'cancel'});
     showSheet(fmt(Math.abs(amt))+' · '+fmtDate(txn.date)+' · Excluded from income',actions);
@@ -4075,7 +4081,7 @@ function openBankDetail(id){
     actions.push({label:'Remove match',cls:'danger',fn:function(){
       var prev=invoices.find(function(i){return i.id===txn.matched_invoice_id;});
       if(prev){prev.status='unpaid';prev.paid_date=null;prev.paid_amount=null;}
-      txn.matched_invoice_id=null; save(); renderAll(); showToast('Match removed');
+      txn.matched_invoice_id=null; save(); renderBank(); renderInvoices(); showToast('Match removed');
     }});
   } else if(amt>0){
     actions.push({label:'Mark as approved income',fn:function(){
@@ -4091,7 +4097,7 @@ function openBankDetail(id){
       };
       invoices.unshift(newInv);
       txn.matched_invoice_id=newInv.id;
-      save(); renderAll(); showToast('Approved as income');
+      save(); renderBank(); showToast('Approved as income');
     }});
     actions.push({label:'Create invoice from this',fn:function(){
       editingId=null;
@@ -4135,7 +4141,7 @@ function openBankDetail(id){
         actions.push({label:'Match → '+label,fn:function(){
           txn.matched_invoice_id=capturedInv.id;
           if(capturedInv.status!=='paid'){capturedInv.status='paid';capturedInv.paid_date=txn.date;capturedInv.paid_amount=String(Math.abs(amt));}
-          save(); renderAll(); showToast('Matched to '+capturedInv.client);
+          save(); renderBank(); renderInvoices(); showToast('Matched to '+capturedInv.client);
         }});
       })(inv);
     });
@@ -4144,7 +4150,7 @@ function openBankDetail(id){
   }
 
   actions.push({label:'Exclude from income',cls:'danger',fn:function(){
-    txn.excluded=true; txn.matched_invoice_id=null; save(); renderAll(); showToast('Excluded from income');
+    txn.excluded=true; txn.matched_invoice_id=null; save(); renderBank(); showToast('Excluded from income');
   }});
   actions.push({label:'Cancel',cls:'cancel'});
   showSheet((amt>0?fmt(amt)+' received':'Debit '+fmt(Math.abs(amt)))+' · '+fmtDate(txn.date)+(txn.description?' · '+txn.description:''),actions);
@@ -4485,7 +4491,7 @@ function saveQuickAdd(){
     created_at:new Date().toISOString(),updated_at:new Date().toISOString()
   };
   invoices.unshift(inv);
-  save(); renderAll(); closeModal('modal-quickadd');
+  save(); renderSummary(); renderInvoices(); closeModal('modal-quickadd');
   showToast('Saved — '+client+' '+fmt(amount));
 }
 
@@ -4703,7 +4709,7 @@ function pickExistingClient(wrongName){
     return {label:name,fn:function(){
       // Rename the most recent invoice with wrongName to the chosen client
       var inv=invoices.find(function(i){return (i.client||'').toLowerCase()===wrongName.toLowerCase();});
-      if(inv){inv.client=name;inv.updated_at=new Date().toISOString();save();renderAll();showToast('Updated to '+name);}
+      if(inv){inv.client=name;inv.updated_at=new Date().toISOString();save();renderSummary();renderInvoices();renderBank();showToast('Updated to '+name);}
     }};
   });
   actions.push({label:'Cancel',cls:'cancel'});
