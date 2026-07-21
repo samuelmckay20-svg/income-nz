@@ -2803,7 +2803,7 @@ function calcIncomeTax(income){
 
 /* ── Render Tax Tab ── */
 function renderTaxTab(){
-  try{ _renderTaxTabInner(); } catch(e){ console.error('renderTaxTab error:',e); }
+  try{ _renderTaxTabInner(); } catch(e){ console.error('renderTaxTab error:',e); var el=document.getElementById('tax-still-owe'); if(el) el.textContent='Error'; showToast('Tax tab error — try syncing'); }
 }
 function _renderTaxTabInner(){
   var fy=invoices.filter(function(i){var d=parseDate(i.date);return d>=FY.start&&d<=FY.end;});
@@ -4050,7 +4050,7 @@ function parseCSV(text){
       return t.description===desc; // same description fallback
     });
     if(dup){skipped++;continue;}
-        bankTxns.push({id:'bank_'+Date.now()+'_'+i,date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:null,source:isKiwibank?'kiwibank':isBNZ?'bnz':'anz',imported_at:new Date().toISOString()});
+        bankTxns.push({id:'bank_'+Date.now()+'_'+i+'_'+Math.random().toString(36).slice(2,6),date:isoDate,amount:amount,description:desc,reference:ref,matched_invoice_id:null,source:isKiwibank?'kiwibank':isBNZ?'bnz':'anz',imported_at:new Date().toISOString()});
     imported++;
   }
   save();renderAll();
@@ -4534,7 +4534,7 @@ function getClientProfile(name){
 
 function setClientProfile(name, profile){
   if(!name) return;
-  clientProfiles[name.toLowerCase().trim()]=profile;
+  clientProfiles[name.toLowerCase().trim().replace(/\s+/g,' ')]=profile;
   save();
 }
 
@@ -4592,7 +4592,7 @@ function deleteClientProfile(){
   if(!name) return;
   showSheet('Delete '+name+'?',[
     {label:'Delete',cls:'danger',fn:function(){
-      delete clientProfiles[name.toLowerCase().trim()];
+      delete clientProfiles[name.toLowerCase().trim().replace(/\s+/g,' ')];
       save(); closeModal('modal-client-profile'); renderClientsTab();
       showToast('Client deleted');
     }},
