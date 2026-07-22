@@ -775,25 +775,34 @@ body{
       <div class="shdr">ACC levies</div>
       <div class="tax-section-card">
         <div class="tax-sc-header">
-          <div class="tax-sc-icon" style="background:rgba(175,82,222,0.12)">🛡️</div>
+          <div class="tax-sc-icon" style="background:rgba(0,181,173,0.12)">🛡️</div>
           <div class="tax-sc-info">
-            <div class="tax-sc-lbl">ACC total levy</div>
-            <div class="tax-sc-sub" id="acc-working-sub">Earner + working cover</div>
+            <div class="tax-sc-lbl">ACC levies</div>
+            <div class="tax-sc-sub" id="acc-working-sub">Earner’s + work + working safer</div>
           </div>
           <div class="tax-sc-amount" style="color:var(--teal)" id="acc-total">$0</div>
         </div>
         <div class="tax-sc-divider"></div>
         <div class="tax-sc-stats">
-          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Earner's levy</div><div class="tax-sc-stat-val" style="color:var(--teal)" id="acc-earner">$0</div></div>
+          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Earner’s</div><div class="tax-sc-stat-val" style="color:var(--teal)" id="acc-earner">$0</div></div>
           <div class="tax-sc-stat-sep"></div>
-          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Working cover</div><div class="tax-sc-stat-val" style="color:var(--teal)" id="acc-working">$0</div></div>
+          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Work</div><div class="tax-sc-stat-val" style="color:var(--teal)" id="acc-working">$0</div></div>
           <div class="tax-sc-stat-sep"></div>
-          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Liable earnings</div><div class="tax-sc-stat-val" id="acc-liable">$0</div></div>
+          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Working safer</div><div class="tax-sc-stat-val" style="color:var(--teal)" id="acc-safer">$0</div></div>
         </div>
+        <div class="tax-sc-divider"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0 6px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1)">Liable earnings</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:1px" id="acc-liable-sub">Net profit for the year</div>
+          </div>
+          <div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--t1)" id="acc-liable">$0</div>
+        </div>
+        <div id="acc-warning" style="display:none;margin:4px 0 8px;padding:10px 12px;background:rgba(255,149,0,.1);border-radius:10px;font-size:11px;color:var(--t2);line-height:1.5"></div>
         <div class="tax-sc-divider"></div>
         <div class="g-row" style="padding:2px 0">
           <div class="g-icon" style="background:rgba(175,82,222,0.12)">🏗️</div>
-          <span class="g-lbl">Working cover rate</span>
+          <span class="g-lbl">Work levy rate<br><a href="https://www.businessdescription.co.nz" target="_blank" rel="noopener" style="font-size:10px;color:var(--blue);font-weight:400;text-decoration:none">Look up your CU code &#x2197;</a></span>
           <select class="g-select" id="acc-rate" onchange="saveSettings();renderTaxTab()">
             <option value="0.53">0.53% — Video/Film</option>
             <option value="0.39">0.39% — IT / Tech</option>
@@ -1509,6 +1518,21 @@ var LS = {
    Sources: ird.govt.nz/income-tax/tax-rates
             ird.govt.nz/student-loans  |  acc.co.nz/levies */
 var TAX_RATES_FY = 2025;              // verified for FY2025-26
+
+/* ACC levy rates by levy year (1 Apr - 31 Mar).
+   Earner's levy is GST-inclusive (the amount ACC invoices you); a
+   GST-registered sole trader claims that GST portion back separately.
+   Sources: Accident Compensation (Earners' Levy) Regulations 2025,
+            acc.co.nz levy guidebook. Re-check each April. */
+var ACC_RATES = {
+  2024: {earner:0.0160, safer:0.0008, maxLiable:142283, minLiable:44250},
+  2025: {earner:0.0167, safer:0.0008, maxLiable:152790, minLiable:47692},
+  2026: {earner:0.0175, safer:0.0008, maxLiable:156641, minLiable:50501},
+  2027: {earner:0.0175, safer:0.0008, maxLiable:160244, minLiable:50501}
+};
+function accRatesFor(year){
+  return ACC_RATES[year] || ACC_RATES[2026];
+}
 var TAX_RATES_CHECKED = '21 Jul 2026';
 var SL_THRESHOLD = 24128, SL_RATE = 0.12;
 
@@ -3163,6 +3187,22 @@ function calcIncomeTax(income){
 
 
 
+/* ── Business expenses for the current FY (from Receipts NZ) ── */
+function getFYExpenses(){
+  var raw = [];
+  try{ raw = JSON.parse(localStorage.getItem('nzrt5_r')||'[]'); }catch(e){ return {total:0, available:false}; }
+  if(!Array.isArray(raw) || !raw.length) return {total:0, available:false};
+  var total = raw.filter(function(r){
+    var d = parseDate(r.date || r.created_at || '1970-01-01');
+    return d >= FY.start && d <= FY.end;
+  }).reduce(function(s,r){
+    var amt = parseFloat(r.amount)||0;
+    // Expenses are GST-inclusive; the deductible cost is the ex-GST amount
+    return s + (r.gst === 'no' ? amt : amt/1.15);
+  }, 0);
+  return {total: Math.round(total*100)/100, available: true};
+}
+
 /* ── Asset Depreciation ── */
 var assets = [];
 
@@ -3558,19 +3598,60 @@ function _renderTaxTabInner(){
     if(yr3)yr3.textContent=fyYear+1;
   }
 
-  // ── ACC ──
-  var accCap=142283;
-  var earnerRate=0.0160;
-  var workRate=parseFloat(settings.accRate||0.53)/100;
-  var liableEarnings=Math.min(grossIncome,accCap);
-  var accEarner=liableEarnings*earnerRate;
-  var accWorking=liableEarnings*workRate;
-  var accTotal=accEarner+accWorking;
-  $el('acc-earner').textContent=fmt(accEarner);
-  $el('acc-working').textContent=fmt(accWorking);
-  $el('acc-working-sub').textContent=(settings.accRate||'0.53')+'% working cover levy';
-  $el('acc-total').textContent=fmt(accTotal);
-  $el('acc-liable').textContent=fmt(liableEarnings);
+  // ── ACC levies ──
+  // Self-employed pay three levies, all on the same liable earnings:
+  //   Earner's levy   - non-work injuries, flat rate, capped
+  //   Work levy       - work injuries, rate depends on your CU code
+  //   Working Safer   - funds WorkSafe NZ, flat rate
+  // ACC assesses liable earnings on NET PROFIT from your IR3, not gross income.
+  var accY = accRatesFor(FY.startYear);
+  var workRate = parseFloat(settings.accRate||0.53)/100;
+
+  var exp = getFYExpenses();
+  var deprThisFY = (typeof assets !== 'undefined' && assets.length)
+    ? assets.reduce(function(s,a){ return s + (calcDepreciation(a).depr||0); }, 0) : 0;
+  var netProfit = Math.max(0, grossIncome - exp.total - deprThisFY);
+
+  var liableEarnings = Math.min(netProfit, accY.maxLiable);
+  var accEarner  = Math.round(liableEarnings * accY.earner * 100)/100;
+  var accWorking = Math.round(liableEarnings * workRate * 100)/100;
+  var accSafer   = Math.round(liableEarnings * accY.safer * 100)/100;
+  var accTotal   = Math.round((accEarner + accWorking + accSafer) * 100)/100;
+
+  $el('acc-earner').textContent  = fmt(accEarner);
+  $el('acc-working').textContent = fmt(accWorking);
+  $el('acc-safer').textContent   = fmt(accSafer);
+  $el('acc-total').textContent   = fmt(accTotal);
+  $el('acc-liable').textContent  = fmt(liableEarnings);
+
+  // Explain how liable earnings were derived, and flag what is missing
+  var basis;
+  if(!exp.available){
+    basis = 'Based on ' + fmt(grossIncome) + ' income \u2014 link Receipts NZ to deduct expenses';
+  } else {
+    basis = fmt(grossIncome) + ' income less ' + fmt(exp.total) + ' expenses'
+          + (deprThisFY > 0 ? ' and ' + fmt(deprThisFY) + ' depreciation' : '');
+  }
+  $el('acc-liable-sub').textContent = basis;
+  $el('acc-working-sub').textContent =
+    (settings.accRate||'0.53') + '% work levy \u00b7 ' + (accY.earner*100).toFixed(2) + '% earner\u2019s';
+
+  // Warnings
+  var accWarn = document.getElementById('acc-warning');
+  if(accWarn){
+    if(netProfit > 0 && netProfit < accY.minLiable){
+      accWarn.style.display = 'block';
+      accWarn.textContent = 'Your net profit is below the minimum liable earnings of '
+        + fmt(accY.minLiable) + '. If ACC treats you as full-time self-employed '
+        + '(30+ hours a week) they will charge on the minimum, not your actual profit.';
+    } else if(netProfit >= accY.maxLiable){
+      accWarn.style.display = 'block';
+      accWarn.textContent = 'Liable earnings are capped at ' + fmt(accY.maxLiable)
+        + ' for ' + FY.label.replace(/\u00a0/g,' ') + '.';
+    } else {
+      accWarn.style.display = 'none';
+    }
+  }
   if(settings.accRate){
     var sel=document.getElementById('acc-rate');
     if(sel){for(var o=0;o<sel.options.length;o++){if(parseFloat(sel.options[o].value)===parseFloat(settings.accRate)){sel.selectedIndex=o;break;}}}
