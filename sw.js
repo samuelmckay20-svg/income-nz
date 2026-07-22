@@ -1,4 +1,4 @@
-const VERSION = '2.1.0';
+const VERSION = '2.1.1';
 const CACHE = 'income-nz-' + VERSION;
 
 // Files worth pre-caching. index.html is the only one that MUST succeed —
@@ -51,21 +51,31 @@ self.addEventListener('activate', function(e) {
 });
 
 self.addEventListener('fetch', function(e) {
-  var url = e.request.url;
-
-  // Never intercept API calls, external scripts, or non-GET requests
   if (e.request.method !== 'GET') return;
-  if (url.includes('synology.me')) return;
-  if (url.includes('anthropic.com')) return;
-  if (url.includes('cdnjs.cloudflare.com')) return;
+
+  var url;
+  try {
+    url = new URL(e.request.url);
+  } catch (err) {
+    return;   // unparseable — leave it to the network
+  }
+
+  // The Cache API only accepts http(s). Browser extensions, blob:, data:
+  // and similar schemes throw on cache.put(), so ignore them entirely.
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+  // Only ever cache our own assets. Anything cross-origin (API, CDN,
+  // analytics, extensions) passes straight through untouched.
+  if (url.origin !== self.location.origin) return;
 
   e.respondWith(
     fetch(e.request)
       .then(function(res) {
-        // Keep the cache warm with successful same-origin responses
         if (res && res.status === 200 && res.type === 'basic') {
           var copy = res.clone();
-          caches.open(CACHE).then(function(c) { c.put(e.request, copy); });
+          caches.open(CACHE)
+            .then(function(cache) { return cache.put(e.request, copy); })
+            .catch(function(err) { console.warn('[sw] cache put failed:', url.pathname, err); });
         }
         return res;
       })
