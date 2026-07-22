@@ -15,7 +15,7 @@ button,input,select,textarea{font-family:inherit}
 
 :root{
   --blue:#007AFF;--red:#FF3B30;--orange:#FF9500;
-  --green:#34C759;--purple:#AF52DE;--teal:#00B5AD;
+  --green:#0F9D4F;--purple:#AF52DE;--teal:#00B5AD;
   --bg:#F5F5F7;--surface:#FFFFFF;
   --t1:#0A0A0A;--t2:rgba(10,10,10,0.72);
   --t3:rgba(10,10,10,0.42);--t4:rgba(10,10,10,0.20);
@@ -167,11 +167,11 @@ body{
 .r-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
 .b-unpaid{background:rgba(255,149,0,0.12);color:var(--orange)}
-.b-paid{background:rgba(52,199,89,0.12);color:var(--green)}
+.b-paid{background:rgba(15,157,79,0.12);color:var(--green)}
 .b-overdue{background:rgba(255,59,48,0.10);color:var(--red)}
 .b-draft{background:var(--fill);color:var(--t3)}
 .b-review{background:rgba(175,82,222,0.12);color:var(--purple)}
-.b-matched{background:rgba(52,199,89,0.12);color:var(--green)}
+.b-matched{background:rgba(15,157,79,0.12);color:var(--green)}
 .b-unmatched{background:rgba(255,149,0,0.12);color:var(--orange)}
 .b-debit{background:var(--fill);color:var(--t3)}
 
@@ -285,7 +285,7 @@ body{
 /* ── Tax hero ── */
 .tax-hero {
   margin:0 16px 4px;
-  background:linear-gradient(135deg,rgba(0,122,255,0.08),rgba(52,199,89,0.08));
+  background:linear-gradient(135deg,rgba(0,122,255,0.08),rgba(15,157,79,0.08));
   border:0.5px solid var(--sep);
   border-radius:18px; padding:20px;
 }
@@ -462,7 +462,7 @@ body{
   <!-- Summary bar — other tabs only -->
   <div id="summary-bar" style="display:none">
     <div class="sum-row">
-      <div class="sum-card"><div class="sum-lbl">Gross</div><div class="sum-val" style="color:var(--blue)" id="sum-invoiced">$0</div></div>
+      <div class="sum-card"><div class="sum-lbl">Gross</div><div class="sum-val" style="color:var(--t1)" id="sum-invoiced">$0</div></div>
       <div class="sum-card"><div class="sum-lbl">Received</div><div class="sum-val c-green" id="sum-received">$0</div></div>
       <div class="sum-card"><div class="sum-lbl">Outstanding</div><div class="sum-val" style="color:var(--orange)" id="sum-outstanding">$0</div></div>
     </div>
@@ -486,14 +486,10 @@ body{
       <div class="hero-wrap">
         <div class="hero-card">
           <div class="hero-lbl">Net received</div>
-          <div class="hero-amount" id="hero-amount">$0</div>
+          <div class="hero-amount" id="hero-amount" style="color:var(--green)">$0</div>
           <div class="hero-gross-row">
             <span class="hero-gross-lbl">Gross received</span>
             <span class="hero-gross-val" id="hero-gross">$0</span>
-          </div>
-          <div class="hero-gross-row" style="margin-top:2px">
-            <span class="hero-gross-lbl">GST collected</span>
-            <span class="hero-gross-val c-blue" id="hero-gst-collected">$0</span>
           </div>
           <div class="hero-period" id="hero-period">1 Apr 2025 – 31 Mar 2026</div>
 
@@ -581,7 +577,7 @@ body{
     <!-- ── CLIENTS ── -->
     <div id="tab-clients" class="tab-panel">
       <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center">
-        <button onclick="openClientProfile('')" style="flex-shrink:0;padding:7px 14px;border-radius:20px;border:none;background:rgba(52,199,89,.1);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x2795; Add client</button>
+        <button onclick="openClientProfile('')" style="flex-shrink:0;padding:7px 14px;border-radius:20px;border:none;background:rgba(15,157,79,.1);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x2795; Add client</button>
         <div style="flex:1;background:var(--fill);border-radius:12px;display:flex;align-items:center;padding:8px 12px;gap:8px">
           <span style="font-size:14px;opacity:.5">🔍</span>
           <input id="client-search" type="text" placeholder="Search clients…"
@@ -612,7 +608,7 @@ body{
       <!-- Buttons row -->
       <div style="padding:4px 16px 0;display:flex;gap:8px;align-items:center">
         <button onclick="$el('csv-input').click()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x1F3E6; Import CSV</button>
-        <button id="automatch-btn" onclick="runAutoMatch()" style="display:none;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:rgba(52,199,89,.12);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;margin-left:auto">&#x2728; Auto-match</button>
+        <button id="automatch-btn" onclick="runAutoMatch()" style="display:none;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:rgba(15,157,79,.12);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;margin-left:auto">&#x2728; Auto-match</button>
       </div>
       <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="onCSV(this)">
       <div class="shdr" style="margin-top:4px">Needs review</div>
@@ -733,7 +729,7 @@ body{
           <div><div style="font-size:13px;font-weight:600;color:var(--t1)">Total purchases</div><div style="font-size:11px;color:var(--t3);margin-top:1px">GST-inclusive expenses paid</div></div>
           <div style="font-size:17px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums" id="gst-box11">—</div>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep);background:rgba(52,199,89,.04)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep);background:rgba(15,157,79,.04)">
           <div><div style="font-size:13px;font-weight:600;color:var(--green)">GST to claim</div><div style="font-size:11px;color:var(--t3);margin-top:1px">Input tax from Receipts NZ</div></div>
           <div style="font-size:17px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums" id="gst-box13">—</div>
         </div>
@@ -817,7 +813,7 @@ body{
       <!-- ── Asset Depreciation ── -->
       <div class="shdr-row">
         <span class="shdr">Asset depreciation</span>
-        <button onclick="openAddAsset()" style="padding:6px 14px;border-radius:16px;border:none;background:rgba(52,199,89,.1);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">+ Add asset</button>
+        <button onclick="openAddAsset()" style="padding:6px 14px;border-radius:16px;border:none;background:rgba(15,157,79,.1);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">+ Add asset</button>
       </div>
       <div id="asset-list" style="padding:0 16px 4px">
         <div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">No assets added yet</div>
@@ -965,7 +961,7 @@ body{
       <div class="shdr">Profile</div>
       <div class="g-list">
         <div class="g-row"><div class="g-icon" style="background:rgba(0,122,255,0.12)">👤</div><span class="g-lbl">Signed in as</span><span class="g-val" id="acct-name">—</span></div>
-        <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,0.12)">📧</div><span class="g-lbl">BCC address</span><span class="g-val" id="acct-email" style="color:var(--blue);font-size:12px;word-break:break-all;text-align:right">—</span></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(15,157,79,0.12)">📧</div><span class="g-lbl">BCC address</span><span class="g-val" id="acct-email" style="color:var(--blue);font-size:12px;word-break:break-all;text-align:right">—</span></div>
       </div>
       <div class="shdr">Email forwarding</div>
       <div class="g-list">
@@ -978,7 +974,7 @@ body{
       <div class="shdr">Export</div>
       <div class="g-list" style="margin-bottom:8px">
         <div class="g-row" style="cursor:pointer" onclick="closeModal('modal-account');exportPLReport()" style="border-bottom:0.5px solid var(--sep)">
-          <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F4C8;</div>
+          <div class="g-icon" style="background:rgba(15,157,79,.12)">&#x1F4C8;</div>
           <span class="g-lbl">Profit & Loss report PDF</span>
           <span class="g-val" style="color:var(--blue)">&#x203A;</span>
         </div>
@@ -1027,8 +1023,8 @@ body{
       <div class="shdr">Password</div>
       <div class="g-list">
         <div class="g-row"><div class="g-icon" style="background:rgba(255,59,48,.12)">&#x1F512;</div><span class="g-lbl">Current</span><input class="g-input" type="password" id="chpw-current" placeholder="Current password" autocomplete="current-password"></div>
-        <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F511;</div><span class="g-lbl">New</span><input class="g-input" type="password" id="chpw-new" placeholder="New password" autocomplete="new-password"></div>
-        <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,.12)">&#x2705;</div><span class="g-lbl">Confirm</span><input class="g-input" type="password" id="chpw-confirm" placeholder="Confirm new password" autocomplete="new-password"></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(15,157,79,.12)">&#x1F511;</div><span class="g-lbl">New</span><input class="g-input" type="password" id="chpw-new" placeholder="New password" autocomplete="new-password"></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(15,157,79,.12)">&#x2705;</div><span class="g-lbl">Confirm</span><input class="g-input" type="password" id="chpw-confirm" placeholder="Confirm new password" autocomplete="new-password"></div>
       </div>
       <div id="chpw-error" style="color:var(--red);font-size:13px;text-align:center;padding:0 16px 8px;min-height:18px"></div>
       <div style="padding:0 16px">
@@ -1089,7 +1085,7 @@ body{
             oninput="onClientInput('f-client','f-client-hint')" onblur="onClientBlur('f-client')">
         </div>
         <div id="f-client-hint" style="display:none;padding:8px 16px;font-size:12px;color:var(--blue);cursor:pointer;background:rgba(0,122,255,.06);border-top:0.5px solid var(--sep)"></div>
-        <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,0.12)">💵</div><span class="g-lbl">Amount (incl. GST)</span><input class="g-input" id="f-amount" type="text" placeholder="0.00" inputmode="decimal"></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(15,157,79,0.12)">💵</div><span class="g-lbl">Amount (incl. GST)</span><input class="g-input" id="f-amount" type="text" placeholder="0.00" inputmode="decimal"></div>
         <div class="g-row"><div class="g-icon" style="background:rgba(255,149,0,0.12)">📅</div><span class="g-lbl">Invoice date</span><input class="g-input" id="f-date" type="date"></div>
         <div class="g-row"><div class="g-icon" style="background:rgba(255,59,48,0.12)">⏰</div><span class="g-lbl">Due date</span><input class="g-input" id="f-due" type="date"></div>
         <div class="g-row"><div class="g-icon" style="background:rgba(175,82,222,0.12)">#️⃣</div><span class="g-lbl">Invoice #</span><input class="g-input" id="f-num" type="text" placeholder="Optional"></div>
@@ -1097,7 +1093,7 @@ body{
       <div class="field-err" id="inv-err"></div>
       <div class="shdr">Tax</div>
       <div class="g-list">
-        <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,0.12)">🧮</div><span class="g-lbl">GST</span><select class="g-select" id="f-gst"><option value="yes">Includes 15% GST</option><option value="no">No GST</option><option value="zero">Zero-rated</option></select></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(15,157,79,0.12)">🧮</div><span class="g-lbl">GST</span><select class="g-select" id="f-gst"><option value="yes">Includes 15% GST</option><option value="no">No GST</option><option value="zero">Zero-rated</option></select></div>
         <div class="g-row"><div class="g-icon" style="background:rgba(175,82,222,0.12)">🏛️</div><span class="g-lbl">W/H tax rate</span><select class="g-select" id="f-wht"><option value="0">None</option><option value="20">20%</option><option value="33">33%</option><option value="15">15%</option></select></div>
       </div>
       <div class="shdr">Notes</div>
@@ -1237,7 +1233,7 @@ body{
             </select>
           </div>
           <div class="g-row">
-            <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F9EE;</div>
+            <div class="g-icon" style="background:rgba(15,157,79,.12)">&#x1F9EE;</div>
             <span class="g-lbl">GST</span>
             <select class="g-select" id="paid-gst">
               <option value="yes">15% GST included</option>
@@ -1266,7 +1262,7 @@ body{
           <input class="g-input" id="paid-wht" type="text" inputmode="decimal" placeholder="0.00" oninput="updatePaidSummary()">
         </div>
         <div class="g-row" style="border-bottom:0.5px solid var(--sep)">
-          <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F4B5;</div>
+          <div class="g-icon" style="background:rgba(15,157,79,.12)">&#x1F4B5;</div>
           <span class="g-lbl">Net to bank</span>
           <input class="g-input" id="paid-net" type="text" inputmode="decimal" placeholder="0.00" oninput="updatePaidSummary()">
         </div>
@@ -1309,7 +1305,7 @@ body{
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
           <div style="padding:14px 16px;border-bottom:0.5px solid var(--sep);border-right:0.5px solid var(--sep)">
             <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Gross invoice</div>
-            <div id="id-gross" style="font-size:22px;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums">—</div>
+            <div id="id-gross" style="font-size:22px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums">—</div>
           </div>
           <div style="padding:14px 16px;border-bottom:0.5px solid var(--sep)">
             <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">GST collected</div>
@@ -1333,8 +1329,8 @@ body{
         <div class="g-row"><div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F4C5;</div><span class="g-lbl">Invoice date</span><span class="g-val" id="id-date"></span></div>
         <div class="g-row" id="id-due-row"><div class="g-icon" style="background:rgba(255,59,48,.12)">&#x23F0;</div><span class="g-lbl">Due date</span><span class="g-val" id="id-due"></span></div>
         <div class="g-row" id="id-num-row"><div class="g-icon" style="background:rgba(175,82,222,.12)">#&#xFE0F;&#x20E3;</div><span class="g-lbl">Invoice #</span><span class="g-val" id="id-num"></span></div>
-        <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F9EE;</div><span class="g-lbl">GST</span><span class="g-val" id="id-gst-label"></span></div>
-        <div class="g-row" id="id-paid-date-row" style="display:none"><div class="g-icon" style="background:rgba(52,199,89,.12)">&#x2705;</div><span class="g-lbl">Paid on</span><span class="g-val" id="id-paid-date"></span></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(15,157,79,.12)">&#x1F9EE;</div><span class="g-lbl">GST</span><span class="g-val" id="id-gst-label"></span></div>
+        <div class="g-row" id="id-paid-date-row" style="display:none"><div class="g-icon" style="background:rgba(15,157,79,.12)">&#x2705;</div><span class="g-lbl">Paid on</span><span class="g-val" id="id-paid-date"></span></div>
         <div class="g-row" id="id-notes-row" style="display:none"><div class="g-icon" style="background:var(--fill)">&#x1F4DD;</div><span class="g-lbl">Notes</span><span class="g-val" id="id-notes" style="text-align:right;white-space:normal;font-size:13px"></span></div>
       </div>
 
@@ -1416,7 +1412,7 @@ body{
           </select>
         </div>
         <div class="g-row">
-          <div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F9EE;</div>
+          <div class="g-icon" style="background:rgba(15,157,79,.12)">&#x1F9EE;</div>
           <span class="g-lbl">GST on invoices</span>
           <select class="g-select" id="cp-gst">
             <option value="yes">15% GST &#x2014; GST registered</option>
@@ -1970,10 +1966,10 @@ function exportAnnualSummary(){
 
   // ── SUMMARY CARDS ──
   var cards=[
-    {label:'Total invoiced',val:fmt(totGross),sub:'Gross inc GST',col:[0,122,255]},
+    {label:'Total invoiced',val:fmt(totGross),sub:'Gross inc GST',col:[10,10,10]},
     {label:'GST collected',val:fmt(totGST),sub:'Payable to IRD',col:[255,149,0]},
     {label:'W/H tax deducted',val:fmt(totWHT),sub:'By clients',col:[175,82,222]},
-    {label:'Net received',val:fmt(totNet),sub:'Banked after W/H',col:[52,199,89]}
+    {label:'Net received',val:fmt(totNet),sub:'Banked after W/H',col:[15,157,79]}
   ];
   var cw4=(cw-9)/4;
   cards.forEach(function(c2,i){
@@ -2138,7 +2134,7 @@ function exportPLReport(){
   var cols3=(cw-8)/3;
   [['Total income',fmt(netIncome),'ex-GST',[0,122,255]],
    ['Total expenses',fmt(netExpenses),'ex-GST',[255,149,0]],
-   ['Net profit',fmt(netProfit),netProfit>=0?'Profit':'Loss',[52,199,89]]
+   ['Net profit',fmt(netProfit),netProfit>=0?'Profit':'Loss',[15,157,79]]
   ].forEach(function(item,i){
     var cx=M+i*(cols3+4);
     doc.setFillColor(245,245,247);
@@ -2202,7 +2198,7 @@ function exportPLReport(){
   }
 
   // ── NET PROFIT ──
-  doc.setFillColor(netProfit>=0?52:255, netProfit>=0?199:59, netProfit>=0?89:48);
+  doc.setFillColor(netProfit>=0?15:255, netProfit>=0?157:59, netProfit>=0?79:48);
   doc.roundedRect(M,y,cw,12,2,2,'F');
   doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(255,255,255);
   doc.text('Net '+(netProfit>=0?'Profit':'Loss')+' (ex-GST)',M+4,y+8);
@@ -2230,7 +2226,7 @@ function exportPLReport(){
     doc.setFont('helvetica',i===((new Date().getMonth()-3+12)%12)?'bold':'normal'); doc.setFontSize(8);
     doc.text(m+' '+( i<9?FY.start.getFullYear():FY.end.getFullYear()),mc.month,y);
     doc.text(fmt(inc),mc.income,y); doc.text(exp>0?fmt(exp):'—',mc.expenses,y);
-    if(profit>=0) doc.setTextColor(52,199,89); else doc.setTextColor(255,59,48);
+    if(profit>=0) doc.setTextColor(15,157,79); else doc.setTextColor(255,59,48);
     doc.text(fmt(profit),mc.profit,y,{align:'right'});
     doc.setTextColor(0,0,0); y+=6.5;
   });
@@ -2513,7 +2509,6 @@ function renderIncomeTab(){
 
   $el('hero-amount').textContent=fmt(received);
   var hg=document.getElementById('hero-gross'); if(hg) hg.textContent=fmt(grossInvoiced);
-  var hgc=document.getElementById('hero-gst-collected'); if(hgc) hgc.textContent=fmt(gstCollected);
   $el('hero-period').textContent=FY.range;
   renderOverviewExtras(fy);
   // ── Income tax on income tab ──
@@ -2637,7 +2632,7 @@ function renderClientDetail(clientName, detailId){
   var html='';
 
   // W/H summary rows
-  html+='<div class="wh-row"><span class="wh-row-lbl">Total invoiced</span><span class="wh-row-val c-blue">'+fmt(totalInv)+'</span></div>';
+  html+='<div class="wh-row"><span class="wh-row-lbl">Total invoiced</span><span class="wh-row-val">'+fmt(totalInv)+'</span></div>';
   html+='<div class="wh-row"><span class="wh-row-lbl">Total received</span><span class="wh-row-val c-green">'+fmt(totalRec)+'</span></div>';
   if(totalOut>0) html+='<div class="wh-row"><span class="wh-row-lbl">Outstanding</span><span class="wh-row-val c-orange">'+fmt(totalOut)+'</span></div>';
   if(totalWHT>0){
@@ -2738,7 +2733,7 @@ function renderSources(fyInvoices){
     html+='<div style="display:flex;padding:0 16px 14px;gap:0">';
     html+='<div style="flex:1;'+(colCount>1?'border-right:0.5px solid var(--sep);padding-right:12px':'')+'">';
     html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">Gross</div>';
-    html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--blue)">'+fmt(c.invoiced)+'</div>';
+    html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--t1)">'+fmt(c.invoiced)+'</div>';
     html+='</div>';
     if(hasGST){
       html+='<div style="flex:1;padding-left:12px;'+(hasWHT?'border-right:0.5px solid var(--sep);padding-right:12px':'')+'">';
@@ -2798,7 +2793,7 @@ function drawChart(fyInvoices){
   var isDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
   var t3c=isDark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.35)';
   var sepc=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)';
-  var greenC=isDark?'#30D158':'#34C759';
+  var greenC=isDark?'#30D158':'#0F9D4F';
   var blueBar=isDark?'rgba(10,132,255,0.30)':'rgba(0,122,255,0.18)';
   var blueLine=isDark?'#0A84FF':'#007AFF';
   var nowMonth=new Date().getMonth();
@@ -2969,8 +2964,8 @@ function invCard(inv){
   }
   var whtBadge=wr>0?'<span class="badge" style="background:rgba(175,82,222,0.12);color:var(--purple)">W/H '+wr+'%</span>':'';
   var isVerified=window._matchedInvIds?window._matchedInvIds.has(String(inv.id)):bankTxns.some(function(t){return t.matched_invoice_id&&String(t.matched_invoice_id)===String(inv.id);});
-  var verifiedBadge=isVerified?'<span class="badge" style="background:rgba(52,199,89,.12);color:var(--green)">&#x2713; Verified</span>':'';
-  var grossSub=inv.status==='paid'&&whtAmt>0?'<div style="font-size:11px;color:var(--blue);opacity:0.7;text-align:right">of '+fmt(amt)+'</div>':'';
+  var verifiedBadge=isVerified?'<span class="badge" style="background:rgba(15,157,79,.12);color:var(--green)">&#x2713; Verified</span>':'';
+  var grossSub=inv.status==='paid'&&whtAmt>0?'<div style="font-size:11px;color:var(--t3);text-align:right">of '+fmt(amt)+'</div>':'';
   var html='<div class="r-card" data-iid="'+esc(String(inv.id))+'">';
   html+='<div class="r-bar" style="background:'+c+'"></div>';
   html+='<div class="r-body">';
@@ -3078,7 +3073,7 @@ function renderClientsTab(){
     html+='<div style="display:flex;padding:0 16px 14px;gap:0">';
     html+='<div style="flex:1;'+(hasGST2||hasWHT2?'border-right:0.5px solid var(--sep);padding-right:12px':'')+'">'
     html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">Gross</div>';
-    html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--blue)">'+fmt(c.invoiced)+'</div>';
+    html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--t1)">'+fmt(c.invoiced)+'</div>';
     html+='</div>';
     if(hasGST2){
       html+='<div style="flex:1;padding-left:12px;'+(hasWHT2?'border-right:0.5px solid var(--sep);padding-right:12px':'')+'">'
@@ -3378,7 +3373,7 @@ function renderAssets(){
     if(r.disposedThisFY)        badge = '<span class="badge" style="background:rgba(255,149,0,.12);color:var(--orange)">Sold this FY</span>';
     else if(r.disposed)         badge = '<span class="badge" style="background:rgba(120,120,128,.12);color:var(--t3)">Disposed</span>';
     else if(r.fullyDepreciated) badge = '<span class="badge" style="background:rgba(120,120,128,.12);color:var(--t3)">Fully depreciated</span>';
-    else if(r.lowValue)         badge = '<span class="badge" style="background:rgba(52,199,89,.12);color:var(--green)">Low value</span>';
+    else if(r.lowValue)         badge = '<span class="badge" style="background:rgba(15,157,79,.12);color:var(--green)">Low value</span>';
     else if(r.notYetOwned)      badge = '<span class="badge" style="background:rgba(120,120,128,.12);color:var(--t3)">Not yet owned</span>';
 
     var boostBadge = asset.investmentBoost ? ' \u00b7 \u26A1 Boost' : '';
@@ -4158,7 +4153,7 @@ function openInvDetail(id){
 
   // Status banner
   var banner=document.getElementById('inv-detail-banner');
-  var bannerColors={paid:'rgba(52,199,89,.12)',unpaid:'rgba(255,149,0,.12)',overdue:'rgba(255,59,48,.12)',review:'rgba(175,82,222,.12)',draft:'rgba(120,120,128,.1)'};
+  var bannerColors={paid:'rgba(15,157,79,.12)',unpaid:'rgba(255,149,0,.12)',overdue:'rgba(255,59,48,.12)',review:'rgba(175,82,222,.12)',draft:'rgba(120,120,128,.1)'};
   var bannerTextColors={paid:'var(--green)',unpaid:'var(--orange)',overdue:'var(--red)',review:'var(--purple)',draft:'var(--t3)'};
   banner.style.background=bannerColors[status]||'var(--fill)';
   $el('inv-detail-status-label').style.color=bannerTextColors[status]||'var(--t2)';
@@ -4266,7 +4261,7 @@ function renderInvBin(){
       +'<div style="font-size:12px;color:var(--t3);margin-top:2px">'+fmtDate(inv.date)+' &middot; Deleted '+fmtDate(inv.deletedAt)+'</div></div>'
       +'<div style="font-size:17px;font-weight:700">'+fmt(inv.amount)+'</div></div>'
       +'<div style="display:flex;gap:8px">'
-      +'<button data-bi="'+i+'" class="bin-restore" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(52,199,89,.12);color:var(--green);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">&#x21A9; Restore</button>'
+      +'<button data-bi="'+i+'" class="bin-restore" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(15,157,79,.12);color:var(--green);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">&#x21A9; Restore</button>'
       +'<button data-bi="'+i+'" class="bin-perm" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,59,48,.1);color:var(--red);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">Delete forever</button>'
       +'</div></div>';
   }).join('');
@@ -4498,7 +4493,7 @@ function updatePaidSummary(){
   el.style.display='block';
   if(gross>0&&net>0){
     if(valid){
-      el.style.background='rgba(52,199,89,.1)';
+      el.style.background='rgba(15,157,79,.1)';
       el.style.color='var(--green)';
       el.textContent='✓ Numbers check out — (Gross + GST) − W/H = Net';
     } else {

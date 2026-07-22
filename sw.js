@@ -1,4 +1,4 @@
-const VERSION = '1.9.0';
+const VERSION = '2.0.3';
 const CACHE = 'income-nz-' + VERSION;
 const SHELL = [
   '/income-nz/',
