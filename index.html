@@ -1441,6 +1441,12 @@ body{
       <div class="g-list" style="margin-bottom:12px">
         <div class="g-row" style="align-items:flex-start;padding-top:14px;padding-bottom:14px">
           <div class="g-icon" style="background:var(--fill);margin-top:2px">&#x1F4DD;</div>
+          <div style="width:100%">
+            <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:9px">Colour</div>
+            <div id="cp-colour-swatches" style="display:flex;gap:9px;flex-wrap:wrap"></div>
+          </div>
+        </div>
+        <div class="g-row">
           <textarea class="g-input" id="cp-notes" placeholder="Any notes about this client&#x2026;" rows="2" style="resize:none;line-height:1.45;padding-top:1px"></textarea>
         </div>
       </div>
@@ -2606,10 +2612,18 @@ function renderIncomeTab(){
 }
 
 /* ── Client colour helper ── */
+/* Client colours — one source of truth, used by the donut, the client
+   cards and anywhere else a client is represented by colour. A saved
+   override wins; otherwise the name is hashed so the colour is stable
+   regardless of sort order or how many clients exist. */
+var CLIENT_PALETTE=['#007AFF','#34C759','#FF9500','#AF52DE','#FF3B30','#5AC8FA','#FF2D55','#30B0C7','#32ADE6','#64D2FF','#BF5AF2','#FF6961','#FFD60A','#30D158'];
+
 function clientColour(name){
-  var colours=['#007AFF','#34C759','#FF9500','#AF52DE','#FF3B30','#5AC8FA','#FF2D55','#30B0C7','#32ADE6','#64D2FF','#BF5AF2','#FF6961','#FFD60A','#30D158'];
+  if(!name) return CLIENT_PALETTE[0];
+  var p=getClientProfile(name);
+  if(p&&p.colour) return p.colour;
   var hash=0; for(var i=0;i<name.length;i++) hash=(hash*31+name.charCodeAt(i))&0xFFFF;
-  return colours[hash%colours.length];
+  return CLIENT_PALETTE[hash%CLIENT_PALETTE.length];
 }
 
 function clientId(name){
@@ -2817,9 +2831,12 @@ function drawChart(fyInvoices){
   var isDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
   var t3c=isDark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.35)';
   var sepc=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)';
-  var greenC=isDark?'#30D158':'#0F9D4F';
-  var blueBar=isDark?'rgba(10,132,255,0.30)':'rgba(0,122,255,0.18)';
-  var blueLine=isDark?'#0A84FF':'#007AFF';
+  // Chart colours follow the app-wide system: gross is neutral, net is green.
+  // The trend line traces the received series, so it takes a darker green
+  // rather than an unrelated blue.
+  var netC=isDark?'#30D158':'#0F9D4F';
+  var grossBar=isDark?'rgba(255,255,255,0.16)':'rgba(10,10,10,0.13)';
+  var trendC=isDark?'#5BE07F':'#053D1F';
   var nowMonth=new Date().getMonth();
   var curIdx=(nowMonth-3+12)%12;
 
@@ -2839,8 +2856,8 @@ function drawChart(fyInvoices){
     var bx=pL+i*bw+bw*0.10;
     var ih=(invoiced[i]/niceMax)*cH;
     var rh=(received[i]/niceMax)*cH;
-    if(ih>0) html+='<rect x="'+bx+'" y="'+(pT+cH-ih)+'" width="'+barW+'" height="'+ih+'" fill="'+blueBar+'" rx="2"/>';
-    if(rh>0) html+='<rect x="'+(bx+barW+gap)+'" y="'+(pT+cH-rh)+'" width="'+barW+'" height="'+rh+'" fill="'+greenC+'" rx="2"/>';
+    if(ih>0) html+='<rect x="'+bx+'" y="'+(pT+cH-ih)+'" width="'+barW+'" height="'+ih+'" fill="'+grossBar+'" rx="2"/>';
+    if(rh>0) html+='<rect x="'+(bx+barW+gap)+'" y="'+(pT+cH-rh)+'" width="'+barW+'" height="'+rh+'" fill="'+netC+'" rx="2"/>';
     var tx=pL+i*bw+bw*0.5, ty=yp(received[i]);
     trendPts.push(tx+','+ty);
     // X label
@@ -2851,23 +2868,23 @@ function drawChart(fyInvoices){
 
   // Trend line
   if(trendPts.length>1){
-    html+='<polyline points="'+trendPts.join(' ')+'" fill="none" stroke="'+blueLine+'" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    html+='<polyline points="'+trendPts.join(' ')+'" fill="none" stroke="'+trendC+'" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>';
     trendPts.forEach(function(pt,i){
       if(received[i]>0||invoiced[i]>0){
         var parts=pt.split(',');
-        html+='<circle cx="'+parts[0]+'" cy="'+parts[1]+'" r="2.5" fill="'+blueLine+'"/>';
+        html+='<circle cx="'+parts[0]+'" cy="'+parts[1]+'" r="2.5" fill="'+trendC+'"/>';
       }
     });
   }
 
   // Legend
   var ly2=H-4;
-  html+='<rect x="'+pL+'" y="'+(ly2-7)+'" width="8" height="7" fill="'+blueBar+'" rx="1"/>';
-  html+='<text x="'+(pL+11)+'" y="'+ly2+'" font-size="8" fill="'+t3c+'" font-family="-apple-system,sans-serif">Invoiced</text>';
-  html+='<rect x="'+(pL+58)+'" y="'+(ly2-7)+'" width="8" height="7" fill="'+greenC+'" rx="1"/>';
-  html+='<text x="'+(pL+69)+'" y="'+ly2+'" font-size="8" fill="'+t3c+'" font-family="-apple-system,sans-serif">Received</text>';
-  html+='<line x1="'+(pL+118)+'" y1="'+(ly2-3)+'" x2="'+(pL+128)+'" y2="'+(ly2-3)+'" stroke="'+blueLine+'" stroke-width="1.5"/>';
-  html+='<text x="'+(pL+131)+'" y="'+ly2+'" font-size="8" fill="'+t3c+'" font-family="-apple-system,sans-serif">Trend</text>';
+  html+='<rect x="'+pL+'" y="'+(ly2-7)+'" width="8" height="7" fill="'+grossBar+'" rx="1"/>';
+  html+='<text x="'+(pL+11)+'" y="'+ly2+'" font-size="8" fill="'+t3c+'" font-family="-apple-system,sans-serif">Gross</text>';
+  html+='<rect x="'+(pL+44)+'" y="'+(ly2-7)+'" width="8" height="7" fill="'+netC+'" rx="1"/>';
+  html+='<text x="'+(pL+55)+'" y="'+ly2+'" font-size="8" fill="'+t3c+'" font-family="-apple-system,sans-serif">Net</text>';
+  html+='<line x1="'+(pL+88)+'" y1="'+(ly2-3)+'" x2="'+(pL+98)+'" y2="'+(ly2-3)+'" stroke="'+trendC+'" stroke-width="1.5"/>';
+  html+='<text x="'+(pL+101)+'" y="'+ly2+'" font-size="8" fill="'+t3c+'" font-family="-apple-system,sans-serif">Trend</text>';
 
   svg.innerHTML=html;
 
@@ -2893,8 +2910,8 @@ function drawChart(fyInvoices){
     if(col<0||col>11){tooltipEl.style.opacity='0';return;}
     var inv=received[col], inv2=invoiced[col];
     if(inv2===0&&inv===0){tooltipEl.style.opacity='0';return;}
-    tooltipEl.textContent=months[col]+': '+fmt(inv)+' received';
-    if(inv2>0&&inv2!==inv) tooltipEl.textContent+=', '+fmt(inv2)+' invoiced';
+    tooltipEl.textContent=months[col]+': '+fmt(inv)+' net';
+    if(inv2>0&&inv2!==inv) tooltipEl.textContent+=' \u00b7 '+fmt(inv2)+' gross';
     var tipX=rect.left+((pL+(col+0.5)*cW/12)/W)*svgW;
     var tipY=rect.top-8;
     tooltipEl.style.left=tipX+'px';
@@ -5245,13 +5262,14 @@ function renderOverviewExtras(fyInvoices){
   });
   var sorted=Object.entries(clients).sort(function(a,b){return b[1]-a[1];});
   var total=sorted.reduce(function(s,c){return s+c[1];},0);
-  var colours=['#007AFF','#34C759','#FF9500','#AF52DE','#FF3B30','#5AC8FA','#FF2D55','#30B0C7','#32ADE6','#64D2FF','#BF5AF2','#FF6961','#FFD60A','#30D158'];
+  // Colours come from clientColour() so a client keeps the same colour here
+  // as on the Clients tab, regardless of who earned the most this period.
 
   // Build SVG donut — centred, larger
   var size=180,cx=90,cy2=90,outerR=82,innerR=62,startAngle=-Math.PI/2;
   var slices='',legend='';
   sorted.forEach(function(pair,i){
-    var col=colours[i%colours.length];
+    var col=clientColour(pair[0]);
     var pct=pair[1]/total;
     var angle=pct*Math.PI*2;
     var endAngle=startAngle+angle;
@@ -5361,6 +5379,8 @@ function openClientProfile(name, prefill){
   var notes=(existing&&existing.notes)||'';
   if(!existing&&scan&&scan.reference&&!notes) notes='Ref: '+scan.reference;
   $el('cp-notes').value=notes;
+  _cpColour=(existing&&existing.colour)||null;
+  renderColourSwatches();
   $el('cp-delete-btn').style.display=existing?'block':'none';
   // Show a hint if pre-filled from scan
   var hint='';
@@ -5370,6 +5390,36 @@ function openClientProfile(name, prefill){
   var hintEl=document.getElementById('cp-scan-hint');
   if(hintEl){hintEl.textContent=hint;hintEl.style.display=hint?'block':'none';}
   openModal('modal-client-profile');
+}
+
+
+/* ── Client colour picker ── */
+var _cpColour = null;   // null = use the automatic hashed colour
+
+function renderColourSwatches(){
+  var wrap = document.getElementById('cp-colour-swatches');
+  if(!wrap) return;
+  var html = '';
+
+  // "Auto" — clears any override and falls back to the hashed colour
+  var autoSel = _cpColour === null;
+  html += '<button type="button" onclick="pickClientColour(null)" title="Automatic" '
+       +  'style="width:30px;height:30px;border-radius:50%;cursor:pointer;padding:0;'
+       +  'background:linear-gradient(135deg,#007AFF,#34C759,#FF9500,#FF3B30);'
+       +  'border:' + (autoSel ? '3px solid var(--t1)' : '1px solid var(--sep)') + '"></button>';
+
+  CLIENT_PALETTE.forEach(function(col){
+    var sel = _cpColour === col;
+    html += '<button type="button" onclick="pickClientColour(\'' + col + '\')" '
+         +  'style="width:30px;height:30px;border-radius:50%;cursor:pointer;padding:0;background:' + col + ';'
+         +  'border:' + (sel ? '3px solid var(--t1)' : '1px solid rgba(0,0,0,.08)') + '"></button>';
+  });
+  wrap.innerHTML = html;
+}
+
+function pickClientColour(col){
+  _cpColour = col;
+  renderColourSwatches();
 }
 
 function saveClientProfile(){
@@ -5383,12 +5433,14 @@ function saveClientProfile(){
     gst:$el('cp-gst').value,
     terms:parseInt($el('cp-terms').value)||30,
     notes:$el('cp-notes').value.trim()||null,
+    colour:_cpColour||null,
     updatedAt:new Date().toISOString()
   };
   setClientProfile(name, profile);
   window._lastRemittanceScan=null;
   closeModal('modal-client-profile');
   renderClientsTab();
+  if(currentTab==='overview') renderIncomeTab();   // donut picks up the new colour
   showToast('Client saved');
 }
 
