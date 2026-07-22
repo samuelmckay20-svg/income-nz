@@ -4,8 +4,8 @@
   "description": "NZ income tracking for sole traders",
   "start_url": "/income-nz/",
   "display": "standalone",
-  "background_color": "#F2F2F7",
-  "theme_color": "#F2F2F7",
+  "background_color": "#0F3A2A",
+  "theme_color": "#F5F5F7",
   "orientation": "portrait",
   "icons": [
     {
