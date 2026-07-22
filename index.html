@@ -15,7 +15,7 @@ button,input,select,textarea{font-family:inherit}
 
 :root{
   --blue:#007AFF;--red:#FF3B30;--orange:#FF9500;
-  --green:#34C759;--purple:#AF52DE;
+  --green:#34C759;--purple:#AF52DE;--teal:#00B5AD;
   --bg:#F5F5F7;--surface:#FFFFFF;
   --t1:#0A0A0A;--t2:rgba(10,10,10,0.72);
   --t3:rgba(10,10,10,0.42);--t4:rgba(10,10,10,0.20);
@@ -223,8 +223,6 @@ body{
 .empty-sub{font-size:14px;color:var(--t3);line-height:1.55;max-width:240px}
 
 /* ── FAB ── */
-.fab-quick{position:fixed;bottom:calc(var(--safe-bottom) + 90px);right:80px;width:44px;height:44px;border-radius:50%;background:var(--fill);border:none;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.15);z-index:200;-webkit-tap-highlight-color:transparent;}
-.fab-quick:active{opacity:.8;transform:scale(.93)}
 .fab{
   position:fixed;right:20px;bottom:calc(var(--safe-bottom) + 74px);
   width:52px;height:52px;border-radius:26px;
@@ -464,9 +462,9 @@ body{
   <!-- Summary bar — other tabs only -->
   <div id="summary-bar" style="display:none">
     <div class="sum-row">
-      <div class="sum-card"><div class="sum-lbl">Gross</div><div class="sum-val c-blue" id="sum-invoiced">$0</div></div>
+      <div class="sum-card"><div class="sum-lbl">Gross</div><div class="sum-val" style="color:var(--blue)" id="sum-invoiced">$0</div></div>
       <div class="sum-card"><div class="sum-lbl">Received</div><div class="sum-val c-green" id="sum-received">$0</div></div>
-      <div class="sum-card"><div class="sum-lbl">Outstanding</div><div class="sum-val c-orange" id="sum-outstanding">$0</div></div>
+      <div class="sum-card"><div class="sum-lbl">Outstanding</div><div class="sum-val" style="color:var(--orange)" id="sum-outstanding">$0</div></div>
     </div>
     <div class="chips" id="period-chips">
       <button class="chip on" onclick="setPeriod('fy',this)">FY 25–26</button>
@@ -631,35 +629,22 @@ body{
       <div class="hero-wrap" style="padding-bottom:4px">
         <div class="hero-card">
           <div class="hero-lbl">Set aside for tax</div>
-          <div class="hero-amount" id="setaside-total" style="color:var(--orange)">$0</div>
+          <div class="hero-amount" id="setaside-total" style="color:var(--purple)">$0</div>
           <div class="hero-period" id="setaside-sub">Income tax + GST this period + ACC</div>
           <div class="hero-divider"></div>
-          <div style="background:var(--fill);border-radius:12px;overflow:hidden">
-        <!-- Breakdown rows -->
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--t1)">Income tax</div>
-            <div style="font-size:11px;color:var(--t3);margin-top:1px" id="setaside-tax-sub">Residual after W/H credit</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0">
+            <div><div style="font-size:13px;font-weight:600;color:var(--t1)">Income tax</div><div style="font-size:11px;color:var(--t3);margin-top:1px" id="setaside-tax-sub">Residual after W/H credit</div></div>
+            <div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums" id="setaside-tax">$0</div>
           </div>
-          <div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums" id="setaside-tax">$0</div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--t1)">GST this period</div>
-            <div style="font-size:11px;color:var(--t3);margin-top:1px" id="setaside-gst-sub">Current unfiled period</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:0.5px solid var(--sep)">
+            <div><div style="font-size:13px;font-weight:600;color:var(--t1)">GST this period</div><div style="font-size:11px;color:var(--t3);margin-top:1px" id="setaside-gst-sub">Current unfiled period</div></div>
+            <div style="font-size:17px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums" id="setaside-gst">$0</div>
           </div>
-          <div style="font-size:17px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums" id="setaside-gst">$0</div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--t1)">ACC levies</div>
-            <div style="font-size:11px;color:var(--t3);margin-top:1px">Earner + working cover</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:0.5px solid var(--sep)">
+            <div><div style="font-size:13px;font-weight:600;color:var(--t1)">ACC levies</div><div style="font-size:11px;color:var(--t3);margin-top:1px">Earner + working cover</div></div>
+            <div style="font-size:17px;font-weight:700;color:var(--teal);font-variant-numeric:tabular-nums" id="setaside-acc">$0</div>
           </div>
-          <div style="font-size:17px;font-weight:700;color:var(--purple);font-variant-numeric:tabular-nums" id="setaside-acc">$0</div>
         </div>
-
-        <!-- Monthly suggestion -->
-      </div>
       </div><!-- /set-aside hero-wrap -->
 
       <div class="hero-wrap" style="padding-bottom:4px">
@@ -671,17 +656,17 @@ body{
           <div class="hero-stats">
             <div class="hero-stat" style="min-width:0">
               <div class="hs-lbl" style="font-size:9px">Taxable income</div>
-              <div class="hs-val c-blue" style="font-size:15px;letter-spacing:-0.4px" id="tax-gross">$0</div>
+              <div class="hs-val c-blue" style="font-size:17px;letter-spacing:-0.5px" id="tax-gross">$0</div>
             </div>
             <div class="hero-stat-sep"></div>
             <div class="hero-stat" style="padding-left:10px;min-width:0">
               <div class="hs-lbl" style="font-size:9px">Total tax</div>
-              <div class="hs-val c-red" style="font-size:15px;letter-spacing:-0.4px" id="tax-total-all">$0</div>
+              <div class="hs-val c-red" style="font-size:17px;letter-spacing:-0.5px" id="tax-total-all">$0</div>
             </div>
             <div class="hero-stat-sep"></div>
             <div class="hero-stat" style="padding-left:10px;min-width:0">
               <div class="hs-lbl" style="font-size:9px">W/H paid</div>
-              <div class="hs-val c-green" style="font-size:15px;letter-spacing:-0.4px" id="tax-wht-paid">$0</div>
+              <div class="hs-val c-green" style="font-size:17px;letter-spacing:-0.5px" id="tax-wht-paid">$0</div>
             </div>
           </div>
           <div class="hero-divider" style="margin-top:16px"></div>
@@ -732,7 +717,7 @@ body{
         </div>
         <div style="padding:20px 16px 16px;text-align:center;border-bottom:0.5px solid var(--sep)">
           <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Net GST to pay IRD</div>
-          <div style="font-size:42px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-1px" id="gst-box15">$0</div>
+          <div style="font-size:42px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--orange)" id="gst-box15">$0</div>
           <div style="font-size:12px;color:var(--t3);margin-top:4px" id="gst-box15-sub">Output minus input</div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
@@ -753,7 +738,7 @@ body{
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(0,122,255,.06)">
           <div><div style="font-size:13px;font-weight:700;color:var(--blue)">Amount to pay IRD</div><div style="font-size:11px;color:var(--t3);margin-top:1px">Output minus input</div></div>
-          <div style="font-size:17px;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums" id="gst-box15b">$0</div>
+          <div style="font-size:17px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums" id="gst-box15b">$0</div>
         </div>
         <div style="padding:12px 16px;border-top:0.5px solid var(--sep);display:flex;flex-direction:column;gap:10px">
           <div style="display:flex;align-items:center;justify-content:space-between">
@@ -794,13 +779,13 @@ body{
             <div class="tax-sc-lbl">ACC total levy</div>
             <div class="tax-sc-sub" id="acc-working-sub">Earner + working cover</div>
           </div>
-          <div class="tax-sc-amount c-purple" id="acc-total">$0</div>
+          <div class="tax-sc-amount" style="color:var(--teal)" id="acc-total">$0</div>
         </div>
         <div class="tax-sc-divider"></div>
         <div class="tax-sc-stats">
-          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Earner's levy</div><div class="tax-sc-stat-val c-purple" id="acc-earner">$0</div></div>
+          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Earner's levy</div><div class="tax-sc-stat-val" style="color:var(--teal)" id="acc-earner">$0</div></div>
           <div class="tax-sc-stat-sep"></div>
-          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Working cover</div><div class="tax-sc-stat-val c-purple" id="acc-working">$0</div></div>
+          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Working cover</div><div class="tax-sc-stat-val" style="color:var(--teal)" id="acc-working">$0</div></div>
           <div class="tax-sc-stat-sep"></div>
           <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Liable earnings</div><div class="tax-sc-stat-val" id="acc-liable">$0</div></div>
         </div>
@@ -912,7 +897,6 @@ body{
 
   </div><!-- /tab-content -->
 
-  <button class="fab-quick" id="fab-quick" onclick="openQuickAdd()">&#x26A1;</button>
   <button class="fab hidden" id="fab" onclick="onFab()">＋</button>
 
   <div class="tab-bar">
@@ -971,6 +955,14 @@ body{
           <span class="g-val" style="color:var(--blue)">&#x203A;</span>
         </div>
       </div>
+      <div class="shdr">Data safety</div>
+      <div class="g-list" style="margin-bottom:8px">
+        <div class="g-row" style="cursor:pointer" onclick="closeModal('modal-account');restoreSnapshot()">
+          <div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F504;</div>
+          <span class="g-lbl">Restore last backup</span>
+          <span class="g-val" style="color:var(--blue)">&#x203A;</span>
+        </div>
+      </div>
       <div class="shdr">App</div>
       <div class="g-list">
         <div class="g-row"><div class="g-icon" style="background:var(--fill)">ℹ️</div><span class="g-lbl">Version</span><span class="g-val">1.0.0</span></div>
@@ -1015,43 +1007,6 @@ body{
 </div>
 
 <!-- ══ QUICK ADD MODAL ══ -->
-<div class="modal-bd" id="modal-quickadd">
-  <div class="modal-sheet">
-    <div class="modal-hdr">
-      <span></span>
-      <span class="modal-title">&#x26A1; Quick Add</span>
-      <button class="modal-close" onclick="closeModal('modal-quickadd')">Cancel</button>
-    </div>
-    <div class="modal-scroll" style="padding:0 0 16px">
-      <div style="text-align:center;padding:20px 16px 12px">
-        <div style="font-size:13px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Amount</div>
-        <div style="display:flex;align-items:center;justify-content:center;gap:4px">
-          <span style="font-size:32px;font-weight:300;color:var(--t3)">$</span>
-          <input type="number" id="qa-amount" inputmode="decimal" step="0.01" min="0" placeholder="0.00"
-            style="font-size:48px;font-weight:700;border:none;background:none;outline:none;font-family:inherit;color:var(--t1);width:180px;text-align:center;letter-spacing:-1px">
-        </div>
-      </div>
-      <div class="g-list">
-        <div class="g-row">
-          <div class="g-icon" style="background:rgba(0,122,255,.12)">&#x1F3E2;</div>
-          <span class="g-lbl">Client</span>
-          <input class="g-input" type="text" id="qa-client" placeholder="Client name" autocapitalize="words"
-            oninput="onClientInput('qa-client','qa-client-hint')" onblur="onClientBlur('qa-client')">
-        </div>
-        <div id="qa-client-hint" style="display:none;padding:8px 16px;font-size:12px;color:var(--blue);cursor:pointer;background:rgba(0,122,255,.06);border-top:0.5px solid var(--sep)"></div>
-        <div class="g-row"><div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F4C5;</div><span class="g-lbl">Date</span><input class="g-input" type="date" id="qa-date"></div>
-        <div class="g-row"><div class="g-icon" style="background:rgba(52,199,89,.12)">&#x1F9EE;</div><span class="g-lbl">GST</span><select class="g-select" id="qa-gst"><option value="yes">15% GST included</option><option value="no">No GST</option></select></div>
-        <div class="g-row"><div class="g-icon" style="background:rgba(175,82,222,.12)">&#x1F3DB;&#xFE0F;</div><span class="g-lbl">W/H rate</span><select class="g-select" id="qa-wht"><option value="0">None</option><option value="20">20%</option><option value="33">33%</option></select></div>
-      </div>
-      <div style="padding:8px 16px 0">
-        <button class="btn-primary" onclick="saveQuickAdd()">Save Invoice</button>
-      </div>
-      <div style="padding:8px 16px 0">
-        <button onclick="closeModal('modal-quickadd');openNewInvoice()" style="width:100%;padding:13px;border-radius:14px;border:none;background:none;font-family:inherit;font-size:15px;color:var(--blue);cursor:pointer">Add with file / scan instead &#x2192;</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- ══ ADD/EDIT INVOICE MODAL ══ -->
 <div class="modal-bd" id="modal-invoice">
@@ -1322,7 +1277,7 @@ body{
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
           <div style="padding:14px 16px;border-bottom:0.5px solid var(--sep);border-right:0.5px solid var(--sep)">
             <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Gross invoice</div>
-            <div id="id-gross" style="font-size:22px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums">—</div>
+            <div id="id-gross" style="font-size:22px;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums">—</div>
           </div>
           <div style="padding:14px 16px;border-bottom:0.5px solid var(--sep)">
             <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">GST collected</div>
@@ -1600,7 +1555,6 @@ function switchTab(name){
   var isIncome=name==='overview';
   document.getElementById('summary-bar').style.display=isIncome?'none':'block';
   document.getElementById('fab').classList.toggle('hidden',isIncome||name==='gst');
-  var qf=document.getElementById('fab-quick'); if(qf) qf.style.display=name==='gst'||name==='bank'?'none':'flex';
   refreshFY();
   // Only render what's needed for the active tab
   if(name==='overview') renderIncomeTab();
@@ -2282,36 +2236,119 @@ function loadFromServer(){
   .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
   .then(function(data){
     if(!data)return;
+
+    // ── SAFETY GUARDS ──────────────────────────────────────────────
+    // A malformed, empty, or partial server response must never be
+    // allowed to overwrite good local data. Bail out instead.
+
+    // Guard 0: response must actually contain an invoices array.
+    // A missing key means a broken response, not "you have no invoices".
+    if(!Array.isArray(data.invoices)){
+      console.error('[sync] Aborted: server response had no invoices array', data);
+      showToast('Sync failed \u2014 bad server response. Your data is safe.');
+      return;
+    }
+
     var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
-    var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id))&&i.client&&parseFloat(i.amount)>0;});
+    var serverInvoices=data.invoices.filter(function(i){
+      return !binnedIds.has(String(i.id))&&i.client&&parseFloat(i.amount)>0;
+    });
+
+    // How many invoices do we hold locally that the server should also have?
+    var localServerBacked=invoices.filter(function(i){
+      return !String(i.id).startsWith('local_');
+    }).length;
+
+    // Guard 1: server returned nothing but we hold real records.
+    if(serverInvoices.length===0&&localServerBacked>0){
+      console.error('[sync] Aborted: server returned 0 invoices, local has '+localServerBacked);
+      showToast('Sync aborted \u2014 server returned no data. Local data kept.');
+      return;
+    }
+
+    // Guard 2: server returned far fewer records than we hold.
+    // Only applies once there is enough data for the ratio to be meaningful.
+    if(localServerBacked>=4&&serverInvoices.length<localServerBacked*0.5){
+      console.error('[sync] Aborted: server has '+serverInvoices.length+', local has '+localServerBacked);
+      showToast('Sync aborted \u2014 server data incomplete ('+serverInvoices.length+' vs '+localServerBacked+'). Local data kept.');
+      return;
+    }
+
+    // Passed the guards \u2014 snapshot current state so it can be rolled back.
+    snapshotLocalData();
+
+    // ── MERGE ──────────────────────────────────────────────────────
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
-    // Keep genuinely unsynced local items
-    // Keep all local_ items — includes stubs being filled AND unsynced invoices
     var unsyncedLocal=invoices.filter(function(i){
       return String(i.id).startsWith('local_')&&!serverIds.has(String(i.id));
     });
     invoices=serverInvoices.concat(unsyncedLocal);
-    // Preserve excluded + matched flags from local bank data
-    var sBank=data.bankTxns||[];
-    var lBankMap={};
-    bankTxns.forEach(function(t){lBankMap[t.id]=t;});
-    bankTxns=sBank.map(function(t){
-      var l=lBankMap[t.id];
-      if(l){
-        if(l.excluded) t.excluded=true;
-        if(l.matched_invoice_id) t.matched_invoice_id=l.matched_invoice_id;
-      }
-      return t;
-    });
-    // Keep any local-only bank txns not yet on server
-    sBank.forEach(function(t){delete lBankMap[t.id];});
-    Object.values(lBankMap).forEach(function(t){bankTxns.push(t);});
-    settings=data.settings||settings;
+
+    // Bank: preserve local excluded + matched flags, keep local-only rows
+    var sBank=Array.isArray(data.bankTxns)?data.bankTxns:[];
+    var localBankCount=bankTxns.length;
+    if(sBank.length===0&&localBankCount>0){
+      // Server has no bank rows but we do \u2014 keep ours rather than wiping
+      console.warn('[sync] Server returned 0 bank txns, keeping '+localBankCount+' local');
+    } else {
+      var lBankMap={};
+      bankTxns.forEach(function(t){lBankMap[t.id]=t;});
+      bankTxns=sBank.map(function(t){
+        var l=lBankMap[t.id];
+        if(l){
+          if(l.excluded) t.excluded=true;
+          if(l.matched_invoice_id) t.matched_invoice_id=l.matched_invoice_id;
+        }
+        return t;
+      });
+      sBank.forEach(function(t){delete lBankMap[t.id];});
+      Object.values(lBankMap).forEach(function(t){bankTxns.push(t);});
+    }
+
+    // Settings: only replace when the server actually sent something.
+    // An empty object is truthy and would silently wipe local config.
+    if(data.settings&&Object.keys(data.settings).length>0) settings=data.settings;
+
     if(data.clientProfiles&&Object.keys(data.clientProfiles).length>0) clientProfiles=data.clientProfiles;
+
     repairInvoiceGST(); saveLocal(); renderAll();
     if(unsyncedLocal.length||binnedIds.size) syncToServer();
   })
   .catch(function(e){console.warn('Load:',e);});
+}
+
+/* ── Local data snapshot / rollback ── */
+function snapshotLocalData(){
+  try{
+    var snap={
+      at:new Date().toISOString(),
+      invoices:invoices.map(function(i){var c=Object.assign({},i);delete c.image;delete c.remittance_image;return c;}),
+      bankTxns:bankTxns,
+      settings:settings,
+      clientProfiles:clientProfiles
+    };
+    LS.set('nzin_snapshot',JSON.stringify(snap));
+  }catch(e){ /* snapshot is best-effort only */ }
+}
+
+function restoreSnapshot(){
+  var raw=LS.get('nzin_snapshot');
+  if(!raw){showToast('No backup available');return;}
+  var snap;
+  try{ snap=JSON.parse(raw); }catch(e){ showToast('Backup is unreadable'); return; }
+  if(!snap||!Array.isArray(snap.invoices)){showToast('Backup is invalid');return;}
+  var when=snap.at?new Date(snap.at).toLocaleString('en-NZ'):'unknown time';
+  showSheet('Restore '+snap.invoices.length+' invoices from '+when+'?',[
+    {label:'Restore backup',cls:'danger',fn:function(){
+      invoices=snap.invoices;
+      bankTxns=Array.isArray(snap.bankTxns)?snap.bankTxns:bankTxns;
+      if(snap.settings&&Object.keys(snap.settings).length) settings=snap.settings;
+      if(snap.clientProfiles&&Object.keys(snap.clientProfiles).length) clientProfiles=snap.clientProfiles;
+      saveLocal(); renderAll();
+      showToast('Restored '+snap.invoices.length+' invoices');
+    }},
+    {label:'Cancel',cls:'cancel'}
+  ]);
 }
 
 /* ── Formatting ── */
@@ -2553,11 +2590,13 @@ function renderSources(fyInvoices){
   var clients={};
   fyInvoices.forEach(function(inv){
     var c=inv.client;
-    if(!clients[c]) clients[c]={invoiced:0,received:0,count:0,wht:0};
-    clients[c].invoiced+=parseFloat(inv.amount)||0;
+    if(!clients[c]) clients[c]={invoiced:0,received:0,count:0,wht:0,gst:0};
+    var iAmt=parseFloat(inv.amount)||0;
+    clients[c].invoiced+=iAmt;
     clients[c].count++;
+    if(inv.gst==='yes') clients[c].gst+=Math.round(iAmt*3/23*100)/100;
     if(inv.status==='paid'){
-      clients[c].received+=parseFloat(inv.paid_amount||inv.amount)||0;
+      clients[c].received+=parseFloat(inv.paid_amount||iAmt)||0;
       var wa=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):(parseFloat(inv.amount)||0)*(parseFloat(inv.wht_rate)||0)/100;
       clients[c].wht+=wa;
     }
@@ -2572,7 +2611,6 @@ function renderSources(fyInvoices){
   sorted.forEach(function(name){
     var c=clients[name];
     var pct=Math.round((c.invoiced/maxInvoiced)*100);
-    var matchRate=c.invoiced>0?Math.round((c.received/c.invoiced)*100):0;
     var initials=name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
     var col=clientColour(name);
     var outstanding=fyInvoices.filter(function(i){return i.client===name&&i.status!=='paid';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
@@ -2585,31 +2623,35 @@ function renderSources(fyInvoices){
     html+='<div style="width:38px;height:38px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0">'+esc(initials)+'</div>';
     html+='<div style="flex:1;min-width:0">';
     html+=  '<div style="font-size:15px;font-weight:600;color:var(--t1);margin-bottom:2px">'+esc(name)+'</div>';
-    html+=  '<div style="font-size:12px;color:var(--t3)">'+c.count+' invoice'+(c.count!==1?'s':'')+' · '+matchRate+'% paid</div>';
     html+='</div>';
     html+='<div style="text-align:right;margin-right:8px">';
-    html+=  '<div style="font-size:17px;font-weight:700;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;color:var(--t1)">'+fmt(c.invoiced)+'</div>';
-    html+=  '<div style="font-size:11px;color:var(--t3)">invoiced</div>';
+    html+=  '<div style="font-size:17px;font-weight:700;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;color:var(--green)">'+fmt(c.received)+'</div>';
+    html+=  '<div style="font-size:11px;color:var(--t3)">net received</div>';
     html+='</div>';
     html+='<div class="client-chev">›</div>';
     html+='</div>';
 
-    // Progress bar
+
+    // Divider bar (always 100% — decorative)
     html+='<div style="height:3px;background:var(--fill);margin:0 16px 12px;border-radius:2px;overflow:hidden">';
-    html+='<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:2px"></div>';
+    html+='<div style="height:100%;width:100%;background:'+col+';border-radius:2px"></div>';
     html+='</div>';
 
-    // Bottom stats
+    // Bottom stats: Gross | GST | W/H
+    var hasGST=c.gst>0, hasWHT=c.wht>0;
+    var colCount=1+(hasGST?1:0)+(hasWHT?1:0);
     html+='<div style="display:flex;padding:0 16px 14px;gap:0">';
-    html+='<div style="flex:1;border-right:0.5px solid var(--sep);padding-right:12px">';
-    html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">Received</div>';
-    html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--green)">'+fmt(c.received)+'</div>';
+    html+='<div style="flex:1;'+(colCount>1?'border-right:0.5px solid var(--sep);padding-right:12px':'')+'">';
+    html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">Gross</div>';
+    html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--blue)">'+fmt(c.invoiced)+'</div>';
     html+='</div>';
-    html+='<div style="flex:1;padding-left:12px'+(c.wht>0?';border-right:0.5px solid var(--sep);padding-right:12px':'')+'">';
-    html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">Outstanding</div>';
-    html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:'+(outstanding>0?'var(--orange)':'var(--t3)')+'">'+fmt(outstanding)+'</div>';
-    html+='</div>';
-    if(c.wht>0){
+    if(hasGST){
+      html+='<div style="flex:1;padding-left:12px;'+(hasWHT?'border-right:0.5px solid var(--sep);padding-right:12px':'')+'">';
+      html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">GST</div>';
+      html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--orange)">'+fmt(c.gst)+'</div>';
+      html+='</div>';
+    }
+    if(hasWHT){
       html+='<div style="flex:1;padding-left:12px">';
       html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">W/H tax</div>';
       html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--purple)">'+fmt(c.wht)+'</div>';
@@ -2850,7 +2892,7 @@ function invCard(inv){
   var whtBadge=wr>0?'<span class="badge" style="background:rgba(175,82,222,0.12);color:var(--purple)">W/H '+wr+'%</span>':'';
   var isVerified=window._matchedInvIds?window._matchedInvIds.has(String(inv.id)):bankTxns.some(function(t){return t.matched_invoice_id&&String(t.matched_invoice_id)===String(inv.id);});
   var verifiedBadge=isVerified?'<span class="badge" style="background:rgba(52,199,89,.12);color:var(--green)">&#x2713; Verified</span>':'';
-  var grossSub=inv.status==='paid'&&whtAmt>0?'<div style="font-size:11px;color:var(--t3);text-align:right">of '+fmt(amt)+'</div>':'';
+  var grossSub=inv.status==='paid'&&whtAmt>0?'<div style="font-size:11px;color:var(--blue);opacity:0.7;text-align:right">of '+fmt(amt)+'</div>':'';
   var html='<div class="r-card" data-iid="'+esc(String(inv.id))+'">';
   html+='<div class="r-bar" style="background:'+c+'"></div>';
   html+='<div class="r-body">';
@@ -2885,9 +2927,10 @@ function renderClientsTab(){
   var clients={};
   invoices.forEach(function(inv){  // all time, not just FY
     var c=inv.client;
-    if(!clients[c]) clients[c]={invoiced:0,received:0,count:0,wht:0,hasUnpaid:false,hasOverdue:false};
+    if(!clients[c]) clients[c]={invoiced:0,received:0,count:0,wht:0,gst:0,hasUnpaid:false,hasOverdue:false};
     var amt=parseFloat(inv.amount)||0;
     clients[c].invoiced+=amt;
+    if(inv.gst==='yes') clients[c].gst+=Math.round(amt*3/23*100)/100;
     clients[c].count++;
     if(inv.status==='paid'){
       clients[c].received+=parseFloat(inv.paid_amount||amt)||0;
@@ -2919,7 +2962,6 @@ function renderClientsTab(){
   sorted.forEach(function(name){
     var c=clients[name];
     var pct=Math.round((c.invoiced/maxInvoiced)*100);
-    var matchRate=c.invoiced>0?Math.round((c.received/c.invoiced)*100):0;
     var initials=name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
     var col=clientColour(name);
     var outstanding=fy.filter(function(i){return i.client===name&&i.status!=='paid';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
@@ -2941,37 +2983,37 @@ function renderClientsTab(){
     html+=  '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+badges+'</div>';
     html+='</div>';
     html+='<div style="text-align:right;margin-right:8px">';
-    html+=  '<div style="font-size:18px;font-weight:700;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;color:var(--t1)">'+fmt(c.invoiced)+'</div>';
-    html+=  '<div style="font-size:11px;color:var(--t3)">'+c.count+' invoices</div>';
+    html+=  '<div style="font-size:18px;font-weight:700;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;color:var(--green)">'+fmt(c.received)+'</div>';
+    html+=  '<div style="font-size:11px;color:var(--t3)">net received</div>';
     html+='</div>';
     html+='<div class="client-chev">›</div>';
     html+='</div>';
 
-    // Progress bar
+
+    // Divider bar (always 100% — decorative)
     html+='<div style="height:3px;background:var(--fill);margin:0 16px 12px;border-radius:2px;overflow:hidden">';
-    html+='<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:2px"></div>';
+    html+='<div style="height:100%;width:100%;background:'+col+';border-radius:2px"></div>';
     html+='</div>';
 
-    // Stats row
+    // Stats row: Gross | GST | W/H
+    var hasGST2=c.gst>0, hasWHT2=c.wht>0;
     html+='<div style="display:flex;padding:0 16px 14px;gap:0">';
-
-    html+='<div style="flex:1;border-right:0.5px solid var(--sep);padding-right:12px">';
-    html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">Received</div>';
-    html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--green)">'+fmt(c.received)+'</div>';
+    html+='<div style="flex:1;'+(hasGST2||hasWHT2?'border-right:0.5px solid var(--sep);padding-right:12px':'')+'">'
+    html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">Gross</div>';
+    html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--blue)">'+fmt(c.invoiced)+'</div>';
     html+='</div>';
-
-    html+='<div style="flex:1;padding-left:12px'+(c.wht>0?';border-right:0.5px solid var(--sep);padding-right:12px':'')+'">';
-    html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">Outstanding</div>';
-    html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:'+(outstanding>0?'var(--orange)':'var(--t3)')+'">'+fmt(outstanding)+'</div>';
-    html+='</div>';
-
-    if(c.wht>0){
+    if(hasGST2){
+      html+='<div style="flex:1;padding-left:12px;'+(hasWHT2?'border-right:0.5px solid var(--sep);padding-right:12px':'')+'">'
+      html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">GST</div>';
+      html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--orange)">'+fmt(c.gst)+'</div>';
+      html+='</div>';
+    }
+    if(hasWHT2){
       html+='<div style="flex:1;padding-left:12px">';
       html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">W/H tax</div>';
       html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--purple)">'+fmt(c.wht)+'</div>';
       html+='</div>';
     }
-
     html+='</div>';
     html+='<div class="client-detail" id="'+id+'-d"></div>';
     html+='</div>';
@@ -3266,7 +3308,7 @@ function renderSetAside(grossIncome, tax, whtPaid, accTotal, gstCurrentPeriod){
   gs('setaside-acc', fmt(accTotal));
 
   var totalEl = document.getElementById('setaside-total');
-  if(totalEl) totalEl.style.color = total > 10000 ? 'var(--red)' : total > 5000 ? 'var(--orange)' : 'var(--green)';
+  if(totalEl) totalEl.style.color = 'var(--purple)';
 }
 
 /* ── Render Tax Tab ── */
@@ -4974,38 +5016,7 @@ async function doChangePassword(){
 }
 
 /* ── Quick add ── */
-function openQuickAdd(){
-  document.getElementById('qa-amount').value='';
-  document.getElementById('qa-client').value='';
-  document.getElementById('qa-date').value=today();
-  document.getElementById('qa-gst').value='yes';
-  document.getElementById('qa-wht').value=String(settings.defaultWHT||'0');
-  openModal('modal-quickadd');
-  setTimeout(function(){document.getElementById('qa-amount').focus();},400);
-}
 
-function saveQuickAdd(){
-  var amount=parseFloat(document.getElementById('qa-amount').value)||0;
-  var client=(document.getElementById('qa-client').value||'').trim();
-  var date=document.getElementById('qa-date').value;
-  var gst=document.getElementById('qa-gst').value;
-  var wht=parseFloat(document.getElementById('qa-wht').value)||0;
-  if(!client){showToast('Enter a client name');document.getElementById('qa-client').focus();return;}
-  if(!amount){showToast('Enter an amount');document.getElementById('qa-amount').focus();return;}
-  if(!date){showToast('Enter a date');return;}
-  var whtAmt=Math.round(amount*wht/100*100)/100;
-  var netAmt=amount-whtAmt;
-  var inv={
-    id:'local_'+Date.now(),client:client,amount:amount,date:date,due_date:null,
-    invoice_number:null,gst:gst,wht_rate:wht,wht_amount:whtAmt,
-    status:'paid',paid_date:date,paid_amount:netAmt,
-    source:'manual',_localOnly:true,
-    created_at:new Date().toISOString(),updated_at:new Date().toISOString()
-  };
-  invoices.unshift(inv);
-  save(); renderSummary(); renderInvoices(); closeModal('modal-quickadd');
-  showToast('Saved — '+client+' '+fmt(amount));
-}
 
 
 /* ── Client Profiles ── */
@@ -5417,7 +5428,7 @@ function scanMatchExisting(){
       +'<div class="r-body"><div class="r-top"><div>'
       +'<div class="r-title">'+esc(inv.client)+'</div>'
       +'<div class="r-sub">'+fmtDate(inv.date)+(inv.invoice_number?' · #'+esc(inv.invoice_number):'')+'</div>'
-      +'</div><div class="r-amount c-orange">'+fmt(inv.amount)+'</div></div></div></div>';
+      +'</div><div class="r-amount" style="color:var(--green)">'+fmt(inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):parseFloat(inv.amount)||0)+'</div></div></div></div>';
   });
   el.innerHTML=html;
   el.onclick=function(e){
