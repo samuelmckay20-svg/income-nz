@@ -611,7 +611,7 @@ body{
       </div>
       <!-- Buttons row -->
       <div style="padding:4px 16px 0;display:flex;gap:8px;align-items:center">
-        <button onclick="document.getElementById('csv-input').click()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x1F3E6; Import CSV</button>
+        <button onclick="$el('csv-input').click()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">&#x1F3E6; Import CSV</button>
         <button id="automatch-btn" onclick="runAutoMatch()" style="display:none;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:rgba(52,199,89,.12);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;margin-left:auto">&#x2728; Auto-match</button>
       </div>
       <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="onCSV(this)">
@@ -624,6 +624,7 @@ body{
     </div>
 
     <div id="tab-gst" class="tab-panel">
+      <div id="tax-rate-warning" style="display:none;margin:12px 16px 0;padding:12px 14px;background:rgba(255,149,0,.1);border:0.5px solid rgba(255,149,0,.3);border-radius:12px;font-size:12px;color:var(--t2);line-height:1.5"></div>
 
       <!-- ── Tax set-aside tracker ── -->
       <div class="hero-wrap" style="padding-bottom:4px">
@@ -857,6 +858,30 @@ body{
         </div>
       </div>
 
+      <!-- Dispose asset modal -->
+      <div class="modal-bd" id="modal-dispose">
+        <div class="modal-sheet" id="modal-dispose-sheet">
+          <div class="modal-hdr">
+            <div class="modal-title">Mark as disposed</div>
+            <button class="modal-close" onclick="closeModal('modal-dispose')">&#x2715;</button>
+          </div>
+          <div class="modal-scroll" style="padding:16px">
+            <div style="font-size:15px;font-weight:600;color:var(--t1);margin-bottom:4px" id="dispose-asset-name">&mdash;</div>
+            <div style="font-size:12px;color:var(--t3);margin-bottom:14px">Current book value <span id="dispose-book" style="font-weight:600;color:var(--t1)">&mdash;</span></div>
+            <div class="g-list">
+              <div class="g-row"><div class="g-icon">&#x1F4C5;</div><span class="g-lbl">Date sold / disposed</span><input class="g-input" id="dispose-date" type="date" style="max-width:160px;text-align:right"></div>
+              <div class="g-row"><div class="g-icon">&#x1F4B0;</div><span class="g-lbl">Sale price (0 if scrapped)</span><input class="g-input" id="dispose-proceeds" type="text" inputmode="decimal" placeholder="$0.00" style="max-width:120px;text-align:right"></div>
+            </div>
+            <div style="margin-top:12px;padding:12px;background:var(--fill);border-radius:12px;font-size:12px;color:var(--t3);line-height:1.5">
+              No depreciation can be claimed in the year an asset is disposed of. Instead, the difference between book value and sale price becomes either a deductible loss or recovered depreciation (taxable income), apportioned by business use.
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn-primary" onclick="confirmDisposeAsset()">Confirm disposal</button>
+          </div>
+        </div>
+      </div>
+
       <div class="shdr">Student loan</div>
       <div class="tax-section-card">
         <div class="tax-sc-header">
@@ -893,9 +918,9 @@ body{
 
 
     </div><!-- /tab-gst -->
-    </div>
+    </div><!-- /tab-content -->
 
-  </div><!-- /tab-content -->
+  </div><!-- /main-screen -->
 
   <button class="fab hidden" id="fab" onclick="onFab()">＋</button>
 
@@ -918,7 +943,6 @@ body{
       <span class="tab-icon">🏢</span><span>Clients</span>
     </button>
   </div>
-</div><!-- /main-screen -->
 </div><!-- /app -->
 
 <!-- ══ ACCOUNT MODAL ══ -->
@@ -976,7 +1000,6 @@ body{
         </div>
       </div>
       <div style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px">
-      </div>
         <button class="btn-primary" style="background:var(--red)" onclick="doLogout()">Sign out</button>
       </div>
     </div>
@@ -1092,7 +1115,7 @@ body{
     <div class="modal-scroll" style="padding:16px">
 
       <!-- Upload zone -->
-      <div class="upload-zone" id="scan-drop" onclick="document.getElementById('scan-file-input').click()" style="margin:0 0 16px">
+      <div class="upload-zone" id="scan-drop" onclick="$el('scan-file-input').click()" style="margin:0 0 16px">
         <div class="uz-icon">📄</div>
         <div class="uz-title" id="scan-zone-title">Upload invoice</div>
         <div class="uz-sub">PDF or photo · Claude will analyse it</div>
@@ -1428,6 +1451,43 @@ body{
 <script>
 'use strict';
 
+/* ── Null-safe DOM accessor ───────────────────────────────────────
+   Returns the element, or an inert stub if it is missing, so that a
+   single absent element cannot throw and abort an entire render.
+   Misses are logged once per id so they remain findable in the
+   console rather than failing silently.
+   NOTE: only used for direct property access. Code that needs to
+   branch on existence still uses document.getElementById + if(el). */
+var _missingEls = {};
+function $el(id){
+  var el = document.getElementById(id);
+  if(el) return el;
+  if(!_missingEls[id]){
+    _missingEls[id] = 1;
+    console.warn('[dom] missing element:', id);
+  } else {
+    _missingEls[id]++;
+  }
+  var noop = function(){ return null; };
+  return {
+    textContent:'', innerHTML:'', value:'', checked:false, disabled:false,
+    selectedIndex:-1, options:[], files:[], dataset:{}, style:{}, _stub:true,
+    classList:{ add:noop, remove:noop, toggle:noop, contains:function(){return false;} },
+    focus:noop, blur:noop, click:noop, remove:noop, select:noop,
+    addEventListener:noop, removeEventListener:noop, appendChild:noop,
+    setAttribute:noop, getAttribute:noop, removeAttribute:noop,
+    querySelector:noop, querySelectorAll:function(){return [];},
+    closest:noop, scrollIntoView:noop, getBoundingClientRect:function(){
+      return {top:0,left:0,right:0,bottom:0,width:0,height:0};
+    }
+  };
+}
+function missingElements(){
+  var k = Object.keys(_missingEls);
+  if(!k.length){ console.log('No missing elements recorded.'); return {}; }
+  console.table(_missingEls); return _missingEls;
+}
+
 /* ── Config ── */
 var APP_VERSION = '1.0.0';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
@@ -1440,6 +1500,17 @@ var LS = {
   del: function(k){ try{ localStorage.removeItem(k); }catch(e){} },
   keys: function(){ try{ return Object.keys(localStorage); }catch(e){ return []; } }
 };
+
+/* ── Tax rate provenance ──────────────────────────────────────────
+   These rates are hardcoded and must be re-checked when IRD updates
+   them (usually at Budget). TAX_RATES_FY is the FY they were verified
+   against; if the app is used in a later FY a warning is shown rather
+   than silently producing stale figures.
+   Sources: ird.govt.nz/income-tax/tax-rates
+            ird.govt.nz/student-loans  |  acc.co.nz/levies */
+var TAX_RATES_FY = 2025;              // verified for FY2025-26
+var TAX_RATES_CHECKED = '21 Jul 2026';
+var SL_THRESHOLD = 24128, SL_RATE = 0.12;
 
 var LS_TOKEN='nzin_token', LS_USER='nzin_username', LS_ROLE='nzin_role';
 var LS_SECRET='nzin_secret', LS_ETOKEN='nzin_etoken';
@@ -1487,8 +1558,8 @@ function clearAuth(){ LS.keys().forEach(function(k){ if(k.startsWith('nzin_'))LS
 function handle401(){ clearAuth(); showScreen('login-screen'); showToast('Session expired — please sign in again'); }
 
 function doLogin(){
-  var user=document.getElementById('l-user').value.trim();
-  var pass=document.getElementById('l-pass').value;
+  var user=$el('l-user').value.trim();
+  var pass=$el('l-pass').value;
   var errEl=document.getElementById('login-err');
   var btn=document.getElementById('login-btn');
   errEl.textContent='';
@@ -1526,9 +1597,9 @@ function doLogin(){
 function afterLogin(data){
   var uname=data.username||LS.get(LS_USER)||'?';
   var etoken=data.emailToken||LS.get(LS_ETOKEN)||'';
-  document.getElementById('nav-avatar').textContent=uname.charAt(0).toUpperCase();
-  document.getElementById('acct-name').textContent=uname;
-  document.getElementById('acct-email').textContent=etoken?'Receipts2026+'+etoken+'@gmail.com':'(loading\u2026)';
+  $el('nav-avatar').textContent=uname.charAt(0).toUpperCase();
+  $el('acct-name').textContent=uname;
+  $el('acct-email').textContent=etoken?'Receipts2026+'+etoken+'@gmail.com':'(loading\u2026)';
   refreshFY(); loadLocal(); loadAssets(); repairInvoiceGST(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
 }
 
@@ -1537,7 +1608,7 @@ function doLogout(){
     {label:'Sign out',cls:'danger',fn:function(){
       clearAuth(); invoices=[]; bankTxns=[]; settings={}; _imgCache.clear();
       closeModal('modal-account'); showScreen('login-screen');
-      document.getElementById('l-user').value=''; document.getElementById('l-pass').value='';
+      $el('l-user').value=''; $el('l-pass').value='';
     }},
     {label:'Cancel',cls:'cancel'}
   ]);
@@ -1551,10 +1622,10 @@ function switchTab(name){
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.dataset.tab===name);});
   document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.toggle('active',p.id==='tab-'+name);});
   var titles={overview:'Income',invoices:'Invoices',bank:'Bank',gst:'Tax',clients:'Clients'};
-  document.getElementById('nav-title').textContent=titles[name]||'';
+  $el('nav-title').textContent=titles[name]||'';
   var isIncome=name==='overview';
-  document.getElementById('summary-bar').style.display=isIncome?'none':'block';
-  document.getElementById('fab').classList.toggle('hidden',isIncome||name==='gst');
+  $el('summary-bar').style.display=isIncome?'none':'block';
+  $el('fab').classList.toggle('hidden',isIncome||name==='gst');
   refreshFY();
   // Only render what's needed for the active tab
   if(name==='overview') renderIncomeTab();
@@ -1566,7 +1637,7 @@ function switchTab(name){
 
 function setPeriod(p,btn){ currentPeriod=p; document.querySelectorAll('#period-chips .chip').forEach(function(c){c.classList.toggle('on',c===btn);}); renderAll(); }
 function setFilter(f,btn){ statusFilter=f; if(btn)document.querySelectorAll('#status-chips .chip').forEach(function(c){c.classList.toggle('on',c===btn);}); renderInvoices(); }
-function onFab(){ if(currentTab==='invoices')openAddInvoice(); else if(currentTab==='bank')document.getElementById('csv-input').click(); }
+function onFab(){ if(currentTab==='invoices')openAddInvoice(); else if(currentTab==='bank')$el('csv-input').click(); }
 
 /* ── Storage ── */
 function saveLocal(){
@@ -2381,9 +2452,9 @@ function renderSummary(){
       out+=a;
     }
   });
-  document.getElementById('sum-invoiced').textContent=fmtShort(gross);
-  document.getElementById('sum-received').textContent=fmtShort(rec);
-  document.getElementById('sum-outstanding').textContent=fmtShort(out);
+  $el('sum-invoiced').textContent=fmtShort(gross);
+  $el('sum-received').textContent=fmtShort(rec);
+  $el('sum-outstanding').textContent=fmtShort(out);
 }
 
 /* ── Render Income Tab ── */
@@ -2416,10 +2487,10 @@ function renderIncomeTab(){
   var whtPaid=whtTotal;     // alias used below
   var taxOwed=Math.max(0,gstOwed-whtPaid);
 
-  document.getElementById('hero-amount').textContent=fmt(received);
+  $el('hero-amount').textContent=fmt(received);
   var hg=document.getElementById('hero-gross'); if(hg) hg.textContent=fmt(grossInvoiced);
   var hgc=document.getElementById('hero-gst-collected'); if(hgc) hgc.textContent=fmt(gstCollected);
-  document.getElementById('hero-period').textContent=FY.range;
+  $el('hero-period').textContent=FY.range;
   renderOverviewExtras(fy);
   // ── Income tax on income tab ──
   var grossIncome=fy.filter(function(i){return i.status==='paid';}).reduce(function(s,i){var amt=parseFloat(i.amount)||0;return s+(i.gst==='yes'?amt/1.15:amt);},0);
@@ -2674,23 +2745,6 @@ function renderSources(fyInvoices){
 
 /* ── Next GST due ── */
 
-function nextGSTDue(){
-  var freq=settings.gstFreq||'2monthly';
-  var now=new Date(), m=now.getMonth(), y=now.getFullYear();
-  var periodEnds=freq==='1monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:freq==='6monthly'?[3,9]:[0,2,4,6,8,10];
-  for(var i=0;i<24;i++){
-    var pm=(m+i)%12, py=y+Math.floor((m+i)/12);
-    if(periodEnds.indexOf(pm)!==-1){
-      var end=new Date(py,pm+1,0);
-      if(end>=now){
-        var due=new Date(py,pm+1,28);
-        var days=Math.ceil((due-now)/86400000);
-        return{date:due.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'}),period:'Period ends '+end.toLocaleDateString('en-NZ',{month:'long',year:'numeric'})+' \u00b7 '+days+' days'};
-      }
-    }
-  }
-  return{date:'\u2014',period:'Set frequency below'};
-}
 
 /* ── SVG Chart ── */
 function drawChart(fyInvoices){
@@ -2781,7 +2835,7 @@ function drawChart(fyInvoices){
     tooltipEl=document.createElement('div');
     tooltipEl.id='chart-tooltip';
     tooltipEl.style.cssText='position:absolute;background:rgba(20,20,22,0.92);color:#fff;padding:6px 12px;border-radius:10px;font-size:13px;font-weight:600;pointer-events:none;opacity:0;transition:opacity .15s;white-space:nowrap;z-index:500;transform:translateX(-50%)';
-    document.getElementById('app').appendChild(tooltipEl);
+    $el('app').appendChild(tooltipEl);
   }
 
   var wrap=svg.parentElement;
@@ -3128,96 +3182,133 @@ function syncAssetsToServer(){
 }
 
 function calcDepreciation(asset, forFY){
-  // IRD-compliant calculation per ird.govt.nz/depreciation:
-  // 1. GST-registered: use ex-GST cost as depreciable base
-  // 2. Year 1: pro-rate by MONTHS, count part-months as whole months
-  // 3. Subsequent years: full year DV on closing book value from prior year
-  // 4. Investment Boost (assets purchased on/after 22 May 2025): optional 20%
-  //    immediate deduction in year 1, then DV on remaining 80%
+  /* IRD-compliant depreciation — ird.govt.nz/depreciation
+     1. GST-registered: ex-GST cost is the depreciable base
+     2. Year 1 pro-rated by MONTHS held; part-months count as whole months
+     3. Diminishing value applied to closing book value each subsequent year
+     4. Low-value assets (<$1,000 ex-GST): 100% written off in year of purchase,
+        with NO month pro-rating
+     5. Investment Boost (assets acquired on/after 22 May 2025): optional 20%
+        immediate deduction, then DV on the remaining 80%
+     6. Book value floors at zero — the residual is written off once it drops
+        below $1 rather than shrinking asymptotically forever
+     7. Disposed assets stop depreciating from the FY after disposal */
 
   var fy = forFY || FY;
-  var costRaw = parseFloat(asset.cost)||0;
-  // Ex-GST cost is the depreciable base for GST-registered taxpayers
-  var cost = asset.gstIncluded!==false ? Math.round(costRaw/1.15*100)/100 : costRaw;
-  var dvRate = (parseFloat(asset.rate)||0)/100;
-  var bizPct = (parseFloat(asset.bizPct)||100)/100;
+  var costRaw   = parseFloat(asset.cost)||0;
+  var cost      = asset.gstIncluded!==false ? Math.round(costRaw/1.15*100)/100 : costRaw;
+  var dvRate    = (parseFloat(asset.rate)||0)/100;
+  var bizPct    = (parseFloat(asset.bizPct)||100)/100;
   var purchaseDate = parseDate(asset.date);
 
-  // Asset not yet purchased when this FY started (relative to purchase year)
-  if(purchaseDate > fy.end) return {depr:0, bookOpen:cost, bookClose:cost};
+  var nil = {depr:0, bookOpen:0, bookClose:0, monthsHeld:0};
 
-  // Investment Boost: available for new assets purchased on or after 22 May 2025
-  var investBoostCutoff = new Date(2025,4,22); // 22 May 2025
-  var qualifiesForBoost = asset.investmentBoost && purchaseDate >= investBoostCutoff;
+  // Not yet acquired in this FY
+  if(purchaseDate > fy.end) return {depr:0, bookOpen:cost, bookClose:cost, monthsHeld:0, notYetOwned:true};
 
-  // Build a year-by-year schedule to get the correct book value for any FY
-  // Start from the purchase FY and work forward
-  var purchaseFYStart, purchaseFYEnd;
-  // NZ FY: 1 Apr to 31 Mar
-  var purchaseMonth = purchaseDate.getMonth(); // 0=Jan
-  var purchaseYear = purchaseDate.getFullYear();
-  if(purchaseMonth >= 3){ // Apr or later = this calendar year starts FY
-    purchaseFYStart = new Date(purchaseYear, 3, 1);
-    purchaseFYEnd = new Date(purchaseYear+1, 2, 31);
-  } else { // Jan-Mar = previous calendar year started FY
-    purchaseFYStart = new Date(purchaseYear-1, 3, 1);
-    purchaseFYEnd = new Date(purchaseYear, 2, 31);
+  // Disposed in an earlier FY — nothing left to claim
+  var disposedDate = asset.disposedDate ? parseDate(asset.disposedDate) : null;
+  if(disposedDate && disposedDate < fy.start){
+    return {depr:0, bookOpen:0, bookClose:0, monthsHeld:0, disposed:true};
   }
 
+  // Which FY did the purchase fall in? (NZ FY runs 1 Apr – 31 Mar)
+  var pMonth = purchaseDate.getMonth(), pYear = purchaseDate.getFullYear();
+  var purchaseFYStart = pMonth >= 3 ? new Date(pYear,3,1) : new Date(pYear-1,3,1);
+  var isPurchaseFY = (purchaseFYStart.getTime() === fy.start.getTime());
+
+  // Low-value asset: full write-off in the purchase year, no pro-rating
+  if(dvRate >= 1){
+    if(isPurchaseFY){
+      return {depr: Math.round(cost*bizPct*100)/100, bookOpen: cost, bookClose: 0,
+              monthsHeld: 12, lowValue: true};
+    }
+    return {depr:0, bookOpen:0, bookClose:0, monthsHeld:0, lowValue:true, fullyDepreciated:true};
+  }
+
+  var investBoostCutoff = new Date(2025,4,22);
+  var qualifiesForBoost = asset.investmentBoost && purchaseDate >= investBoostCutoff;
+
   var bookValue = cost;
-  var investBoostClaimed = false;
-
-  // Simulate each FY from purchase year until the target FY
   var simFYStart = purchaseFYStart;
+
   while(simFYStart <= fy.start){
-    var simFYEnd = new Date(simFYStart.getFullYear()+1, 2, 31);
+    var simFYEnd  = new Date(simFYStart.getFullYear()+1, 2, 31);
     var isFirstFY = (simFYStart.getTime() === purchaseFYStart.getTime());
-    var istargetFY = (simFYStart.getTime() === fy.start.getTime());
-
-    var deprBase = bookValue;
-
-    // Investment Boost: 20% of original cost ex-GST, claimed in purchase year only
+    var isTargetFY= (simFYStart.getTime() === fy.start.getTime());
+    var bookOpen  = bookValue;
     var boostAmount = 0;
-    if(isFirstFY && qualifiesForBoost && !investBoostClaimed){
+
+    // Investment Boost — purchase year only, 20% of original ex-GST cost
+    if(isFirstFY && qualifiesForBoost){
       boostAmount = Math.round(cost * 0.20 * 100) / 100;
-      deprBase = cost - boostAmount; // DV applies to 80% of cost going forward
-      bookValue = deprBase;
-      investBoostClaimed = true;
+      bookValue = Math.round((cost - boostAmount) * 100) / 100;
     }
 
-    // Months held this FY
-    var monthsHeld;
+    // Already written down to nothing
+    if(bookValue < 1){
+      if(isTargetFY) return {depr:0, bookOpen:bookOpen, bookClose:0, monthsHeld:0, fullyDepreciated:true};
+      bookValue = 0;
+      simFYStart = new Date(simFYStart.getFullYear()+1, 3, 1);
+      continue;
+    }
+
+    // Months held — part-months count as whole months
+    var monthsHeld = 12;
     if(isFirstFY){
-      // Count months from purchase month to end of FY
-      // Part-months count as whole months per IRD
-      var startMonth = purchaseDate.getMonth(); // 0-indexed
-      var endMonth = 2; // March = index 2
-      var startYear = purchaseDate.getFullYear();
-      var endYear = simFYEnd.getFullYear();
-      monthsHeld = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
-      monthsHeld = Math.min(monthsHeld, 12);
-    } else {
-      monthsHeld = 12;
+      monthsHeld = (simFYEnd.getFullYear() - purchaseDate.getFullYear()) * 12
+                 + (2 - purchaseDate.getMonth()) + 1;
+      monthsHeld = Math.max(1, Math.min(monthsHeld, 12));
+    }
+    // IRD: no depreciation may be claimed in the year an asset is disposed of.
+    // Instead a loss or gain is calculated against the sale price:
+    //   (adjusted tax value - sale price) x business use %
+    if(disposedDate && disposedDate >= simFYStart && disposedDate <= simFYEnd){
+      if(isTargetFY){
+        var proceeds = parseFloat(asset.saleProceeds)||0;
+        var lossGain = Math.round((bookValue - proceeds) * bizPct * 100)/100;
+        return {
+          depr: 0, deprDVOnly: 0, boostAmount: 0,
+          bookOpen: bookOpen, bookClose: bookValue, monthsHeld: 0,
+          disposedThisFY: true, saleProceeds: proceeds,
+          lossOnSale: lossGain > 0 ? lossGain : 0,
+          depreciationRecovered: lossGain < 0 ? Math.abs(lossGain) : 0
+        };
+      }
+      bookValue = 0;
+      simFYStart = new Date(simFYStart.getFullYear()+1, 3, 1);
+      continue;
     }
 
-    var annualDepr = Math.round(deprBase * dvRate * (monthsHeld/12) * bizPct * 100) / 100;
+    // The FULL depreciation reduces the adjusted tax value; only the
+    // business-use share is deductible. Apportioning the book value too
+    // would double-count the private portion at disposal.
+    var fullDepr   = Math.round(bookValue * dvRate * (monthsHeld/12) * 100) / 100;
+    var afterDepr  = Math.round((bookValue - fullDepr) * 100) / 100;
+    if(afterDepr < 1){          // sweep the final remainder rather than
+      fullDepr  = bookValue;    // shrinking towards zero indefinitely
+      afterDepr = 0;
+    }
+    var annualDepr = Math.round(fullDepr * bizPct * 100) / 100;
 
-    if(istargetFY){
+    if(isTargetFY){
       return {
-        depr: annualDepr + (istargetFY && isFirstFY ? boostAmount : 0),
+        depr: Math.round((annualDepr + (isFirstFY ? boostAmount : 0)) * 100)/100,
         deprDVOnly: annualDepr,
         boostAmount: boostAmount,
-        bookOpen: bookValue,
-        bookClose: Math.round((bookValue - annualDepr) * 100) / 100,
-        monthsHeld: monthsHeld
+        bookOpen: bookOpen,
+        bookClose: afterDepr,
+        monthsHeld: monthsHeld,
+        disposed: !!(disposedDate && disposedDate <= simFYEnd),
+        fullyDepreciated: afterDepr === 0
       };
     }
 
-    bookValue = Math.round((bookValue - annualDepr) * 100) / 100;
+    bookValue = afterDepr;
     simFYStart = new Date(simFYStart.getFullYear()+1, 3, 1);
   }
 
-  return {depr:0, bookOpen:bookValue, bookClose:bookValue};
+  return {depr:0, bookOpen:bookValue, bookClose:bookValue, monthsHeld:0};
 }
 
 function renderAssets(){
@@ -3228,7 +3319,7 @@ function renderAssets(){
   if(!el) return;
 
   if(!assets.length){
-    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">No assets added yet — tap + Add asset</div>';
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">No assets added yet \u2014 tap + Add asset</div>';
     if(summaryRow) summaryRow.style.display='none';
     return;
   }
@@ -3236,24 +3327,51 @@ function renderAssets(){
   var totalDepr = 0;
   var html = '';
   assets.forEach(function(asset, idx){
-    var result = calcDepreciation(asset);
-    var depr = result.depr||0;
-    var bookVal = result.bookOpen||0;
-    var cost = parseFloat(asset.cost)||0; // original purchase price for display
-    totalDepr += depr;
+    var r       = calcDepreciation(asset);
+    var depr    = r.depr||0;
+    var bookVal = r.bookOpen||0;
+    var cost    = parseFloat(asset.cost)||0;
+    totalDepr  += depr;
 
-    html += '<div style="background:var(--surface);border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:var(--sh)">';
+    // Status badge
+    var badge = '';
+    if(r.disposedThisFY)        badge = '<span class="badge" style="background:rgba(255,149,0,.12);color:var(--orange)">Sold this FY</span>';
+    else if(r.disposed)         badge = '<span class="badge" style="background:rgba(120,120,128,.12);color:var(--t3)">Disposed</span>';
+    else if(r.fullyDepreciated) badge = '<span class="badge" style="background:rgba(120,120,128,.12);color:var(--t3)">Fully depreciated</span>';
+    else if(r.lowValue)         badge = '<span class="badge" style="background:rgba(52,199,89,.12);color:var(--green)">Low value</span>';
+    else if(r.notYetOwned)      badge = '<span class="badge" style="background:rgba(120,120,128,.12);color:var(--t3)">Not yet owned</span>';
+
+    var boostBadge = asset.investmentBoost ? ' \u00b7 \u26A1 Boost' : '';
+    var dim = (r.disposed || r.fullyDepreciated) ? 'opacity:0.55;' : '';
+
+    html += '<div style="'+dim+'background:var(--surface);border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:var(--sh)">';
     html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--sep)">';
-    var boostBadge = asset.investmentBoost ? ' · ⚡ Boost' : '';
-    html += '<div><div style="font-size:14px;font-weight:600;color:var(--t1)">'+esc(asset.name)+'</div>';
-    html += '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+esc(asset.label)+' · '+(parseFloat(asset.bizPct)||100)+'% business · '+parseFloat(asset.rate)+'% DV'+boostBadge+'</div></div>';
-    html += '<button onclick="deleteAsset('+idx+')" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,59,48,.1);color:var(--red);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">&#x2715;</button>';
+    html += '<div style="min-width:0"><div style="font-size:14px;font-weight:600;color:var(--t1)">'+esc(asset.name)+'</div>';
+    html += '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+esc(asset.label)+' \u00b7 '+(parseFloat(asset.bizPct)||100)+'% business \u00b7 '+parseFloat(asset.rate)+'% DV'+boostBadge+'</div>';
+    if(badge) html += '<div style="margin-top:6px">'+badge+'</div>';
     html += '</div>';
-    html += '<div style="display:flex;gap:0">';
-    html += '<div style="flex:1;padding:10px 16px;border-right:0.5px solid var(--sep)"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">Cost</div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">'+fmt(cost)+'</div></div>';
-    html += '<div style="flex:1;padding:10px 16px;border-right:0.5px solid var(--sep)"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">Book value</div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">'+fmt(bookVal)+'</div></div>';
-    html += '<div style="flex:1;padding:10px 16px"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">This FY</div><div style="font-size:13px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums">'+fmt(depr)+'</div></div>';
-    html += '</div></div>';
+    html += '<button onclick="assetActions('+idx+')" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--fill);color:var(--t2);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0">\u22EF</button>';
+    html += '</div>';
+
+    if(r.disposedThisFY){
+      // Disposal year: no depreciation claimable, show the loss/gain instead
+      var lossLbl = r.lossOnSale > 0 ? 'Loss on sale' : 'Deprec. recovered';
+      var lossVal = r.lossOnSale > 0 ? r.lossOnSale : r.depreciationRecovered;
+      var lossCol = r.lossOnSale > 0 ? 'var(--green)' : 'var(--red)';
+      html += '<div style="display:flex;gap:0">';
+      html += '<div style="flex:1;padding:10px 16px;border-right:0.5px solid var(--sep)"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">Value at sale</div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">'+fmt(r.bookClose)+'</div></div>';
+      html += '<div style="flex:1;padding:10px 16px;border-right:0.5px solid var(--sep)"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">Sold for</div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">'+fmt(r.saleProceeds)+'</div></div>';
+      html += '<div style="flex:1;padding:10px 16px"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">'+lossLbl+'</div><div style="font-size:13px;font-weight:700;color:'+lossCol+';font-variant-numeric:tabular-nums">'+fmt(lossVal)+'</div></div>';
+      html += '</div>';
+      html += '<div style="padding:8px 16px;background:rgba(255,149,0,.06);font-size:11px;color:var(--t3)">No depreciation is claimable in the year of disposal (IRD rule).</div>';
+    } else {
+      html += '<div style="display:flex;gap:0">';
+      html += '<div style="flex:1;padding:10px 16px;border-right:0.5px solid var(--sep)"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">Cost</div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">'+fmt(cost)+'</div></div>';
+      html += '<div style="flex:1;padding:10px 16px;border-right:0.5px solid var(--sep)"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">Book value</div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">'+fmt(bookVal)+'</div></div>';
+      html += '<div style="flex:1;padding:10px 16px"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">This FY</div><div style="font-size:13px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums">'+fmt(depr)+'</div></div>';
+      html += '</div>';
+    }
+    html += '</div>';
   });
 
   el.innerHTML = html;
@@ -3261,22 +3379,68 @@ function renderAssets(){
   if(summaryRow) summaryRow.style.display = 'flex';
 }
 
+function assetActions(idx){
+  var a = assets[idx];
+  if(!a) return;
+  var acts = [];
+  if(!a.disposedDate){
+    acts.push({label:'Mark as sold or disposed', fn:function(){ openDisposeAsset(idx); }});
+  } else {
+    acts.push({label:'Undo disposal', fn:function(){
+      delete assets[idx].disposedDate; delete assets[idx].saleProceeds;
+      saveAssets(); renderAssets(); showToast('Disposal removed');
+    }});
+  }
+  acts.push({label:'Delete asset', cls:'danger', fn:function(){
+    assets.splice(idx,1); saveAssets(); renderAssets(); showToast('Asset removed');
+  }});
+  acts.push({label:'Cancel', cls:'cancel'});
+  showSheet(a.name, acts);
+}
+
+function openDisposeAsset(idx){
+  var a = assets[idx];
+  if(!a) return;
+  window._disposingAsset = idx;
+  $el('dispose-asset-name').textContent = a.name;
+  $el('dispose-date').value = today();
+  $el('dispose-proceeds').value = '';
+  var r = calcDepreciation(a);
+  $el('dispose-book').textContent = fmt(r.bookOpen||0);
+  openModal('modal-dispose');
+}
+
+function confirmDisposeAsset(){
+  var idx = window._disposingAsset;
+  if(idx==null || !assets[idx]){ closeModal('modal-dispose'); return; }
+  var d = $el('dispose-date').value;
+  if(!d){ showToast('Enter the disposal date'); return; }
+  var proceeds = parseFloat(String($el('dispose-proceeds').value).replace(/[^0-9.]/g,''))||0;
+  assets[idx].disposedDate  = d;
+  assets[idx].saleProceeds  = proceeds;
+  saveAssets(); renderAssets();
+  closeModal('modal-dispose');
+  window._disposingAsset = null;
+  showToast(assets[idx].name + ' marked as disposed');
+}
+
+
 function openAddAsset(){
-  document.getElementById('asset-name').value = '';
-  document.getElementById('asset-cost').value = '';
-  document.getElementById('asset-date').value = today();
-  document.getElementById('asset-biz-pct').value = '100';
+  $el('asset-name').value = '';
+  $el('asset-cost').value = '';
+  $el('asset-date').value = today();
+  $el('asset-biz-pct').value = '100';
   openModal('modal-asset');
 }
 
 function saveAsset(){
-  var name = document.getElementById('asset-name').value.trim();
-  var cost = document.getElementById('asset-cost').value.replace(/[^0-9.]/g,'');
-  var date = document.getElementById('asset-date').value;
+  var name = $el('asset-name').value.trim();
+  var cost = $el('asset-cost').value.replace(/[^0-9.]/g,'');
+  var date = $el('asset-date').value;
   var catEl = document.getElementById('asset-category');
   var rate = catEl ? parseFloat(catEl.value) : 67;
   var label = catEl ? (catEl.options[catEl.selectedIndex]||{}).text || '' : '';
-  var bizPct = document.getElementById('asset-biz-pct').value || '100';
+  var bizPct = $el('asset-biz-pct').value || '100';
   if(!name){ showToast('Enter asset name'); return; }
   if(!cost||isNaN(+cost)||+cost<=0){ showToast('Enter purchase price'); return; }
   var gstInc = (document.getElementById('asset-gst')||{}).value !== 'no';
@@ -3287,12 +3451,6 @@ function saveAsset(){
   showToast(name + ' added');
 }
 
-function deleteAsset(idx){
-  showSheet('Remove ' + (assets[idx]||{}).name + '?', [
-    {label:'Remove asset', cls:'danger', fn:function(){ assets.splice(idx,1); saveAssets(); renderAssets(); showToast('Asset removed'); }},
-    {label:'Cancel', cls:'cancel'}
-  ]);
-}
 
 /* ── Tax Set-Aside Tracker ── */
 function renderSetAside(grossIncome, tax, whtPaid, accTotal, gstCurrentPeriod){
@@ -3312,7 +3470,23 @@ function renderSetAside(grossIncome, tax, whtPaid, accTotal, gstCurrentPeriod){
 }
 
 /* ── Render Tax Tab ── */
+function checkTaxRateFreshness(){
+  var el = document.getElementById('tax-rate-warning');
+  if(!el) return;
+  if(FY.startYear > TAX_RATES_FY){
+    el.style.display = 'block';
+    el.innerHTML = '<strong>Tax rates may be out of date.</strong> These figures use FY'
+      + TAX_RATES_FY + '\u2013' + String(TAX_RATES_FY+1).slice(2)
+      + ' rates (checked ' + TAX_RATES_CHECKED + '). You are viewing '
+      + FY.label.replace(/\u00a0/g,' ')
+      + ' \u2014 verify against ird.govt.nz before filing.';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
 function renderTaxTab(){
+  checkTaxRateFreshness();
   try{ _renderTaxTabInner(); } catch(e){ console.error('renderTaxTab error:',e); var el=document.getElementById('tax-still-owe'); if(el) el.textContent='Error'; showToast('Tax tab error — try syncing'); }
 }
 function _renderTaxTabInner(){
@@ -3337,16 +3511,16 @@ function _renderTaxTabInner(){
   // Update hero
   // ── Income tax display ──
   // tax-income-total removed — use inc-tax-total instead
-  document.getElementById('tax-gross').textContent=fmt(grossIncome);
-  document.getElementById('tax-on-income').textContent=fmt(tax.total);
-  document.getElementById('tax-wht-paid').textContent=fmt(whtPaid);
-  document.getElementById('tax-still-owe').textContent=fmt(stillOwe);
-  document.getElementById('tax-residual').textContent=fmt(stillOwe);
+  $el('tax-gross').textContent=fmt(grossIncome);
+  $el('tax-on-income').textContent=fmt(tax.total);
+  $el('tax-wht-paid').textContent=fmt(whtPaid);
+  $el('tax-still-owe').textContent=fmt(stillOwe);
+  $el('tax-residual').textContent=fmt(stillOwe);
 
   var now=new Date();
   var monthsLeft=Math.max(1,Math.ceil((FY.end-now)/(30.5*24*3600*1000)));
   var incomeMonthly=(tax.total-whtPaid)/Math.max(1,monthsLeft);
-  document.getElementById('tax-monthly').textContent=fmt(Math.max(0,incomeMonthly))+'/mo';
+  $el('tax-monthly').textContent=fmt(Math.max(0,incomeMonthly))+'/mo';
 
   // Bracket breakdown
   var bracketHTML=tax.breakdown.filter(function(b){return b.taxable>0;}).map(function(b){
@@ -3375,9 +3549,9 @@ function _renderTaxTabInner(){
   if(provOn) {
     var instalment=tax.total/3;
     var fyYear=FY.startYear;
-    document.getElementById('prov-1').textContent=fmt(instalment);
-    document.getElementById('prov-2').textContent=fmt(instalment);
-    document.getElementById('prov-3').textContent=fmt(instalment);
+    $el('prov-1').textContent=fmt(instalment);
+    $el('prov-2').textContent=fmt(instalment);
+    $el('prov-3').textContent=fmt(instalment);
     var yr1=document.getElementById('prov-yr1'),yr2=document.getElementById('prov-yr2'),yr3=document.getElementById('prov-yr3');
     if(yr1)yr1.textContent=fyYear;
     if(yr2)yr2.textContent=fyYear+1;
@@ -3392,11 +3566,11 @@ function _renderTaxTabInner(){
   var accEarner=liableEarnings*earnerRate;
   var accWorking=liableEarnings*workRate;
   var accTotal=accEarner+accWorking;
-  document.getElementById('acc-earner').textContent=fmt(accEarner);
-  document.getElementById('acc-working').textContent=fmt(accWorking);
-  document.getElementById('acc-working-sub').textContent=(settings.accRate||'0.53')+'% working cover levy';
-  document.getElementById('acc-total').textContent=fmt(accTotal);
-  document.getElementById('acc-liable').textContent=fmt(liableEarnings);
+  $el('acc-earner').textContent=fmt(accEarner);
+  $el('acc-working').textContent=fmt(accWorking);
+  $el('acc-working-sub').textContent=(settings.accRate||'0.53')+'% working cover levy';
+  $el('acc-total').textContent=fmt(accTotal);
+  $el('acc-liable').textContent=fmt(liableEarnings);
   if(settings.accRate){
     var sel=document.getElementById('acc-rate');
     if(sel){for(var o=0;o<sel.options.length;o++){if(parseFloat(sel.options[o].value)===parseFloat(settings.accRate)){sel.selectedIndex=o;break;}}}
@@ -3479,12 +3653,12 @@ function _renderTaxTabInner(){
   if(slExtraEl&&!slExtraEl.value&&settings.slExtra)slExtraEl.value=settings.slExtra;
   var slVolRow=document.getElementById('sl-voluntary-row');
   if(slVolRow)slVolRow.style.display=hasLoan2?'flex':'none';
-  document.getElementById('sl-liable').textContent=hasLoan2?fmt(slLiable):'—';
-  document.getElementById('sl-monthly').textContent=hasLoan2?fmt(slMonthly)+'/mo':'—';
+  $el('sl-liable').textContent=hasLoan2?fmt(slLiable):'—';
+  $el('sl-monthly').textContent=hasLoan2?fmt(slMonthly)+'/mo':'—';
 
   // ── Tile values ──
-  document.getElementById('tax-total-all').textContent=fmt(tax.total);
-  document.getElementById('tax-total-sub').textContent=FY.label;
+  $el('tax-total-all').textContent=fmt(tax.total);
+  $el('tax-total-sub').textContent=FY.label;
 
   // ── Asset depreciation ──
   loadAssets(); renderAssets();
@@ -3528,12 +3702,12 @@ function openAddInvoice(){
 
 function openNewInvoice(){
   editingId=null;
-  document.getElementById('inv-modal-title').textContent='New Invoice';
-  document.getElementById('f-client').value=''; document.getElementById('f-amount').value='';
-  document.getElementById('f-date').value=today(); document.getElementById('f-due').value=daysAhead(30);
-  document.getElementById('f-num').value=''; document.getElementById('f-gst').value='yes';
-  document.getElementById('f-wht').value=String(settings.defaultWHT||'0');
-  document.getElementById('f-notes').value=''; clearInvFile(); hideErr('inv-err'); openModal('modal-invoice');
+  $el('inv-modal-title').textContent='New Invoice';
+  $el('f-client').value=''; $el('f-amount').value='';
+  $el('f-date').value=today(); $el('f-due').value=daysAhead(30);
+  $el('f-num').value=''; $el('f-gst').value='yes';
+  $el('f-wht').value=String(settings.defaultWHT||'0');
+  $el('f-notes').value=''; clearInvFile(); hideErr('inv-err'); openModal('modal-invoice');
 }
 
 function openNewRemittance(){
@@ -3548,13 +3722,13 @@ function openNewRemittance(){
   _paidInvId=stub.id;
   window._newRemStub=stub; // keep reference so onClosePaidModal can remove it
   clearPaidFile();
-  document.getElementById('paid-modal-title').textContent='New remittance';
-  document.getElementById('paid-ai-result').style.display='none'; document.getElementById('paid-ai-result').innerHTML='';
-  document.getElementById('paid-gross').value='';
-  document.getElementById('paid-gst-amt').value='';
-  document.getElementById('paid-net').value='';
-  document.getElementById('paid-wht').value='';
-  document.getElementById('paid-date').value=today();
+  $el('paid-modal-title').textContent='New remittance';
+  $el('paid-ai-result').style.display='none'; $el('paid-ai-result').innerHTML='';
+  $el('paid-gross').value='';
+  $el('paid-gst-amt').value='';
+  $el('paid-net').value='';
+  $el('paid-wht').value='';
+  $el('paid-date').value=today();
   var pc=document.getElementById('paid-client'); if(pc) pc.value='';
   var pn=document.getElementById('paid-inv-num'); if(pn) pn.value='';
   updatePaidSummary();
@@ -3564,11 +3738,11 @@ function openNewRemittance(){
 }
 
 function saveInvoice(){
-  var client=document.getElementById('f-client').value.trim();
-  var amount=document.getElementById('f-amount').value.replace(/[^0-9.]/g,'');
-  var date=document.getElementById('f-date').value, due=document.getElementById('f-due').value;
-  var num=document.getElementById('f-num').value.trim(), gst=document.getElementById('f-gst').value;
-  var wht=document.getElementById('f-wht').value, notes=document.getElementById('f-notes').value.trim();
+  var client=$el('f-client').value.trim();
+  var amount=$el('f-amount').value.replace(/[^0-9.]/g,'');
+  var date=$el('f-date').value, due=$el('f-due').value;
+  var num=$el('f-num').value.trim(), gst=$el('f-gst').value;
+  var wht=$el('f-wht').value, notes=$el('f-notes').value.trim();
   hideErr('inv-err');
   if(!client){showErr('inv-err','Client name is required');return;}
   if(!amount||isNaN(+amount)||+amount<=0){showErr('inv-err','Enter a valid amount');return;}
@@ -3620,12 +3794,12 @@ function onInvAnyFile(e){
     r.onload=function(ev){
       window._invImgData=ev.target.result;
       window._invImgMime='application/pdf';
-      document.getElementById('inv-prev-wrap').style.display='none';
-      document.getElementById('inv-pdf-wrap').style.display='block';
-      document.getElementById('inv-pdf-name').textContent=f.name+' · '+(f.size/1024).toFixed(0)+' KB';
-      document.getElementById('inv-retake-row').style.display='block';
-      document.getElementById('inv-ai-wrap').style.display='block';
-      document.getElementById('inv-ai-result').style.display='none';
+      $el('inv-prev-wrap').style.display='none';
+      $el('inv-pdf-wrap').style.display='block';
+      $el('inv-pdf-name').textContent=f.name+' · '+(f.size/1024).toFixed(0)+' KB';
+      $el('inv-retake-row').style.display='block';
+      $el('inv-ai-wrap').style.display='block';
+      $el('inv-ai-result').style.display='none';
       renderInvPDFPreview(ev.target.result);
     };
     r.readAsDataURL(f);
@@ -3634,12 +3808,12 @@ function onInvAnyFile(e){
     r.onload=function(ev){
       window._invImgData=ev.target.result;
       window._invImgMime=f.type||'image/jpeg';
-      document.getElementById('inv-prev-wrap').style.display='block';
-      document.getElementById('inv-pdf-wrap').style.display='none';
-      document.getElementById('inv-prev-img').src=ev.target.result;
-      document.getElementById('inv-retake-row').style.display='block';
-      document.getElementById('inv-ai-wrap').style.display='block';
-      document.getElementById('inv-ai-result').style.display='none';
+      $el('inv-prev-wrap').style.display='block';
+      $el('inv-pdf-wrap').style.display='none';
+      $el('inv-prev-img').src=ev.target.result;
+      $el('inv-retake-row').style.display='block';
+      $el('inv-ai-wrap').style.display='block';
+      $el('inv-ai-result').style.display='none';
     };
     r.readAsDataURL(f);
   }
@@ -3667,12 +3841,12 @@ function onInvFile(e){
     window._invImgData=data;
     window._invImgMime=f.type;
     // Show image preview
-    document.getElementById('inv-prev-wrap').style.display='block';
-    document.getElementById('inv-pdf-wrap').style.display='none';
-    document.getElementById('inv-prev-img').src=data;
-    document.getElementById('inv-retake-row').style.display='block';
-    document.getElementById('inv-ai-wrap').style.display='block';
-    document.getElementById('inv-ai-result').style.display='none';
+    $el('inv-prev-wrap').style.display='block';
+    $el('inv-pdf-wrap').style.display='none';
+    $el('inv-prev-img').src=data;
+    $el('inv-retake-row').style.display='block';
+    $el('inv-ai-wrap').style.display='block';
+    $el('inv-ai-result').style.display='none';
   };
   reader.readAsDataURL(f);
 }
@@ -3686,12 +3860,12 @@ function onInvPDF(e){
     window._invImgData=data;
     window._invImgMime='application/pdf';
     // Show PDF preview
-    document.getElementById('inv-prev-wrap').style.display='none';
-    document.getElementById('inv-pdf-wrap').style.display='block';
-    document.getElementById('inv-pdf-name').textContent=f.name+' · '+(f.size/1024).toFixed(0)+' KB';
-    document.getElementById('inv-retake-row').style.display='block';
-    document.getElementById('inv-ai-wrap').style.display='block';
-    document.getElementById('inv-ai-result').style.display='none';
+    $el('inv-prev-wrap').style.display='none';
+    $el('inv-pdf-wrap').style.display='block';
+    $el('inv-pdf-name').textContent=f.name+' · '+(f.size/1024).toFixed(0)+' KB';
+    $el('inv-retake-row').style.display='block';
+    $el('inv-ai-wrap').style.display='block';
+    $el('inv-ai-result').style.display='none';
     renderInvPDFPreview(data);
   };
   reader.readAsDataURL(f);
@@ -3789,11 +3963,11 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeViewer(
 function clearInvFile(){
   window._invImgData=null;
   window._invImgMime=null;
-  document.getElementById('inv-prev-wrap').style.display='none';
-  document.getElementById('inv-pdf-wrap').style.display='none';
-  document.getElementById('inv-retake-row').style.display='none';
-  document.getElementById('inv-ai-wrap').style.display='none';
-  document.getElementById('inv-ai-result').style.display='none';
+  $el('inv-prev-wrap').style.display='none';
+  $el('inv-pdf-wrap').style.display='none';
+  $el('inv-retake-row').style.display='none';
+  $el('inv-ai-wrap').style.display='none';
+  $el('inv-ai-result').style.display='none';
   var fi=document.getElementById('inv-file-input'); if(fi) fi.value='';
 }
 
@@ -3833,13 +4007,13 @@ function scanInvoiceForm(){
   .then(function(data){
     var text=(data.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
     var parsed=JSON.parse(text.replace(/```json|```/gi,'').trim());
-    if(parsed.client) document.getElementById('f-client').value=parsed.client;
-    if(parsed.amount) document.getElementById('f-amount').value=String(parsed.amount);
-    if(parsed.date) document.getElementById('f-date').value=parsed.date;
-    if(parsed.invoice_number) document.getElementById('f-num').value=parsed.invoice_number;
-    if(parsed.gst) document.getElementById('f-gst').value=parsed.gst;
-    if(parsed.wht_rate!=null) document.getElementById('f-wht').value=String(parsed.wht_rate);
-    if(parsed.notes) document.getElementById('f-notes').value=parsed.notes;
+    if(parsed.client) $el('f-client').value=parsed.client;
+    if(parsed.amount) $el('f-amount').value=String(parsed.amount);
+    if(parsed.date) $el('f-date').value=parsed.date;
+    if(parsed.invoice_number) $el('f-num').value=parsed.invoice_number;
+    if(parsed.gst) $el('f-gst').value=parsed.gst;
+    if(parsed.wht_rate!=null) $el('f-wht').value=String(parsed.wht_rate);
+    if(parsed.notes) $el('f-notes').value=parsed.notes;
     resultEl.className='ai-inv-result-ok';
     resultEl.style.display='block';
     resultEl.innerHTML='&#x2713; Found: <strong>'+(parsed.client||'invoice')+'</strong>'+(parsed.amount?' &middot; $'+parsed.amount:'')+(parsed.invoice_number?' &middot; #'+parsed.invoice_number:'');
@@ -3876,29 +4050,29 @@ function openInvDetail(id){
   var netAmt=whtAmt>0?(inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):amt-whtAmt):amt;
 
   // Title
-  document.getElementById('inv-detail-title').textContent=inv.client;
+  $el('inv-detail-title').textContent=inv.client;
 
   // Breakdown
-  document.getElementById('id-gross').textContent=fmt(amt);
-  document.getElementById('id-gst').textContent=gstAmt>0?fmt(gstAmt):'N/A';
-  document.getElementById('id-wht').textContent=whtAmt>0?fmt(whtAmt):'None';
-  document.getElementById('id-net').textContent=fmt(netAmt);
+  $el('id-gross').textContent=fmt(amt);
+  $el('id-gst').textContent=gstAmt>0?fmt(gstAmt):'N/A';
+  $el('id-wht').textContent=whtAmt>0?fmt(whtAmt):'None';
+  $el('id-net').textContent=fmt(netAmt);
 
   // Details
-  document.getElementById('id-client').textContent=inv.client;
-  document.getElementById('id-date').textContent=fmtDate(inv.date);
+  $el('id-client').textContent=inv.client;
+  $el('id-date').textContent=fmtDate(inv.date);
   var dueRow=document.getElementById('id-due-row');
-  if(inv.due_date){dueRow.style.display='flex';document.getElementById('id-due').textContent=fmtDate(inv.due_date);}
+  if(inv.due_date){dueRow.style.display='flex';$el('id-due').textContent=fmtDate(inv.due_date);}
   else dueRow.style.display='none';
   var numRow=document.getElementById('id-num-row');
-  if(inv.invoice_number){numRow.style.display='flex';document.getElementById('id-num').textContent='#'+inv.invoice_number;}
+  if(inv.invoice_number){numRow.style.display='flex';$el('id-num').textContent='#'+inv.invoice_number;}
   else numRow.style.display='none';
-  document.getElementById('id-gst-label').textContent=inv.gst==='yes'?'15% GST included':inv.gst==='zero'?'Zero-rated':'No GST';
+  $el('id-gst-label').textContent=inv.gst==='yes'?'15% GST included':inv.gst==='zero'?'Zero-rated':'No GST';
   var paidDateRow=document.getElementById('id-paid-date-row');
-  if(inv.paid_date){paidDateRow.style.display='flex';document.getElementById('id-paid-date').textContent=fmtDate(inv.paid_date);}
+  if(inv.paid_date){paidDateRow.style.display='flex';$el('id-paid-date').textContent=fmtDate(inv.paid_date);}
   else paidDateRow.style.display='none';
   var notesRow=document.getElementById('id-notes-row');
-  if(inv.notes){notesRow.style.display='flex';document.getElementById('id-notes').textContent=inv.notes;}
+  if(inv.notes){notesRow.style.display='flex';$el('id-notes').textContent=inv.notes;}
   else notesRow.style.display='none';
 
   // Status banner
@@ -3906,9 +4080,9 @@ function openInvDetail(id){
   var bannerColors={paid:'rgba(52,199,89,.12)',unpaid:'rgba(255,149,0,.12)',overdue:'rgba(255,59,48,.12)',review:'rgba(175,82,222,.12)',draft:'rgba(120,120,128,.1)'};
   var bannerTextColors={paid:'var(--green)',unpaid:'var(--orange)',overdue:'var(--red)',review:'var(--purple)',draft:'var(--t3)'};
   banner.style.background=bannerColors[status]||'var(--fill)';
-  document.getElementById('inv-detail-status-label').style.color=bannerTextColors[status]||'var(--t2)';
-  document.getElementById('inv-detail-status-label').textContent=status.charAt(0).toUpperCase()+status.slice(1);
-  document.getElementById('inv-detail-status-sub').textContent=
+  $el('inv-detail-status-label').style.color=bannerTextColors[status]||'var(--t2)';
+  $el('inv-detail-status-label').textContent=status.charAt(0).toUpperCase()+status.slice(1);
+  $el('inv-detail-status-sub').textContent=
     status==='paid'?'Paid '+fmtDate(inv.paid_date)+' · Net '+fmt(netAmt):
     isOverdue(inv)?'Was due '+fmtDate(inv.due_date):
     inv.due_date?'Due '+fmtDate(inv.due_date):'';
@@ -3931,20 +4105,20 @@ function openInvDetail(id){
   // Edit btn in header
   var invForEdit=invoices.find(function(i){return String(i.id)===String(id);});
   var isRem=!!(invForEdit&&invForEdit.remittance_image);
-  document.getElementById('inv-detail-edit-btn').onclick=function(){
+  $el('inv-detail-edit-btn').onclick=function(){
     closeModal('modal-inv-detail');
     if(isRem) openMarkPaid(id);
     else editInvoice(id);
   };
 
   // Delegated clicks for dynamically injected buttons
-  document.getElementById('inv-detail-banner').onclick=function(e){
+  $el('inv-detail-banner').onclick=function(e){
     var b=e.target.closest('[data-iid]'); if(!b) return;
     var iid=b.dataset.iid;
     if(b.classList.contains('inv-det-mark-paid')){closeModal('modal-inv-detail');openMarkPaid(iid);}
     if(b.classList.contains('inv-det-undo')){closeModal('modal-inv-detail');markInvUnpaid(iid);}
   };
-  document.getElementById('inv-detail-actions').onclick=function(e){
+  $el('inv-detail-actions').onclick=function(e){
     var b=e.target.closest('[data-iid]'); if(!b) return;
     var iid=b.dataset.iid;
     if(b.classList.contains('inv-det-edit')){var editInv=invoices.find(function(i){return String(i.id)===iid;});closeModal('modal-inv-detail');if(editInv&&editInv.remittance_image)openMarkPaid(iid);else editInvoice(iid);}
@@ -3966,15 +4140,15 @@ function editInvoice(id){
   var inv=invoices.find(function(i){return String(i.id)===String(id);});
   if(!inv) return;
   editingId=inv.id;
-  document.getElementById('inv-modal-title').textContent='Edit Invoice';
-  document.getElementById('f-client').value=inv.client||'';
-  document.getElementById('f-amount').value=inv.amount||'';
-  document.getElementById('f-date').value=inv.date||'';
-  document.getElementById('f-due').value=inv.due_date||'';
-  document.getElementById('f-num').value=inv.invoice_number||'';
-  document.getElementById('f-gst').value=inv.gst||'yes';
-  document.getElementById('f-wht').value=String(inv.wht_rate||'0');
-  document.getElementById('f-notes').value=inv.notes||'';
+  $el('inv-modal-title').textContent='Edit Invoice';
+  $el('f-client').value=inv.client||'';
+  $el('f-amount').value=inv.amount||'';
+  $el('f-date').value=inv.date||'';
+  $el('f-due').value=inv.due_date||'';
+  $el('f-num').value=inv.invoice_number||'';
+  $el('f-gst').value=inv.gst||'yes';
+  $el('f-wht').value=String(inv.wht_rate||'0');
+  $el('f-notes').value=inv.notes||'';
   clearInvFile(); hideErr('inv-err'); openModal('modal-invoice');
 }
 
@@ -4181,8 +4355,8 @@ function openMarkPaid(id){
   if(!inv) return;
   _paidInvId=id;
   clearPaidFile();
-  document.getElementById('paid-modal-title').textContent='Mark paid — '+inv.client;
-  document.getElementById('paid-ai-result').style.display='none';
+  $el('paid-modal-title').textContent='Mark paid — '+inv.client;
+  $el('paid-ai-result').style.display='none';
   var amt=parseFloat(inv.amount)||0;
   var gstIncluded=inv.gst==='yes';
   var base=gstIncluded?amt/1.15:amt; // ex-GST base
@@ -4190,11 +4364,11 @@ function openMarkPaid(id){
     ?parseFloat(inv.wht_amount)  // use stored amount if available
     :Math.round(base*(parseFloat(inv.wht_rate)||0)/100*100)/100; // else calc from base
   var net=Math.round((amt-whtAmt)*100)/100;
-  document.getElementById('paid-gross').value=String(amt);
-  document.getElementById('paid-gst-amt').value=inv.gst==='yes'?String(Math.round(amt*3/23*100)/100):'';
-  document.getElementById('paid-net').value=whtAmt>0?String(net):'';
-  document.getElementById('paid-wht').value=whtAmt>0?String(whtAmt):'';
-  document.getElementById('paid-date').value=today();
+  $el('paid-gross').value=String(amt);
+  $el('paid-gst-amt').value=inv.gst==='yes'?String(Math.round(amt*3/23*100)/100):'';
+  $el('paid-net').value=whtAmt>0?String(net):'';
+  $el('paid-wht').value=whtAmt>0?String(whtAmt):'';
+  $el('paid-date').value=today();
   var dateLbl=document.getElementById('paid-date-lbl'); if(dateLbl) dateLbl.textContent='Payment date';
   var extraFields=document.getElementById('paid-extra-fields'); if(extraFields) extraFields.style.display='none';
   updatePaidSummary();
@@ -4203,8 +4377,8 @@ function openMarkPaid(id){
 
 function onPaidGrossInput(){
   // Auto-calc GST and net when gross is entered with a known W/H rate
-  var gross=parseFloat(document.getElementById('paid-gross').value)||0;
-  var wht=parseFloat(document.getElementById('paid-wht').value)||0;
+  var gross=parseFloat($el('paid-gross').value)||0;
+  var wht=parseFloat($el('paid-wht').value)||0;
   var whtRateEl=document.getElementById('paid-wht-rate');
   var rate=whtRateEl?parseFloat(whtRateEl.value)||0:0;
   if(gross>0){
@@ -4213,28 +4387,28 @@ function onPaidGrossInput(){
     var gstMode=gstEl?gstEl.value:'yes';
     if(gstMode==='yes'){
       var gstAmt=Math.round(gross*3/23*100)/100;
-      document.getElementById('paid-gst-amt').value=String(gstAmt);
+      $el('paid-gst-amt').value=String(gstAmt);
     }
     // W/H = rate% of (gross - gst) if rate is set
-    if(rate>0&&!document.getElementById('paid-wht').value){
+    if(rate>0&&!$el('paid-wht').value){
       var baseExGst=gross*(23/38); // gross excl GST from inclusive
       var whtAmt=Math.round(baseExGst*rate/100*100)/100;
-      document.getElementById('paid-wht').value=String(whtAmt);
+      $el('paid-wht').value=String(whtAmt);
     }
     // Net = (gross + gst) - wht (GST passes through to bank, W/H deducted from base)
-    var whtVal=parseFloat(document.getElementById('paid-wht').value)||0;
-    var gstVal=parseFloat(document.getElementById('paid-gst-amt').value)||0;
-    document.getElementById('paid-net').value=String(Math.round((gross+gstVal-whtVal)*100)/100);
+    var whtVal=parseFloat($el('paid-wht').value)||0;
+    var gstVal=parseFloat($el('paid-gst-amt').value)||0;
+    $el('paid-net').value=String(Math.round((gross+gstVal-whtVal)*100)/100);
   }
   updatePaidSummary();
 }
 
 function updatePaidSummary(){
   var el=document.getElementById('paid-summary');
-  var gross=parseFloat(document.getElementById('paid-gross').value)||0;
-  var gst=parseFloat(document.getElementById('paid-gst-amt').value)||0;
-  var wht=parseFloat(document.getElementById('paid-wht').value)||0;
-  var net=parseFloat(document.getElementById('paid-net').value)||0;
+  var gross=parseFloat($el('paid-gross').value)||0;
+  var gst=parseFloat($el('paid-gst-amt').value)||0;
+  var wht=parseFloat($el('paid-wht').value)||0;
+  var net=parseFloat($el('paid-net').value)||0;
   if(!gross&&!net){el.style.display='none';return;}
   // (Gross + GST) - W/H = Net (GST passes through, W/H from base only)
   var calcNetA=gross>0?Math.round((gross+gst-wht)*100)/100:0;
@@ -4267,13 +4441,13 @@ function onPaidFile(e){
     var isPDF=f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf');
     window._paidFileData=data;
     window._paidFileMime=isPDF?'application/pdf':(f.type||'image/jpeg');
-    document.getElementById('paid-prev-wrap').style.display=isPDF?'none':'block';
-    document.getElementById('paid-pdf-wrap').style.display=isPDF?'block':'none';
-    if(!isPDF) document.getElementById('paid-prev-img').src=data;
-    else{ document.getElementById('paid-pdf-name').textContent=f.name; renderPaidPDFPreview(data); }
-    document.getElementById('paid-retake-row').style.display='block';
-    document.getElementById('paid-ai-wrap').style.display='block';
-    document.getElementById('paid-ai-result').style.display='none';
+    $el('paid-prev-wrap').style.display=isPDF?'none':'block';
+    $el('paid-pdf-wrap').style.display=isPDF?'block':'none';
+    if(!isPDF) $el('paid-prev-img').src=data;
+    else{ $el('paid-pdf-name').textContent=f.name; renderPaidPDFPreview(data); }
+    $el('paid-retake-row').style.display='block';
+    $el('paid-ai-wrap').style.display='block';
+    $el('paid-ai-result').style.display='none';
   };
   reader.readAsDataURL(f);
 }
@@ -4310,10 +4484,10 @@ function onClosePaidModal(){
 
 function clearPaidFile(){
   window._paidFileData=null; window._paidFileMime=null;
-  document.getElementById('paid-prev-wrap').style.display='none';
-  document.getElementById('paid-pdf-wrap').style.display='none';
-  document.getElementById('paid-retake-row').style.display='none';
-  document.getElementById('paid-ai-wrap').style.display='none';
+  $el('paid-prev-wrap').style.display='none';
+  $el('paid-pdf-wrap').style.display='none';
+  $el('paid-retake-row').style.display='none';
+  $el('paid-ai-wrap').style.display='none';
   var fi=document.getElementById('paid-file-input'); if(fi) fi.value='';
 }
 
@@ -4361,11 +4535,11 @@ function scanRemittance(){
     var js2=ct.indexOf('{'),je2=ct.lastIndexOf('}')+1;
     if(js2===-1||je2===0) throw new Error('No JSON in response: '+ct.slice(0,60));
     var parsed=JSON.parse(ct.slice(js2,je2));
-    if(parsed.gross_inc_gst!=null) document.getElementById('paid-gross').value=String(parsed.gross_inc_gst);
-    if(parsed.gst_amount!=null) document.getElementById('paid-gst-amt').value=String(parsed.gst_amount);
-    if(parsed.wht_amount!=null) document.getElementById('paid-wht').value=String(parsed.wht_amount);
-    if(parsed.net_paid!=null) document.getElementById('paid-net').value=String(parsed.net_paid);
-    if(parsed.payment_date) document.getElementById('paid-date').value=parsed.payment_date;
+    if(parsed.gross_inc_gst!=null) $el('paid-gross').value=String(parsed.gross_inc_gst);
+    if(parsed.gst_amount!=null) $el('paid-gst-amt').value=String(parsed.gst_amount);
+    if(parsed.wht_amount!=null) $el('paid-wht').value=String(parsed.wht_amount);
+    if(parsed.net_paid!=null) $el('paid-net').value=String(parsed.net_paid);
+    if(parsed.payment_date) $el('paid-date').value=parsed.payment_date;
     // Fill extra fields if new remittance
     if(parsed.payer){var pc=document.getElementById('paid-client');if(pc)pc.value=parsed.payer;}
     // Always overwrite invoice number from scan
@@ -4407,7 +4581,7 @@ function createMultiRemittance(){
   var scan=window._lastRemittanceScan;
   if(!scan||!scan.multiInvoices){showToast('No multi-invoice data');return;}
   var payer=scan.payer||(document.getElementById('paid-client')||{}).value||'';
-  var paymentDate=scan.paymentDate||document.getElementById('paid-date').value||today();
+  var paymentDate=scan.paymentDate||$el('paid-date').value||today();
   var gstSetting='yes';
 
   scan.multiInvoices.forEach(function(inv){
@@ -4451,23 +4625,23 @@ function confirmMarkPaid(){
   var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
   if(!inv){showToast('Error: try again');closeModal('modal-paid');return;}
 
-  var grossField=parseFloat(document.getElementById('paid-gross').value)||0;
-  var gstAmt=parseFloat(document.getElementById('paid-gst-amt').value)||0;
-  var net=parseFloat(document.getElementById('paid-net').value)||0;
-  var wht=parseFloat(document.getElementById('paid-wht').value)||0;
-  var dateVal=document.getElementById('paid-date').value;
+  var grossField=parseFloat($el('paid-gross').value)||0;
+  var gstAmt=parseFloat($el('paid-gst-amt').value)||0;
+  var net=parseFloat($el('paid-net').value)||0;
+  var wht=parseFloat($el('paid-wht').value)||0;
+  var dateVal=$el('paid-date').value;
   var extraFields=document.getElementById('paid-extra-fields');
   var isNew=!!(extraFields&&extraFields.style.display!=='none'&&inv.amount===0);
 
   if(isNew){
-    var client=(document.getElementById('paid-client').value||'').trim();
+    var client=($el('paid-client').value||'').trim();
     if(!client){showToast('Enter a client name');return;}
     var gross=grossField>0?grossField:(wht>0?net+wht:net);
     if(gross<=0&&net<=0){showToast('Enter the net received amount');return;}
     inv.client=client;
     inv.amount=gross;
     inv.date=dateVal||today();
-    inv.invoice_number=(document.getElementById('paid-inv-num').value||'').trim()||null;
+    inv.invoice_number=($el('paid-inv-num').value||'').trim()||null;
     var gstEl=document.getElementById('paid-gst'); inv.gst=gstEl?gstEl.value:'yes';
     inv.wht_rate=wht>0&&gross>0?Math.round(wht/gross*100*100)/100:0;
     if(extraFields) extraFields.style.display='none';
@@ -4637,15 +4811,15 @@ function openBankDetail(id){
     }});
     actions.push({label:'Create invoice from this',fn:function(){
       editingId=null;
-      document.getElementById('inv-modal-title').textContent='New Invoice';
-      document.getElementById('f-client').value=txn.description||'';
-      document.getElementById('f-amount').value=String(Math.abs(amt));
-      document.getElementById('f-date').value=txn.date;
-      document.getElementById('f-due').value=txn.date;
-      document.getElementById('f-num').value=txn.reference||'';
-      document.getElementById('f-gst').value=settings.defaultGST||'yes';
-      document.getElementById('f-wht').value=String(settings.defaultWHT||'0');
-      document.getElementById('f-notes').value='';
+      $el('inv-modal-title').textContent='New Invoice';
+      $el('f-client').value=txn.description||'';
+      $el('f-amount').value=String(Math.abs(amt));
+      $el('f-date').value=txn.date;
+      $el('f-due').value=txn.date;
+      $el('f-num').value=txn.reference||'';
+      $el('f-gst').value=settings.defaultGST||'yes';
+      $el('f-wht').value=String(settings.defaultWHT||'0');
+      $el('f-notes').value='';
       var al=document.getElementById('f-attach-label'); if(al) al.textContent='Upload PDF / photo';
       hideErr('inv-err');
       _pendingMatchTxnId=id;
@@ -4763,7 +4937,7 @@ function saveSettings(){
 }
 
 /* ── Account ── */
-function copyBCC(){var addr=document.getElementById('acct-email').textContent;if(navigator.clipboard){navigator.clipboard.writeText(addr).then(function(){showToast('BCC address copied');});}else{showToast('BCC: '+addr);}}
+function copyBCC(){var addr=$el('acct-email').textContent;if(navigator.clipboard){navigator.clipboard.writeText(addr).then(function(){showToast('BCC address copied');});}else{showToast('BCC: '+addr);}}
 
 /* ── Modal ── */
 function openModal(id){
@@ -4793,8 +4967,8 @@ function hideErr(id){var el=document.getElementById(id);if(el){el.textContent=''
 function emptyState(icon,title,sub,pad){return'<div class="empty" style="padding:'+(pad||'56px 32px')+'">'+'<div class="empty-icon">'+icon+'</div>'+'<div class="empty-title">'+esc(title)+'</div>'+'<div class="empty-sub">'+esc(sub)+'</div>'+'</div>';}
 
 /* ── Keyboard ── */
-document.getElementById('l-user').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('l-pass').focus();});
-document.getElementById('l-pass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+$el('l-user').addEventListener('keydown',function(e){if(e.key==='Enter')$el('l-pass').focus();});
+$el('l-pass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 
 /* ── Drag-drop on bank ── */
 (function(){
@@ -4987,18 +5161,18 @@ function renderOverviewExtras(fyInvoices){
 
 /* ── Change password ── */
 function openChangePassword(){
-  document.getElementById('chpw-current').value='';
-  document.getElementById('chpw-new').value='';
-  document.getElementById('chpw-confirm').value='';
-  document.getElementById('chpw-error').textContent='';
+  $el('chpw-current').value='';
+  $el('chpw-new').value='';
+  $el('chpw-confirm').value='';
+  $el('chpw-error').textContent='';
   closeModal('modal-account');
   setTimeout(function(){openModal('modal-chpw');},350);
 }
 
 async function doChangePassword(){
-  var cur=document.getElementById('chpw-current').value;
-  var nw=document.getElementById('chpw-new').value;
-  var conf=document.getElementById('chpw-confirm').value;
+  var cur=$el('chpw-current').value;
+  var nw=$el('chpw-new').value;
+  var conf=$el('chpw-confirm').value;
   var errEl=document.getElementById('chpw-error');
   errEl.textContent='';
   if(!cur||!nw||!conf){errEl.textContent='Please fill in all fields';return;}
@@ -5042,21 +5216,21 @@ function openClientProfile(name, prefill){
   var existing=getClientProfile(name);
   // prefill can come from remittance scan or invoice scan
   var scan=prefill||window._lastRemittanceScan||null;
-  document.getElementById('cp-modal-title').textContent=existing?esc(name):'New Client';
-  document.getElementById('cp-name').value=name||'';
-  document.getElementById('cp-email').value=(existing&&existing.email)||'';
-  document.getElementById('cp-gst-num').value=(existing&&existing.gstNum)||(scan&&scan.payerGst)||'';
+  $el('cp-modal-title').textContent=existing?esc(name):'New Client';
+  $el('cp-name').value=name||'';
+  $el('cp-email').value=(existing&&existing.email)||'';
+  $el('cp-gst-num').value=(existing&&existing.gstNum)||(scan&&scan.payerGst)||'';
   // W/H: use existing profile, then scan, then 0
   var whtRate=(existing&&existing.whtRate!=null)?existing.whtRate
     :(scan&&scan.whtRate!=null)?scan.whtRate:0;
-  document.getElementById('cp-wht').value=String(whtRate);
-  document.getElementById('cp-gst').value=(existing&&existing.gst)||'yes';
-  document.getElementById('cp-terms').value=String((existing&&existing.terms!=null)?existing.terms:30);
+  $el('cp-wht').value=String(whtRate);
+  $el('cp-gst').value=(existing&&existing.gst)||'yes';
+  $el('cp-terms').value=String((existing&&existing.terms!=null)?existing.terms:30);
   // Notes: include scan reference if available
   var notes=(existing&&existing.notes)||'';
   if(!existing&&scan&&scan.reference&&!notes) notes='Ref: '+scan.reference;
-  document.getElementById('cp-notes').value=notes;
-  document.getElementById('cp-delete-btn').style.display=existing?'block':'none';
+  $el('cp-notes').value=notes;
+  $el('cp-delete-btn').style.display=existing?'block':'none';
   // Show a hint if pre-filled from scan
   var hint='';
   if(!existing&&scan&&scan.whtRate>0){
@@ -5068,16 +5242,16 @@ function openClientProfile(name, prefill){
 }
 
 function saveClientProfile(){
-  var name=document.getElementById('cp-name').value.trim();
+  var name=$el('cp-name').value.trim();
   if(!name){showToast('Enter a client name');return;}
   var profile={
     name:name,
-    email:document.getElementById('cp-email').value.trim()||null,
-    gstNum:document.getElementById('cp-gst-num').value.trim()||null,
-    whtRate:parseFloat(document.getElementById('cp-wht').value)||0,
-    gst:document.getElementById('cp-gst').value,
-    terms:parseInt(document.getElementById('cp-terms').value)||30,
-    notes:document.getElementById('cp-notes').value.trim()||null,
+    email:$el('cp-email').value.trim()||null,
+    gstNum:$el('cp-gst-num').value.trim()||null,
+    whtRate:parseFloat($el('cp-wht').value)||0,
+    gst:$el('cp-gst').value,
+    terms:parseInt($el('cp-terms').value)||30,
+    notes:$el('cp-notes').value.trim()||null,
     updatedAt:new Date().toISOString()
   };
   setClientProfile(name, profile);
@@ -5088,7 +5262,7 @@ function saveClientProfile(){
 }
 
 function deleteClientProfile(){
-  var name=document.getElementById('cp-name').value.trim();
+  var name=$el('cp-name').value.trim();
   if(!name) return;
   showSheet('Delete '+name+'?',[
     {label:'Delete',cls:'danger',fn:function(){
@@ -5281,15 +5455,15 @@ function initPinchZoom(){
     window.location.protocol==='blob:'||
     window.location.hostname==='';
   if(isPreview){
-    document.getElementById('nav-avatar').textContent='S';
-    document.getElementById('acct-name').textContent='Sam';
-    document.getElementById('acct-email').textContent='sam@mckaysmedia.co.nz';
+    $el('nav-avatar').textContent='S';
+    $el('acct-name').textContent='Sam';
+    $el('acct-email').textContent='sam@mckaysmedia.co.nz';
     loadDemoData(); showScreen('main-screen'); renderAll();
   } else if(LS.get(LS_TOKEN)){
     var u=LS.get(LS_USER)||'?';
-    document.getElementById('nav-avatar').textContent=u.charAt(0).toUpperCase();
-    document.getElementById('acct-name').textContent=u;
-    document.getElementById('acct-email').textContent=LS.get(LS_ETOKEN)||'';
+    $el('nav-avatar').textContent=u.charAt(0).toUpperCase();
+    $el('acct-name').textContent=u;
+    $el('acct-email').textContent=LS.get(LS_ETOKEN)||'';
     loadLocal(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
   } else {
     showScreen('login-screen');
@@ -5325,18 +5499,18 @@ var _scanImageData = null, _scanMimeType = null;
 
 function openScanModal(){
   _scanImageData=null; _scanMimeType=null;
-  document.getElementById('scan-zone-title').textContent='Upload invoice';
-  document.getElementById('scan-status').style.display='none';
-  document.getElementById('scan-result').style.display='none';
-  document.getElementById('scan-file-input').value='';
+  $el('scan-zone-title').textContent='Upload invoice';
+  $el('scan-status').style.display='none';
+  $el('scan-result').style.display='none';
+  $el('scan-file-input').value='';
   openModal('modal-scan');
 }
 
 function onScanFile(input){
   var file=input.files[0]; if(!file)return;
-  document.getElementById('scan-zone-title').textContent=file.name;
-  document.getElementById('scan-status').style.display='block';
-  document.getElementById('scan-result').style.display='none';
+  $el('scan-zone-title').textContent=file.name;
+  $el('scan-status').style.display='block';
+  $el('scan-result').style.display='none';
 
   var reader=new FileReader();
   reader.onload=function(e){
@@ -5367,48 +5541,48 @@ function callClaudeForScan(b64, mime){
   })
   .then(function(r){return r.json();})
   .then(function(data){
-    document.getElementById('scan-status').style.display='none';
+    $el('scan-status').style.display='none';
     try{
       var text=data.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
       var clean=text.replace(/```json|```/g,'').trim();
       var parsed=JSON.parse(clean);
-      document.getElementById('sc-client').value=parsed.client||'';
-      document.getElementById('sc-amount').value=parsed.amount||'';
-      document.getElementById('sc-date').value=parsed.date||today();
-      document.getElementById('sc-num').value=parsed.invoice_number||'';
-      document.getElementById('sc-gst').value=parsed.gst||'yes';
-      document.getElementById('sc-wht').value=String(parsed.wht_rate||0);
-      document.getElementById('scan-result').style.display='block';
+      $el('sc-client').value=parsed.client||'';
+      $el('sc-amount').value=parsed.amount||'';
+      $el('sc-date').value=parsed.date||today();
+      $el('sc-num').value=parsed.invoice_number||'';
+      $el('sc-gst').value=parsed.gst||'yes';
+      $el('sc-wht').value=String(parsed.wht_rate||0);
+      $el('scan-result').style.display='block';
     }catch(e){
       showToast('Could not parse invoice — check the file');
-      document.getElementById('scan-zone-title').textContent='Upload invoice';
+      $el('scan-zone-title').textContent='Upload invoice';
     }
   })
   .catch(function(e){
-    document.getElementById('scan-status').style.display='none';
+    $el('scan-status').style.display='none';
     showToast('AI scan failed — '+e.message);
   });
 }
 
 function scanCreateNew(){
-  var client=document.getElementById('sc-client').value.trim();
-  var amount=document.getElementById('sc-amount').value;
-  var date=document.getElementById('sc-date').value;
-  var num=document.getElementById('sc-num').value.trim();
-  var gst=document.getElementById('sc-gst').value;
-  var wht=document.getElementById('sc-wht').value;
+  var client=$el('sc-client').value.trim();
+  var amount=$el('sc-amount').value;
+  var date=$el('sc-date').value;
+  var num=$el('sc-num').value.trim();
+  var gst=$el('sc-gst').value;
+  var wht=$el('sc-wht').value;
 
   closeModal('modal-scan');
   editingId=null;
-  document.getElementById('inv-modal-title').textContent='New Invoice';
-  document.getElementById('f-client').value=client;
-  document.getElementById('f-amount').value=amount;
-  document.getElementById('f-date').value=date;
-  document.getElementById('f-due').value=daysAhead(30);
-  document.getElementById('f-num').value=num;
-  document.getElementById('f-gst').value=gst;
-  document.getElementById('f-wht').value=wht;
-  document.getElementById('f-notes').value='';
+  $el('inv-modal-title').textContent='New Invoice';
+  $el('f-client').value=client;
+  $el('f-amount').value=amount;
+  $el('f-date').value=date;
+  $el('f-due').value=daysAhead(30);
+  $el('f-num').value=num;
+  $el('f-gst').value=gst;
+  $el('f-wht').value=wht;
+  $el('f-notes').value='';
   // Pre-load attachment
   var al=document.getElementById('f-attach-label');
   if(al&&_scanImageData){al.textContent='Scanned document attached'; al._b64=_scanImageData; al._mime=_scanMimeType;}
@@ -5454,6 +5628,52 @@ function confirmScanMatch(invId){
   closeModal('modal-match');
   showToast('Invoice updated');
 }
+  /* ── Error boundaries ────────────────────────────────────────────
+     Each render function is wrapped so a failure in one section
+     (usually a missing DOM element) degrades that section only,
+     instead of taking down the whole tab. Errors are logged and
+     surfaced once per function rather than on every re-render. */
+  var _renderErrs = {};
+  function _boundary(name, fn){
+    return function(){
+      try {
+        return fn.apply(this, arguments);
+      } catch(e){
+        console.error('[' + name + ']', e);
+        if(!_renderErrs[name]){
+          _renderErrs[name] = 1;
+          showToast('Display issue in ' + name.replace(/^(render|open)/, '').toLowerCase() + ' \u2014 data is safe');
+        } else {
+          _renderErrs[name]++;
+        }
+        return null;
+      }
+    };
+  }
+
+  renderSummary        = _boundary('renderSummary',        renderSummary);
+  renderIncomeTab      = _boundary('renderIncomeTab',      renderIncomeTab);
+  renderInvoices       = _boundary('renderInvoices',       renderInvoices);
+  renderClientsTab     = _boundary('renderClientsTab',     renderClientsTab);
+  renderClientDetail   = _boundary('renderClientDetail',   renderClientDetail);
+  renderSources        = _boundary('renderSources',        renderSources);
+  renderBank           = _boundary('renderBank',           renderBank);
+  renderAssets         = _boundary('renderAssets',         renderAssets);
+  renderSetAside       = _boundary('renderSetAside',       renderSetAside);
+  renderInvBin         = _boundary('renderInvBin',         renderInvBin);
+  renderInvoiceList    = _boundary('renderInvoiceList',    renderInvoiceList);
+  renderOverviewExtras = _boundary('renderOverviewExtras', renderOverviewExtras);
+  openInvDetail        = _boundary('openInvDetail',        openInvDetail);
+  openBankDetail       = _boundary('openBankDetail',       openBankDetail);
+
+  // Diagnostic helper — run renderErrors() in the console to see failures
+  function renderErrors(){
+    var keys = Object.keys(_renderErrs);
+    if(!keys.length){ console.log('No render errors recorded.'); return {}; }
+    console.table(_renderErrs);
+    return _renderErrs;
+  }
+
   // Prevent double-tap zoom on iOS (user-scalable=no ignored since iOS 10)
   var lastTap=0;
   document.addEventListener('touchend',function(e){
