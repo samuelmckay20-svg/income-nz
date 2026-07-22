@@ -2707,6 +2707,17 @@ function renderClientDetail(clientName, detailId){
     html+='</div>';
   });
 
+
+  // Edit affordance — the only route into the client profile for a client
+  // that already exists (and therefore the only way to change their colour).
+  html+='<button onclick="event.stopPropagation();openClientProfile('
+     +  esc(JSON.stringify(clientName))
+     +  ')" style="width:100%;margin-top:10px;padding:11px;border-radius:12px;border:none;'
+     +  'background:var(--fill);color:var(--blue);font-family:inherit;font-size:14px;'
+     +  'font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">'
+     +  '<span style="width:11px;height:11px;border-radius:3px;background:'+clientColour(clientName)+';display:inline-block"></span>'
+     +  'Edit client</button>';
+
   el.innerHTML=html;
 }
 
