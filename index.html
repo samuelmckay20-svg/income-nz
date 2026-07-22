@@ -642,7 +642,7 @@ body{
             <div style="font-size:17px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums" id="setaside-gst">$0</div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:0.5px solid var(--sep)">
-            <div><div style="font-size:13px;font-weight:600;color:var(--t1)">ACC levies</div><div style="font-size:11px;color:var(--t3);margin-top:1px">Earner + working cover</div></div>
+            <div><div style="font-size:13px;font-weight:600;color:var(--t1)">ACC levies</div><div style="font-size:11px;color:var(--t3);margin-top:1px">Earner’s + work + working safer</div></div>
             <div style="font-size:17px;font-weight:700;color:var(--teal);font-variant-numeric:tabular-nums" id="setaside-acc">$0</div>
           </div>
         </div>
@@ -843,22 +843,23 @@ body{
               <div class="g-row"><div class="g-icon">&#x1F4B0;</div><span class="g-lbl">Purchase price</span><input class="g-input" id="asset-cost" type="text" inputmode="decimal" placeholder="$0.00" style="max-width:120px;text-align:right"></div>
               <div class="g-row"><div class="g-icon">&#x1F4C5;</div><span class="g-lbl">Purchase date</span><input class="g-input" id="asset-date" type="date" style="max-width:160px;text-align:right"></div>
               <div class="g-row"><div class="g-icon">&#x1F4CA;</div><span class="g-lbl">IRD category</span>
-                <select class="g-select" id="asset-category" style="font-size:13px;max-width:200px">
-                  <option value="67" data-label="Computers &amp; laptops">Computers &amp; laptops (67%)</option>
-                  <option value="50" data-label="Camera equipment">Camera equipment (50%)</option>
+                <select class="g-select" id="asset-category" style="font-size:13px;max-width:210px" onchange="onAssetCategoryChange()">
+                  <option value="50" data-label="Computers &amp; laptops">Computers &amp; laptops (50%)</option>
+                  <option value="67" data-label="Tablets &amp; smartphones">Tablets &amp; smartphones (67%)</option>
                   <option value="30" data-label="Motor vehicles">Motor vehicles (30%)</option>
-                  <option value="40" data-label="Office furniture">Office furniture (40%)</option>
-                  <option value="48" data-label="Audio equipment">Audio equipment (48%)</option>
-                  <option value="25" data-label="Tools &amp; equipment">Tools &amp; equipment (25%)</option>
                   <option value="100" data-label="Low value (under $1,000)">Low value under $1,000 (100%)</option>
+                  <option value="custom" data-label="Custom">Custom rate…</option>
                 </select>
               </div>
+              <div class="g-row" id="asset-custom-row" style="display:none"><div class="g-icon">&#x270F;&#xFE0F;</div><span class="g-lbl">DV rate %</span><input class="g-input" id="asset-custom-rate" type="text" inputmode="decimal" placeholder="e.g. 25" style="max-width:80px;text-align:right"></div>
               <div class="g-row"><div class="g-icon">&#x1F4F1;</div><span class="g-lbl">Business use %</span><input class="g-input" id="asset-biz-pct" type="text" inputmode="numeric" placeholder="100" style="max-width:80px;text-align:right"></div>
               <div class="g-row"><div class="g-icon">&#x1F4B3;</div><span class="g-lbl">Price includes GST?</span><select class="g-select" id="asset-gst" style="font-size:13px;width:auto"><option value="yes">Yes — I'm GST registered</option><option value="no">No — ex-GST price</option></select></div>
               <div class="g-row" id="asset-boost-row"><div class="g-icon">&#x26A1;</div><span class="g-lbl">Investment Boost (20%)?</span><select class="g-select" id="asset-boost" style="font-size:13px;width:auto"><option value="no">No</option><option value="yes">Yes — new asset after 22 May 2025</option></select></div>
             </div>
             <div style="margin-top:12px;padding:12px;background:var(--fill);border-radius:12px;font-size:12px;color:var(--t3)">
-              Diminishing value method. IRD rates sourced from <strong>ird.govt.nz/depreciation</strong>. Low-value assets under $1,000 can be written off immediately.
+              Diminishing value method. Only rates confirmed against IRD's IR265 schedule are listed &mdash; for anything else (camera bodies, lenses, audio gear, tools) look up the exact rate and enter it as a custom rate.<br>
+              <a href="https://www.ird.govt.nz/income-tax/income-tax-for-businesses-and-organisations/types-of-business-expenses/depreciation/claiming-depreciation/work-out-your-assets-rate-and-depreciation-value" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;font-weight:600">IRD depreciation rate finder &#x2197;</a><br><br>
+              Assets under $1,000 (ex-GST) can be written off in full in the year of purchase.
             </div>
           </div>
           <div class="modal-foot">
@@ -1411,8 +1412,8 @@ body{
           <select class="g-select" id="cp-wht">
             <option value="0">None &#x2014; client pays full amount</option>
             <option value="20">20% &#x2014; standard schedular</option>
-            <option value="33">33% &#x2014; no tax code provided</option>
-            <option value="15">15% &#x2014; other</option>
+            <option value="45">45% &#x2014; no IR330C provided</option>
+            <option value="15">15% &#x2014; non-resident minimum</option>
           </select>
         </div>
         <div class="g-row">
@@ -2553,7 +2554,10 @@ function renderIncomeTab(){
   var bHTML=incTax.breakdown.filter(function(b){return b.taxable>0;}).map(function(b){
     var maxPossible=(b.max===Infinity?b.taxable:(b.max-b.min))*b.rate;
     var pct=maxPossible>0?Math.min(100,Math.round((b.tax/maxPossible)*100)):100;
-    var rateLabel=Math.round(b.rate*100)+'%';
+    // Rates like 10.5% and 17.5% must not be rounded to whole numbers —
+    // NZ has no 11% or 18% bracket. Trim only a trailing '.0'.
+    var ratePct=(b.rate*100).toFixed(1).replace(/\.0$/,'');
+    var rateLabel=ratePct+'%';
     var rangeLabel=b.max===Infinity?'Over '+fmtShort(b.min):fmtShort(b.min)+' – '+fmtShort(b.max);
     var colour=b.rate<=0.105?'#34C759':b.rate<=0.175?'#007AFF':b.rate<=0.30?'#FF9500':b.rate<=0.33?'#FF3B30':'#AF52DE';
     return '<div class="bracket-row">'+
@@ -3488,12 +3492,26 @@ function openAddAsset(){
   openModal('modal-asset');
 }
 
+
+function onAssetCategoryChange(){
+  var sel = document.getElementById('asset-category');
+  var row = document.getElementById('asset-custom-row');
+  if(!sel || !row) return;
+  row.style.display = sel.value === 'custom' ? 'flex' : 'none';
+}
+
 function saveAsset(){
   var name = $el('asset-name').value.trim();
   var cost = $el('asset-cost').value.replace(/[^0-9.]/g,'');
   var date = $el('asset-date').value;
   var catEl = document.getElementById('asset-category');
-  var rate = catEl ? parseFloat(catEl.value) : 67;
+  var rate;
+  if(catEl && catEl.value === 'custom'){
+    rate = parseFloat(String((document.getElementById('asset-custom-rate')||{}).value||'').replace(/[^0-9.]/g,''));
+    if(!rate || rate <= 0 || rate > 100){ showToast('Enter a DV rate between 1 and 100'); return; }
+  } else {
+    rate = catEl ? parseFloat(catEl.value) : 50;
+  }
   var label = catEl ? (catEl.options[catEl.selectedIndex]||{}).text || '' : '';
   var bizPct = $el('asset-biz-pct').value || '100';
   if(!name){ showToast('Enter asset name'); return; }
@@ -3582,7 +3600,10 @@ function _renderTaxTabInner(){
     // pct = how full this bracket is (100% = entire bracket range used up)
     var maxPossible=(b.max===Infinity?b.taxable:Math.min(b.max,Infinity)-b.min)*b.rate;
     var pct=maxPossible>0?Math.min(100,Math.round((b.tax/maxPossible)*100)):100;
-    var rateLabel=Math.round(b.rate*100)+'%';
+    // Rates like 10.5% and 17.5% must not be rounded to whole numbers —
+    // NZ has no 11% or 18% bracket. Trim only a trailing '.0'.
+    var ratePct=(b.rate*100).toFixed(1).replace(/\.0$/,'');
+    var rateLabel=ratePct+'%';
     var rangeLabel=b.max===Infinity?'Over '+fmtShort(b.min):fmtShort(b.min)+' – '+fmtShort(b.max);
     var colour=b.rate<=0.105?'#34C759':b.rate<=0.175?'#007AFF':b.rate<=0.30?'#FF9500':b.rate<=0.33?'#FF3B30':'#AF52DE';
     return '<div class="bracket-row">'+
@@ -5205,15 +5226,26 @@ function renderOverviewExtras(fyInvoices){
   var paid=fyInvoices.filter(function(i){return i.status==='paid';});
   if(!paid.length){donutEl.innerHTML='<div style="color:var(--t3);font-size:13px;padding:20px 0">No paid invoices yet</div>';return;}
 
-  // Group by client
+  // Group by client — NET received, to match the "NET" centre label and the
+  // hero figure above. Uses paid_amount where recorded, otherwise gross less W/H.
   var clients={};
   paid.forEach(function(inv){
     var c=inv.client||'Unknown';
-    clients[c]=(clients[c]||0)+(parseFloat(inv.amount)||0);
+    var amt=parseFloat(inv.amount)||0;
+    var net;
+    if(inv.paid_amount!=null&&inv.paid_amount!==''){
+      net=parseFloat(inv.paid_amount)||0;
+    } else {
+      var wht=inv.wht_amount!=null&&inv.wht_amount!==''
+        ? parseFloat(inv.wht_amount)
+        : amt*(parseFloat(inv.wht_rate)||0)/100;
+      net=amt-wht;
+    }
+    clients[c]=(clients[c]||0)+net;
   });
   var sorted=Object.entries(clients).sort(function(a,b){return b[1]-a[1];});
   var total=sorted.reduce(function(s,c){return s+c[1];},0);
-  var colours=['#007AFF','#34C759','#FF9500','#AF52DE','#FF3B30','#5AC8FA','#FF2D55','#FF6B35'];
+  var colours=['#007AFF','#34C759','#FF9500','#AF52DE','#FF3B30','#5AC8FA','#FF2D55','#30B0C7','#32ADE6','#64D2FF','#BF5AF2','#FF6961','#FFD60A','#30D158'];
 
   // Build SVG donut — centred, larger
   var size=180,cx=90,cy2=90,outerR=82,innerR=62,startAngle=-Math.PI/2;
