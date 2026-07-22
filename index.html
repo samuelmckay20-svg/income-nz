@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#F5F5F7">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Income NZ">
 <link rel="manifest" href="manifest.json">
@@ -1620,6 +1624,7 @@ function afterLogin(data){
   $el('nav-avatar').textContent=uname.charAt(0).toUpperCase();
   $el('acct-name').textContent=uname;
   $el('acct-email').textContent=etoken?'Receipts2026+'+etoken+'@gmail.com':'(loading\u2026)';
+  _rxGSTAuthFailed=false;
   refreshFY(); loadLocal(); loadAssets(); repairInvoiceGST(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
 }
 
@@ -1867,7 +1872,7 @@ function nextGSTDue(){
 }
 
 /* ── Receipts NZ Integration ── */
-var _rxGSTCache=null, _rxGSTCacheTime=0, _rxGSTCacheKey='';
+var _rxGSTCache=null, _rxGSTCacheTime=0, _rxGSTCacheKey='', _rxGSTAuthFailed=false;
 function _loadRxCache(){
   try{
     var raw=JSON.parse(localStorage.getItem('nzin_rxcache')||'null');
@@ -1915,13 +1920,28 @@ function fetchReceiptsGST(start,end,callback){
     callback(calcInputGST(_rxGSTCache.receipts,start,end));
     return;
   }
+  // A failed link shouldn't be retried on every render. Once the endpoint
+  // returns 401 we fall back to the local cache until the next sign-in.
+  if(_rxGSTAuthFailed){
+    callback(calcInputGST(getReceiptsNZData().receipts,start,end));
+    return;
+  }
+
   fetch(API_BASE+'/receipts-gst',{headers:authHeaders()})
-  .then(function(r){return r.ok?r.json():null;})
+  .then(function(r){
+    if(r.status===401||r.status===403){
+      _rxGSTAuthFailed=true;
+      console.warn('[receipts] link unauthorised \u2014 using locally cached expenses');
+      return null;
+    }
+    return r.ok?r.json():null;
+  })
   .then(function(data){
     if(!data||!data.receipts){
       callback(calcInputGST(getReceiptsNZData().receipts,start,end));
       return;
     }
+    _rxGSTAuthFailed=false;
     try{localStorage.setItem('nzrt5_r',JSON.stringify(data.receipts));}catch(e){}
     _rxGSTCache={receipts:data.receipts}; _rxGSTCacheTime=Date.now(); _rxGSTCacheKey=cacheKey; _saveRxCache(data.receipts,cacheKey);
     callback(calcInputGST(data.receipts,start,end));
@@ -2262,8 +2282,8 @@ function copyForMyIR(){
     +"Box 5  Total sales and income:   "+(b5?b5.textContent:"")+nl
     +"Box 6  Zero-rated supplies:      $0.00"+nl
     +"Box 7  GST collected on sales:   "+(b7?b7.textContent:"")+nl
-    +"Box 11 Total purchases/expenses: "+(b11&&b11.textContent!=="Link Receipts NZ"?b11.textContent:"—")+nl
-    +"Box 13 GST claimed on purchases: "+(b13&&b13.textContent!=="Link Receipts NZ"?b13.textContent:"$0.00")+nl
+    +"Box 11 Total purchases/expenses: "+(b11&&b11.textContent.indexOf("$")===0?b11.textContent:"—")+nl
+    +"Box 13 GST claimed on purchases: "+(b13&&b13.textContent.indexOf("$")===0?b13.textContent:"$0.00")+nl
     +"Box 15 Resident withholding tax: $0.00"+nl
     +"Box 16 Amount to pay/refund:     "+(b15?b15.textContent:"")+nl
     +nl
@@ -3708,11 +3728,14 @@ function _renderTaxTabInner(){
       gset('gst-box15-sub','Output '+fmt(_box7snap)+' minus input '+fmt(box13));
       gset('gst-input',fmt(box13));
     } else {
-      gset('gst-box11','Link Receipts NZ');
-      gset('gst-box13','Link Receipts NZ');
-      gset('gst-input','Not linked');
+      // Distinguish 'never linked' from 'link expired' so the fix is obvious
+      var rxMsg = _rxGSTAuthFailed ? 'Sign in again' : 'Link Receipts NZ';
+      gset('gst-box11', rxMsg);
+      gset('gst-box13', rxMsg);
+      gset('gst-input', _rxGSTAuthFailed ? 'Link expired' : 'Not linked');
     }
-    var ll=document.getElementById('receipts-link-lbl'); if(ll) ll.textContent='Open Receipts NZ →';
+    var ll=document.getElementById('receipts-link-lbl');
+    if(ll) ll.textContent = _rxGSTAuthFailed ? 'Link expired \u2014 reconnect \u2192' : 'Open Receipts NZ \u2192';
   });
 
   // ── Student loan ──

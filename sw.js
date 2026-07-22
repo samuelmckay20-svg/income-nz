@@ -1,17 +1,36 @@
-const VERSION = '2.0.3';
+const VERSION = '2.1.0';
 const CACHE = 'income-nz-' + VERSION;
-const SHELL = [
+
+// Files worth pre-caching. index.html is the only one that MUST succeed —
+// the rest are best-effort, so a missing asset can't break offline support.
+const CRITICAL = [
   '/income-nz/',
-  '/income-nz/index.html',
+  '/income-nz/index.html'
+];
+const OPTIONAL = [
   '/income-nz/manifest.json',
+  '/income-nz/icon-192.png',
+  '/income-nz/icon-512.png',
+  '/income-nz/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE).then(function(cache) {
-      return cache.addAll(SHELL).catch(function(err) {
-        console.warn('SW cache error:', err);
-      });
+      // cache.addAll() is atomic — a single 404 rejects the whole batch and
+      // leaves the cache empty. Adding entries individually means one missing
+      // file no longer takes offline support down with it.
+      var critical = Promise.all(CRITICAL.map(function(url) {
+        return cache.add(url).catch(function(err) {
+          console.error('[sw] critical asset failed:', url, err);
+        });
+      }));
+      var optional = Promise.all(OPTIONAL.map(function(url) {
+        return cache.add(url).catch(function() {
+          console.warn('[sw] optional asset unavailable:', url);
+        });
+      }));
+      return Promise.all([critical, optional]);
     }).then(function() {
       return self.skipWaiting();
     })
@@ -34,39 +53,26 @@ self.addEventListener('activate', function(e) {
 self.addEventListener('fetch', function(e) {
   var url = e.request.url;
 
-  // NEVER intercept API calls, external scripts, or non-GET requests
+  // Never intercept API calls, external scripts, or non-GET requests
   if (e.request.method !== 'GET') return;
   if (url.includes('synology.me')) return;
   if (url.includes('anthropic.com')) return;
   if (url.includes('cdnjs.cloudflare.com')) return;
-  if (url.includes('googleapis.com')) return;
-
-  // Only cache our own shell files
-  var isShell = url.includes('/income-nz/index.html') ||
-                url.includes('/income-nz/manifest.json') ||
-                url.endsWith('/income-nz/');
-
-  if (!isShell) return;
 
   e.respondWith(
-    caches.match(e.request).then(function(cached) {
-      // Network first for shell — always try to get fresh version
-      return fetch(e.request).then(function(response) {
-        if (response && response.status === 200) {
-          var clone = response.clone();
-          caches.open(CACHE).then(function(cache) {
-            cache.put(e.request, clone);
-          });
+    fetch(e.request)
+      .then(function(res) {
+        // Keep the cache warm with successful same-origin responses
+        if (res && res.status === 200 && res.type === 'basic') {
+          var copy = res.clone();
+          caches.open(CACHE).then(function(c) { c.put(e.request, copy); });
         }
-        return response;
-      }).catch(function() {
-        // Offline fallback only
-        return cached || caches.match('/income-nz/index.html');
-      });
-    })
+        return res;
+      })
+      .catch(function() {
+        return caches.match(e.request).then(function(hit) {
+          return hit || caches.match('/income-nz/index.html');
+        });
+      })
   );
-});
-
-self.addEventListener('message', function(e) {
-  if (e.data === 'skipWaiting') self.skipWaiting();
 });
