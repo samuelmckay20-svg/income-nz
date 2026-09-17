@@ -1505,7 +1505,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.1.0-rem';
+var APP_VERSION = '1.1.1-diag';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -4810,6 +4810,8 @@ function confirmMarkPaid(){
     if(scanD&&scanD.whtRate>0) inv.wht_rate=scanD.whtRate;
   }
   if(window._paidFileData) inv.remittance_image=window._paidFileData;
+  // DIAGNOSTIC: surface whether the remittance is attached at save time
+  showToast(window._paidFileData ? ('REM attached: '+Math.round(window._paidFileData.length/1024)+'KB') : 'NO remittance attached');
   var pnEl=document.getElementById('paid-inv-num');
   if(pnEl&&pnEl.value.trim()) inv.invoice_number=pnEl.value.trim();
   var sd=window._lastRemittanceScan; if(sd&&sd.payerGst) inv.client_gst=sd.payerGst;
