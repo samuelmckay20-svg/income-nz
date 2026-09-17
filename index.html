@@ -999,7 +999,7 @@ body{
       </div>
       <div class="shdr">App</div>
       <div class="g-list">
-        <div class="g-row"><div class="g-icon" style="background:var(--fill)">ℹ️</div><span class="g-lbl">Version</span><span class="g-val">1.0.0</span></div>
+        <div class="g-row"><div class="g-icon" style="background:var(--fill)">ℹ️</div><span class="g-lbl">Version</span><span class="g-val" id="app-version-label">1.0.0</span></div>
       </div>
       <div class="shdr">Account</div>
       <div class="g-list" style="margin-bottom:8px">
@@ -1505,7 +1505,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.0.0';
+var APP_VERSION = '1.1.0-rem';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -1633,6 +1633,7 @@ function afterLogin(data){
   $el('acct-email').textContent=etoken?'Receipts2026+'+etoken+'@gmail.com':'(loading\u2026)';
   _rxGSTAuthFailed=false;
   refreshFY(); loadLocal(); loadAssets(); repairInvoiceGST(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
+  var _vl=document.getElementById('app-version-label'); if(_vl) _vl.textContent=APP_VERSION;
 }
 
 function doLogout(){

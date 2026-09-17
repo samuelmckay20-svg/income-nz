@@ -1,4 +1,4 @@
-const VERSION = '2.5.1';
+const VERSION = '2.5.2';
 const CACHE = 'income-nz-' + VERSION;
 
 // Files worth pre-caching. index.html is the only one that MUST succeed —
