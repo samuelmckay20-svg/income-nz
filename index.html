@@ -1674,7 +1674,7 @@ function onFab(){ if(currentTab==='invoices')openAddInvoice(); else if(currentTa
 /* ── Storage ── */
 function saveLocal(){
   if(invBin.length>50) invBin=invBin.slice(invBin.length-50); // keep last 50 deleted invoices only
-  var slim=invoices.map(function(i){var c=Object.assign({},i);delete c.image;return c;});
+  var slim=invoices.map(function(i){var c=Object.assign({},i);delete c.image;delete c.remittance_image;return c;});
   try{
     LS.set(LS_INVOICES,JSON.stringify(slim)); LS.set(LS_BANK,JSON.stringify(bankTxns)); LS.set(LS_SETTINGS,JSON.stringify(settings)); LS.set('nzin_invbin',JSON.stringify(invBin)); LS.set('nzin_cp',JSON.stringify(clientProfiles));
     // Warn if approaching 5MB localStorage limit
