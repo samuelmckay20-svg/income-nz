@@ -1605,7 +1605,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.5.0-viewdocs';
+var APP_VERSION = '1.6.0-sharpview';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -4144,11 +4144,14 @@ function renderInvPDFPreview(dataUrl){
     }).then(function(page){
       var canvas=document.getElementById('inv-pdf-canvas');
       if(!canvas) return;
+      var dpr=window.devicePixelRatio||1;
       var vp=page.getViewport({scale:1});
-      var scale=Math.min((canvas.parentElement.clientWidth||340)/vp.width, 200/vp.height);
-      var viewport=page.getViewport({scale:scale});
+      var fitScale=Math.min((canvas.parentElement.clientWidth||340)/vp.width, 200/vp.height);
+      var viewport=page.getViewport({scale:fitScale*dpr});   // crisp on retina
       canvas.width=viewport.width;
       canvas.height=viewport.height;
+      canvas.style.width=Math.round(vp.width*fitScale)+'px';
+      canvas.style.height=Math.round(vp.height*fitScale)+'px';
       page.render({canvasContext:canvas.getContext('2d'),viewport:viewport});
     }).catch(function(){});
   }catch(e){}
@@ -4231,14 +4234,26 @@ async function renderPDFInViewer(dataUrl){
     var pdf=await pdfjsLib.getDocument({data:bytes}).promise;
     if(loadingEl) loadingEl.textContent='Rendering '+pdf.numPages+' page'+(pdf.numPages>1?'s':'')+'…';
     var viewerW=(document.getElementById('pdf-viewer-wrap')||{}).clientWidth||340;
+    // Render at high resolution so the receipt stays sharp when zoomed.
+    // Base scale fits the page to the screen; we then multiply by the device
+    // pixel ratio AND a zoom-headroom factor, and draw the canvas at that
+    // resolution while displaying it at fit-width (CSS max-width:100%).
+    var dpr=window.devicePixelRatio||1;
+    var ZOOM_HEADROOM=3;   // keeps detail when pinch-zoomed up to ~3×
     for(var p=1;p<=pdf.numPages;p++){
       var page=await pdf.getPage(p);
       var vp=page.getViewport({scale:1});
-      var scale=Math.min((viewerW-16)/vp.width,2);
-      var viewport=page.getViewport({scale:scale});
+      var fitScale=(viewerW-16)/vp.width;
+      var renderScale=fitScale*dpr*ZOOM_HEADROOM;
+      // Cap total canvas pixels so huge/multi-page PDFs don't exhaust memory
+      var maxCanvasW=4000;
+      if(vp.width*renderScale>maxCanvasW) renderScale=maxCanvasW/vp.width;
+      var viewport=page.getViewport({scale:renderScale});
       var canvas=document.createElement('canvas');
       canvas.width=viewport.width; canvas.height=viewport.height;
-      canvas.style.cssText='max-width:100%;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.4);display:block;';
+      // Display width stays fit-to-screen; the extra pixels are the zoom buffer
+      var cssW=Math.round(vp.width*fitScale);
+      canvas.style.cssText='width:'+cssW+'px;max-width:100%;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.4);display:block;';
       await page.render({canvasContext:canvas.getContext('2d'),viewport:viewport}).promise;
       if(pagesEl) pagesEl.appendChild(canvas);
     }
