@@ -250,6 +250,16 @@ body{
   flex-shrink:0;z-index:100;
 }
 @media(prefers-color-scheme:dark){.tab-bar{background:rgba(17,17,19,0.94)}}
+.dbg-chip{touch-action:manipulation;padding:5px 11px;border-radius:14px;border:0.5px solid var(--sep);background:var(--surface);color:var(--t2);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer}
+.dbg-chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.dbg-line{padding:3px 0;border-bottom:0.5px solid rgba(128,128,128,0.08);white-space:pre-wrap;word-break:break-word}
+.dbg-t{color:var(--t3)}
+.dbg-tag{font-weight:700;padding:0 5px}
+.dbg-err .dbg-tag{color:var(--red)} .dbg-err{color:var(--red)}
+.dbg-net .dbg-tag{color:var(--blue)}
+.dbg-sync .dbg-tag{color:var(--green)}
+.dbg-rem .dbg-tag{color:var(--purple)}
+.dbg-info .dbg-tag{color:var(--t2)}
 .tab-btn{touch-action:manipulation;flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 0 4px;background:none;border:none;cursor:pointer;font-family:inherit;color:var(--t3);font-size:10px;font-weight:500;gap:3px;transition:color .18s}
 .tab-btn.on{color:var(--blue)}
 .tab-icon{font-size:22px;line-height:1}
@@ -930,12 +940,24 @@ body{
     </div><!-- /tab-gst -->
     
     <div id="tab-debug" class="tab-panel">
-      <div style="padding:14px 16px;display:flex;gap:8px;position:sticky;top:0;background:var(--bg);z-index:2">
-        <button onclick="dbgRefresh()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:inherit;font-size:14px;font-weight:600">Refresh</button>
-        <button onclick="dbgCopy()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--fill);color:var(--t1);font-family:inherit;font-size:14px;font-weight:600">Copy all</button>
-        <button onclick="dbgClear()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--fill);color:var(--red);font-family:inherit;font-size:14px;font-weight:600">Clear log</button>
+      <!-- live state header -->
+      <div id="debug-state" style="padding:12px 16px;background:var(--surface);border-bottom:0.5px solid var(--sep);font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.5;color:var(--t2)"></div>
+      <!-- action buttons -->
+      <div style="padding:10px 16px;display:flex;gap:7px;background:var(--bg)">
+        <button onclick="dbgCopy()" style="flex:1;padding:9px;border-radius:9px;border:none;background:var(--blue);color:#fff;font-family:inherit;font-size:13px;font-weight:600">Copy all</button>
+        <button onclick="dbgRefresh()" style="flex:1;padding:9px;border-radius:9px;border:none;background:var(--fill);color:var(--t1);font-family:inherit;font-size:13px;font-weight:600">Refresh</button>
+        <button onclick="dbgClear()" style="flex:1;padding:9px;border-radius:9px;border:none;background:var(--fill);color:var(--red);font-family:inherit;font-size:13px;font-weight:600">Clear</button>
       </div>
-      <div id="debug-body" style="padding:0 16px 24px;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-word"></div>
+      <!-- filter chips -->
+      <div id="debug-filters" style="padding:0 16px 10px;display:flex;gap:6px;flex-wrap:wrap;background:var(--bg)">
+        <button class="dbg-chip on" data-flt="all" onclick="dbgFilter('all')">All</button>
+        <button class="dbg-chip" data-flt="err" onclick="dbgFilter('err')">Errors</button>
+        <button class="dbg-chip" data-flt="net" onclick="dbgFilter('net')">Network</button>
+        <button class="dbg-chip" data-flt="sync" onclick="dbgFilter('sync')">Sync</button>
+        <button class="dbg-chip" data-flt="rem" onclick="dbgFilter('rem')">Remittance</button>
+      </div>
+      <!-- live console -->
+      <div id="debug-console" style="padding:4px 12px 28px;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.5"></div>
     </div>
 
   </div><!-- /tab-content -->
@@ -1486,12 +1508,20 @@ body{
    ═══════════════════════════════════════════════════════════ */
 var _dbgLog = [];
 var _dbgMax = 200;
-function dbg(tag, msg){
-  var line = { t: new Date().toISOString().slice(11,23), tag: tag, msg: String(msg) };
+function dbg(tag, msg, level){
+  // level: 'err' | 'net' | 'sync' | 'rem' | 'info' (default) — drives colour + filter
+  if(!level){
+    level = tag==='ERROR'||tag==='REJECT'||tag==='HTTP'||tag==='FAIL' ? 'err'
+          : tag==='SYNC' ? 'sync'
+          : tag==='REM'  ? 'rem'
+          : tag==='NET'  ? 'net' : 'info';
+  }
+  var line = { t: new Date().toISOString().slice(11,23), tag: tag, msg: String(msg), lvl: level };
   _dbgLog.push(line);
   if(_dbgLog.length > _dbgMax) _dbgLog.shift();
-  // mirror to console too, for desktop debugging
   try{ console.log('['+tag+']', msg); }catch(e){}
+  // live-append if the debug tab is currently showing
+  if(typeof _dbgLiveAppend === 'function') _dbgLiveAppend(line);
 }
 
 // Catch all uncaught JS errors
@@ -1507,13 +1537,19 @@ window.addEventListener('unhandledrejection', function(e){
   var _origFetch = window.fetch;
   window.fetch = function(){
     var url = arguments[0];
+    var opts = arguments[1] || {};
+    var method = (opts.method || 'GET').toUpperCase();
     var path = (typeof url === 'string' ? url : (url && url.url) || '').replace(/^https?:\/\/[^/]+/, '');
+    var host = (typeof url === 'string' ? url : (url && url.url) || '').replace(/^https?:\/\/([^/]+).*/, '$1');
     var started = Date.now();
+    dbg('NET', method + ' ' + path + ' →', 'net');
     return _origFetch.apply(this, arguments).then(function(r){
-      if(!r.ok) dbg('HTTP', r.status + ' ' + path + ' (' + (Date.now()-started) + 'ms)');
+      var ms = Date.now() - started;
+      var lvl = r.ok ? 'net' : 'err';
+      dbg(r.ok ? 'NET' : 'HTTP', method + ' ' + path + ' ← ' + r.status + ' (' + ms + 'ms)', lvl);
       return r;
     }).catch(function(err){
-      dbg('FETCH-FAIL', path + ' — ' + (err.message||err));
+      dbg('FAIL', method + ' ' + path + ' — ' + (err.message||err), 'err');
       throw err;
     });
   };
@@ -1569,7 +1605,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.3.0-debugtab';
+var APP_VERSION = '1.4.0-console';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -5186,32 +5222,73 @@ function closeSheet(){var bg=document.getElementById('sheet-bg'),sh=document.get
 var _toastTmr;
 
 /* ── Debug panel ── */
+var _dbgFilter = 'all';
+
+function dbgClear(){ _dbgLog = []; dbgRefresh(); showToast('Log cleared'); }
+
+function _dbgStateText(){
+  var ls = _lsBytes();
+  var lsWarn = ls > 4*1024*1024 ? '  \u26A0 NEAR LIMIT' : '';
+  var paid = window._paidFileData ? Math.round(window._paidFileData.length/1024)+'KB attached' : 'empty';
+  return 'App ' + APP_VERSION + '   \u00b7   ' + new Date().toLocaleTimeString('en-NZ') + '\n'
+    + 'invoices ' + invoices.length
+    + '  \u00b7  img ' + invoices.filter(function(i){return i.image;}).length
+    + '  \u00b7  rem ' + invoices.filter(function(i){return i.remittance_image;}).length + '\n'
+    + 'localStorage ' + Math.round(ls/1024) + 'KB / ~5120KB' + lsWarn + '\n'
+    + '_paidFileData: ' + paid
+    + '  \u00b7  caches img/rem: ' + (typeof _imgCache!=='undefined'?_imgCache.size:'?') + '/' + (typeof _remCache!=='undefined'?_remCache.size:'?');
+}
+
+function _dbgLineHTML(l){
+  if(_dbgFilter !== 'all' && l.lvl !== _dbgFilter) return '';
+  return '<div class="dbg-line dbg-'+l.lvl+'"><span class="dbg-t">'+l.t+'</span>'
+       + '<span class="dbg-tag">'+esc(l.tag)+'</span>'+esc(l.msg)+'</div>';
+}
+
+function dbgRefresh(){
+  var s = document.getElementById('debug-state');
+  if(s) s.textContent = _dbgStateText();
+  var con = document.getElementById('debug-console');
+  if(con){
+    var html = '';
+    for(var i=0;i<_dbgLog.length;i++) html += _dbgLineHTML(_dbgLog[i]);
+    con.innerHTML = html || '<div style="padding:20px 0;color:var(--t3);text-align:center">No events'+(_dbgFilter!=='all'?' for this filter':' yet')+'</div>';
+    con.scrollTop = con.scrollHeight;
+  }
+}
+
+// Append a single new line without redrawing everything (keeps it live + fast)
+function _dbgLiveAppend(l){
+  var tab = document.getElementById('tab-debug');
+  if(!tab || !tab.classList.contains('active')) return;
+  var con = document.getElementById('debug-console');
+  if(!con) return;
+  var h = _dbgLineHTML(l);
+  if(h){ con.insertAdjacentHTML('beforeend', h); con.scrollTop = con.scrollHeight; }
+  var s = document.getElementById('debug-state');
+  if(s) s.textContent = _dbgStateText();
+}
+
+function dbgFilter(f){
+  _dbgFilter = f;
+  document.querySelectorAll('.dbg-chip').forEach(function(ch){
+    ch.classList.toggle('on', ch.dataset.flt === f);
+  });
+  dbgRefresh();
+}
+
+// Plain-text report for the clipboard (all entries, ignores filter)
 function dbgReport(){
   var lines = [];
-  lines.push('INCOME NZ DEBUG  ·  ' + new Date().toLocaleString('en-NZ'));
-  lines.push('App ' + APP_VERSION);
+  lines.push('INCOME NZ DEBUG  \u00b7  ' + new Date().toLocaleString('en-NZ'));
+  lines.push(_dbgStateText().replace(/\n/g, '\n'));
   lines.push('');
-  lines.push('── STATE ──');
-  lines.push('invoices in memory : ' + invoices.length);
-  lines.push('  with image       : ' + invoices.filter(function(i){return i.image;}).length);
-  lines.push('  with remittance   : ' + invoices.filter(function(i){return i.remittance_image;}).length);
-  lines.push('bank txns          : ' + (typeof bankTxns!=='undefined'?bankTxns.length:'?'));
-  var ls = _lsBytes();
-  lines.push('localStorage       : ' + Math.round(ls/1024) + 'KB / ~5120KB' + (ls > 4*1024*1024 ? '  ⚠ NEAR LIMIT' : ''));
-  lines.push('_paidFileData now  : ' + (window._paidFileData ? Math.round(window._paidFileData.length/1024)+'KB attached' : 'empty'));
-  lines.push('img cache entries  : ' + (typeof _imgCache!=='undefined'?_imgCache.size:'?'));
-  lines.push('rem cache entries  : ' + (typeof _remCache!=='undefined'?_remCache.size:'?'));
-  lines.push('');
-  lines.push('── LOG (newest last, ' + _dbgLog.length + ') ──');
+  lines.push('\u2500\u2500 LOG (' + _dbgLog.length + ') \u2500\u2500');
   _dbgLog.forEach(function(l){ lines.push(l.t + ' [' + l.tag + '] ' + l.msg); });
-  if(!_dbgLog.length) lines.push('(no events yet)');
+  if(!_dbgLog.length) lines.push('(no events)');
   return lines.join('\n');
 }
-function dbgClear(){ _dbgLog = []; dbgRefresh(); showToast('Log cleared'); }
-function dbgRefresh(){
-  var b = document.getElementById('debug-body');
-  if(b) b.textContent = dbgReport();
-}
+
 function dbgCopy(){
   var txt = dbgReport();
   if(navigator.clipboard && navigator.clipboard.writeText){
