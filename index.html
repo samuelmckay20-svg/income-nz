@@ -929,6 +929,19 @@ body{
 
     </div><!-- /tab-gst -->
     </div><!-- /tab-content -->
+      <!-- ══ DEBUG PANEL (hidden; tap Version 5× to open) ══ -->
+      <div id="debug-panel" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch">
+        <div style="position:sticky;top:0;background:var(--surface);border-bottom:0.5px solid var(--sep);padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:16px;font-weight:700">Debug</div>
+          <div style="display:flex;gap:8px">
+            <button onclick="dbgCopy()" style="padding:7px 12px;border-radius:9px;border:none;background:var(--blue);color:#fff;font-family:inherit;font-size:13px;font-weight:600">Copy</button>
+            <button onclick="dbgRefresh()" style="padding:7px 12px;border-radius:9px;border:none;background:var(--fill);color:var(--t1);font-family:inherit;font-size:13px;font-weight:600">Refresh</button>
+            <button onclick="closeDebug()" style="padding:7px 12px;border-radius:9px;border:none;background:var(--fill);color:var(--t1);font-family:inherit;font-size:13px;font-weight:600">Close</button>
+          </div>
+        </div>
+        <div id="debug-body" style="padding:16px;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.5;color:var(--t1);white-space:pre-wrap;word-break:break-word"></div>
+      </div>
+
 
   </div><!-- /main-screen -->
 
@@ -999,7 +1012,7 @@ body{
       </div>
       <div class="shdr">App</div>
       <div class="g-list">
-        <div class="g-row"><div class="g-icon" style="background:var(--fill)">ℹ️</div><span class="g-lbl">Version</span><span class="g-val" id="app-version-label">1.0.0</span></div>
+        <div class="g-row"><div class="g-icon" style="background:var(--fill)">ℹ️</div><span class="g-lbl">Version</span><span class="g-val" id="app-version-label" onclick="dbgTapVersion()" style="cursor:pointer">1.0.0</span></div>
       </div>
       <div class="shdr">Account</div>
       <div class="g-list" style="margin-bottom:8px">
@@ -1467,6 +1480,58 @@ body{
 <script>
 'use strict';
 
+/* ═══════════════════════════════════════════════════════════
+   DEBUG LOG — in-app diagnostics. Read-only; never writes data.
+   Captures errors, failed fetches, sync results and a remittance
+   lifecycle trace. View via Account → tap Version 5×.
+   ═══════════════════════════════════════════════════════════ */
+var _dbgLog = [];
+var _dbgMax = 200;
+function dbg(tag, msg){
+  var line = { t: new Date().toISOString().slice(11,23), tag: tag, msg: String(msg) };
+  _dbgLog.push(line);
+  if(_dbgLog.length > _dbgMax) _dbgLog.shift();
+  // mirror to console too, for desktop debugging
+  try{ console.log('['+tag+']', msg); }catch(e){}
+}
+
+// Catch all uncaught JS errors
+window.addEventListener('error', function(e){
+  dbg('ERROR', (e.message||'?') + ' @ ' + (e.filename||'?').split('/').pop() + ':' + (e.lineno||'?'));
+});
+window.addEventListener('unhandledrejection', function(e){
+  dbg('REJECT', (e.reason && (e.reason.message||e.reason)) || 'unknown');
+});
+
+// Wrap fetch to log failures and slow calls
+(function(){
+  var _origFetch = window.fetch;
+  window.fetch = function(){
+    var url = arguments[0];
+    var path = (typeof url === 'string' ? url : (url && url.url) || '').replace(/^https?:\/\/[^/]+/, '');
+    var started = Date.now();
+    return _origFetch.apply(this, arguments).then(function(r){
+      if(!r.ok) dbg('HTTP', r.status + ' ' + path + ' (' + (Date.now()-started) + 'ms)');
+      return r;
+    }).catch(function(err){
+      dbg('FETCH-FAIL', path + ' — ' + (err.message||err));
+      throw err;
+    });
+  };
+})();
+
+// localStorage size estimate (bytes), for spotting the 5MB overflow
+function _lsBytes(){
+  var total = 0;
+  try{
+    for(var k in localStorage){
+      if(localStorage.hasOwnProperty(k)) total += (localStorage[k].length + k.length) * 2;
+    }
+  }catch(e){}
+  return total;
+}
+
+
 /* ── Null-safe DOM accessor ───────────────────────────────────────
    Returns the element, or an inert stub if it is missing, so that a
    single absent element cannot throw and abort an entire render.
@@ -1505,7 +1570,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.1.1-diag';
+var APP_VERSION = '1.2.0-debug';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -2321,6 +2386,7 @@ function openReceiptsNZ(){
 /* ── NZ CSV normDate ── */
 
 function syncToServer(){
+  try{ dbg('SYNC', 'sending '+invoices.length+' invoices · '+invoices.filter(function(i){return i.image;}).length+' img · '+invoices.filter(function(i){return i.remittance_image;}).length+' rem · ls '+Math.round(_lsBytes()/1024)+'KB'); }catch(e){}
   // Thin wrapper — delegates to manualSync but suppresses the toast and UI spinner
   if(_syncInFlight||_syncPending){_syncPending=true;return;}
   _syncInFlight=true;
@@ -2335,6 +2401,7 @@ function syncToServer(){
     if(!data)return;
     (data.imageLengths||[]).forEach(function(e){_imgCache.set(e.id,e.len);});
     (data.remLengths||[]).forEach(function(e){_remCache.set(e.id,e.len);});
+    dbg('SYNC', 'ok — server has '+(data.imageLengths||[]).length+' images, '+(data.remLengths||[]).length+' remittances');
     if(data.idMap){
       Object.keys(data.idMap).forEach(function(localId){
         var inv=invoices.find(function(i){return String(i.id)===localId;});
@@ -4593,6 +4660,7 @@ function onPaidFile(e){
     var isPDF=f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf');
     window._paidFileData=data;
     window._paidFileMime=isPDF?'application/pdf':(f.type||'image/jpeg');
+    dbg('REM', 'captured '+Math.round(data.length/1024)+'KB');
     $el('paid-prev-wrap').style.display=isPDF?'none':'block';
     $el('paid-pdf-wrap').style.display=isPDF?'block':'none';
     if(!isPDF) $el('paid-prev-img').src=data;
@@ -4635,6 +4703,7 @@ function onClosePaidModal(){
 }
 
 function clearPaidFile(){
+  dbg('REM', 'cleared by clearPaidFile');
   window._paidFileData=null; window._paidFileMime=null;
   $el('paid-prev-wrap').style.display='none';
   $el('paid-pdf-wrap').style.display='none';
@@ -4811,7 +4880,7 @@ function confirmMarkPaid(){
   }
   if(window._paidFileData) inv.remittance_image=window._paidFileData;
   // DIAGNOSTIC: surface whether the remittance is attached at save time
-  showToast(window._paidFileData ? ('REM attached: '+Math.round(window._paidFileData.length/1024)+'KB') : 'NO remittance attached');
+  dbg('REM', window._paidFileData ? ('save: attached '+Math.round(window._paidFileData.length/1024)+'KB') : 'save: EMPTY at confirmMarkPaid');
   var pnEl=document.getElementById('paid-inv-num');
   if(pnEl&&pnEl.value.trim()) inv.invoice_number=pnEl.value.trim();
   var sd=window._lastRemittanceScan; if(sd&&sd.payerGst) inv.client_gst=sd.payerGst;
@@ -5115,6 +5184,64 @@ function closeSheet(){var bg=document.getElementById('sheet-bg'),sh=document.get
 
 /* ── Toast ── */
 var _toastTmr;
+
+/* ── Debug panel ── */
+var _dbgTaps = 0, _dbgTapTimer = null;
+function dbgTapVersion(){
+  _dbgTaps++;
+  clearTimeout(_dbgTapTimer);
+  _dbgTapTimer = setTimeout(function(){ _dbgTaps = 0; }, 1200);
+  if(_dbgTaps >= 5){ _dbgTaps = 0; openDebug(); }
+}
+function openDebug(){
+  var p = document.getElementById('debug-panel');
+  if(p){ p.style.display = 'block'; dbgRefresh(); }
+}
+function closeDebug(){
+  var p = document.getElementById('debug-panel');
+  if(p) p.style.display = 'none';
+}
+function dbgReport(){
+  var lines = [];
+  lines.push('INCOME NZ DEBUG  ·  ' + new Date().toLocaleString('en-NZ'));
+  lines.push('App ' + APP_VERSION);
+  lines.push('');
+  lines.push('── STATE ──');
+  lines.push('invoices in memory : ' + invoices.length);
+  lines.push('  with image       : ' + invoices.filter(function(i){return i.image;}).length);
+  lines.push('  with remittance   : ' + invoices.filter(function(i){return i.remittance_image;}).length);
+  lines.push('bank txns          : ' + (typeof bankTxns!=='undefined'?bankTxns.length:'?'));
+  var ls = _lsBytes();
+  lines.push('localStorage       : ' + Math.round(ls/1024) + 'KB / ~5120KB' + (ls > 4*1024*1024 ? '  ⚠ NEAR LIMIT' : ''));
+  lines.push('_paidFileData now  : ' + (window._paidFileData ? Math.round(window._paidFileData.length/1024)+'KB attached' : 'empty'));
+  lines.push('img cache entries  : ' + (typeof _imgCache!=='undefined'?_imgCache.size:'?'));
+  lines.push('rem cache entries  : ' + (typeof _remCache!=='undefined'?_remCache.size:'?'));
+  lines.push('');
+  lines.push('── LOG (newest last, ' + _dbgLog.length + ') ──');
+  _dbgLog.forEach(function(l){ lines.push(l.t + ' [' + l.tag + '] ' + l.msg); });
+  if(!_dbgLog.length) lines.push('(no events yet)');
+  return lines.join('\n');
+}
+function dbgRefresh(){
+  var b = document.getElementById('debug-body');
+  if(b) b.textContent = dbgReport();
+}
+function dbgCopy(){
+  var txt = dbgReport();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){ showToast('Debug copied'); },
+                                           function(){ _dbgFallbackCopy(txt); });
+  } else { _dbgFallbackCopy(txt); }
+}
+function _dbgFallbackCopy(txt){
+  try{
+    var ta = document.createElement('textarea');
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('Debug copied');
+  }catch(e){ showToast('Copy failed — select manually'); }
+}
+
 function showToast(msg){var el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_toastTmr);_toastTmr=setTimeout(function(){el.classList.remove('show');},2800);}
 function showErr(id,msg){var el=document.getElementById(id);if(el){el.textContent=msg;el.classList.add('show');}}
 function hideErr(id){var el=document.getElementById(id);if(el){el.textContent='';el.classList.remove('show');}}
