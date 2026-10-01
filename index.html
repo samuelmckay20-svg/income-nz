@@ -1605,7 +1605,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.4.0-console';
+var APP_VERSION = '1.5.0-viewdocs';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -2468,6 +2468,11 @@ function loadFromServer(){
 
     // Guard 0: response must actually contain an invoices array.
     // A missing key means a broken response, not "you have no invoices".
+    // Populate length-hint caches so View buttons know which files exist
+    // on the server (without the heavy base64 being shipped in /api/data).
+    if(data.imageLengths) data.imageLengths.forEach(function(e){ _imgCache.set(e.id, e.len); });
+    if(data.remLengths)   data.remLengths.forEach(function(e){ _remCache.set(e.id, e.len); });
+
     if(!Array.isArray(data.invoices)){
       console.error('[sync] Aborted: server response had no invoices array', data);
       showToast('Sync failed \u2014 bad server response. Your data is safe.');
@@ -4149,6 +4154,34 @@ function renderInvPDFPreview(dataUrl){
   }catch(e){}
 }
 
+
+/* Open an invoice's invoice-file or remittance-file. Uses the in-memory copy
+   if present, otherwise fetches it from the server on demand (the heavy base64
+   isn't kept locally, so after a reload it must be pulled). */
+function viewInvoiceDoc(id, kind){
+  var inv = invoices.find(function(i){return String(i.id)===String(id);});
+  if(!inv){ showToast('Invoice not found'); return; }
+  var field = kind==='remittance' ? 'remittance_image' : 'image';
+  var caption = (inv.client||'Document') + (kind==='remittance' ? ' — remittance' : '');
+
+  // Already in memory?
+  if(inv[field]){ openViewer(inv[field], caption); return; }
+
+  // Fetch from the server
+  if(String(id).startsWith('local_')){ showToast('Not synced yet'); return; }
+  showToast('Loading…');
+  var ep = kind==='remittance' ? '/invoice/'+id+'/remittance' : '/invoice/'+id+'/image';
+  fetch(API_BASE+ep,{headers:authHeaders()})
+    .then(function(r){ if(!r.ok) throw new Error('not found'); return r.json(); })
+    .then(function(data){
+      var d = data.remittance_image || data.image;
+      if(!d){ showToast('File unavailable'); return; }
+      inv[field] = d;                       // cache in memory for this session
+      openViewer(d, caption);
+    })
+    .catch(function(){ showToast('Could not load file'); });
+}
+
 function viewInvFile(){ openViewer(window._invImgData,'Invoice'); }
 
 function openViewer(data, caption){
@@ -4352,8 +4385,14 @@ function openInvDetail(id){
 
   // Bottom actions
   var actionsEl=document.getElementById('inv-detail-actions');
-  var viewBtn=inv.image?'<button class="inv-det-view" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">View invoice file</button>':'';
-  actionsEl.innerHTML=viewBtn+
+  // Show a View button when the file exists — either in memory (inv.image) OR
+  // known on the server (length cache). Lets you view after a reload without
+  // the heavy base64 being held locally.
+  var hasInvFile = !!(inv.image) || (typeof _imgCache!=='undefined' && _imgCache.has(inv.id));
+  var hasRemFile = !!(inv.remittance_image) || (typeof _remCache!=='undefined' && _remCache.has(inv.id));
+  var viewInvBtn = hasInvFile ? '<button class="inv-det-view" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">\uD83D\uDCC4 View invoice file</button>' : '';
+  var viewRemBtn = hasRemFile ? '<button class="inv-det-view-rem" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(175,82,222,.1);color:var(--purple);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">\uD83D\uDCCB View remittance</button>' : '';
+  actionsEl.innerHTML=viewInvBtn+viewRemBtn+
     '<button class="inv-det-edit" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:var(--fill);color:var(--t1);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">Edit invoice</button>'+
     '<button class="inv-det-del" data-iid="'+esc(String(id))+'" style="width:100%;padding:14px;border-radius:14px;border:none;background:rgba(255,59,48,.1);color:var(--red);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">Delete invoice</button>';
 
@@ -4378,7 +4417,8 @@ function openInvDetail(id){
     var iid=b.dataset.iid;
     if(b.classList.contains('inv-det-edit')){var editInv=invoices.find(function(i){return String(i.id)===iid;});closeModal('modal-inv-detail');if(editInv&&editInv.remittance_image)openMarkPaid(iid);else editInvoice(iid);}
     if(b.classList.contains('inv-det-del')){closeModal('modal-inv-detail');deleteInvoice(iid);}
-    if(b.classList.contains('inv-det-view')){var vi=invoices.find(function(i){return String(i.id)===String(iid);});if(vi&&vi.image)openViewer(vi.image,vi.client);}
+    if(b.classList.contains('inv-det-view')){viewInvoiceDoc(iid,'image');}
+    if(b.classList.contains('inv-det-view-rem')){viewInvoiceDoc(iid,'remittance');}
   };
 
   openModal('modal-inv-detail');
