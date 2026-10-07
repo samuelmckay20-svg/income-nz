@@ -1605,7 +1605,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.6.0-sharpview';
+var APP_VERSION = '1.7.0-brackets2627';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -1624,7 +1624,7 @@ var LS = {
    than silently producing stale figures.
    Sources: ird.govt.nz/income-tax/tax-rates
             ird.govt.nz/student-loans  |  acc.co.nz/levies */
-var TAX_RATES_FY = 2025;              // verified for FY2025-26
+var TAX_RATES_FY = 2026;              // verified for FY2026-27 (brackets frozen from 1 Apr 2025, confirmed unchanged Budget 2026)
 
 /* ACC levy rates by levy year (1 Apr - 31 Mar).
    Earner's levy is GST-inclusive (the amount ACC invoices you); a
@@ -3327,10 +3327,10 @@ function calcIncomeTax(income){
   // NZ individual tax rates — update when IRD changes brackets
   // FY2025-26 rates (check ird.govt.nz for updates each budget)
   var brackets=settings.taxBrackets||[
-    {min:0,      max:14000,  rate:0.105},
-    {min:14000,  max:48000,  rate:0.175},
-    {min:48000,  max:70000,  rate:0.30},
-    {min:70000,  max:180000, rate:0.33},
+    {min:0,      max:15600,  rate:0.105},
+    {min:15600,  max:53500,  rate:0.175},
+    {min:53500,  max:78100,  rate:0.30},
+    {min:78100,  max:180000, rate:0.33},
     {min:180000, max:Infinity,rate:0.39}
   ];
   var total=0, breakdown=[];
