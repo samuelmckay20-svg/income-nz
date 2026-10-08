@@ -733,9 +733,15 @@ body{
             <span style="font-size:13px;color:var(--t3)">GST number</span>
             <input class="g-input" id="gst-num" type="text" placeholder="XX-XXX-XXX" inputmode="numeric" maxlength="15" onblur="saveSettings()" style="font-size:13px;text-align:right;max-width:160px">
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-top:2px;border-top:0.5px solid var(--sep)" onclick="openReceiptsNZ()">
-            <span style="font-size:13px;color:var(--t3)">Expense data</span>
-            <span style="font-size:13px;font-weight:600;color:var(--blue)" id="receipts-link-lbl">Open Receipts NZ →</span>
+          <div style="padding-top:6px;border-top:0.5px solid var(--sep)">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <span style="font-size:13px;color:var(--t3)">Expense data</span>
+              <span style="display:flex;align-items:center;gap:16px">
+                <button id="rx-refresh-btn" onclick="refreshReceipts(true)" style="background:none;border:none;padding:0;font-family:inherit;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer">&#x21bb; Refresh</button>
+                <span style="font-size:13px;font-weight:600;color:var(--blue);cursor:pointer" id="receipts-link-lbl" onclick="openReceiptsNZ()">Receipts NZ &#x2192;</span>
+              </span>
+            </div>
+            <div id="rx-status" style="font-size:11px;color:var(--t3);margin-top:3px;line-height:1.35"></div>
           </div>
         <!-- Copy for myIR button -->
         <button onclick="copyForMyIR()" style="width:100%;margin-top:4px;padding:14px;border-radius:14px;border:none;background:rgba(0,122,255,.1);color:var(--blue);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
@@ -1526,7 +1532,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.8.2';
+var APP_VERSION = '1.8.3';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -1613,6 +1619,7 @@ function authHeaders(){
 function clearAuth(){ [LS_TOKEN,LS_USER,LS_ROLE,LS_SECRET,LS_ETOKEN].forEach(function(k){ LS.del(k); }); _serverHydrated=false; }
 function wipeLocalData(){
   LS.keys().forEach(function(k){ if(k.startsWith('nzin_'))LS.del(k); });
+  LS.del('nzrt5_r');
   invoices=[]; bankTxns=[]; settings={}; invBin=[]; clientProfiles={}; assets=[]; invPurge=[];
   _imgCache.clear(); _remCache.clear();
 }
@@ -1893,6 +1900,7 @@ function manualSync(){
     if(btn) btn.style.transform='rotate('+angle+'deg)';
     if(!spinning){clearInterval(spinInterval);if(btn){btn.style.transform='';btn.style.opacity='';btn.style.pointerEvents='';}}
   },30);
+  refreshReceipts(false);   // expenses refresh alongside, silently
   runSync()
   .then(function(ok){ if(ok) return loadFromServer({toast:true,afterSync:true}); })
   .finally(function(){spinning=false;});
@@ -1986,17 +1994,89 @@ function populateGSTPeriodSelector(){
 }
 
 /* ── Receipts NZ Integration ── */
-var _rxGSTCache=null, _rxGSTCacheTime=0, _rxGSTCacheKey='', _rxGSTAuthFailed=false;
-function _loadRxCache(){
-  try{
-    var raw=JSON.parse(localStorage.getItem('nzin_rxcache')||'null');
-    if(raw&&raw.t&&Date.now()-raw.t<3600000){_rxGSTCache={receipts:raw.r};_rxGSTCacheTime=raw.t;_rxGSTCacheKey=raw.k||'';}
-  }catch(e){}
+// Expenses are stored on this device (nzrt5_r) with a small status record
+// (nzin_rxmeta). The Tax tab works them out for any period from that copy,
+// so changing periods never waits on the network. "Refresh" (or the ↻ sync
+// button) pulls a fresh copy from Receipts NZ through the NAS.
+var _rxGSTAuthFailed=false, _rxRefreshing=null, _rxAutoTried=false, _rxPeriodCount=null;
+try{ localStorage.removeItem('nzin_rxcache'); }catch(e){}   // old per-period cache (≤1.8.2)
+function getRxMeta(){ try{ return JSON.parse(localStorage.getItem('nzin_rxmeta')||'null'); }catch(e){ return null; } }
+function setRxMeta(m){ try{ localStorage.setItem('nzin_rxmeta',JSON.stringify(m)); }catch(e){} }
+
+function _rxAgo(t){
+  if(!t) return '';
+  var mins=Math.round((Date.now()-t)/60000);
+  if(mins<1) return 'just now';
+  if(mins<60) return mins+' min ago';
+  var d=new Date(t), now=new Date();
+  var hm=d.toLocaleTimeString('en-NZ',{hour:'numeric',minute:'2-digit'});
+  if(d.toDateString()===now.toDateString()) return 'today '+hm;
+  var y=new Date(now); y.setDate(now.getDate()-1);
+  if(d.toDateString()===y.toDateString()) return 'yesterday '+hm;
+  return d.toLocaleDateString('en-NZ',{day:'numeric',month:'short'})+' '+hm;
 }
-function _saveRxCache(receipts,key){
-  try{localStorage.setItem('nzin_rxcache',JSON.stringify({r:receipts,t:Date.now(),k:key}));}catch(e){}
+
+function renderRxStatus(){
+  var el=document.getElementById('rx-status'), btn=document.getElementById('rx-refresh-btn');
+  if(btn){ btn.textContent=_rxRefreshing?'Refreshing…':'↻ Refresh'; btn.disabled=!!_rxRefreshing; btn.style.opacity=_rxRefreshing?'0.5':''; }
+  var ll=document.getElementById('receipts-link-lbl');
+  if(ll) ll.textContent=_rxGSTAuthFailed?'Sign in again →':'Receipts NZ →';
+  if(!el) return;
+  var meta=getRxMeta(), n=getReceiptsNZData().receipts.length, txt, warn=false;
+  if(_rxRefreshing) txt='Getting the latest from Receipts NZ…';
+  else if(!n&&!(meta&&meta.at)){ txt='Not loaded yet — '+(meta&&meta.error?meta.error:'tap Refresh'); warn=!!(meta&&meta.error); }
+  else {
+    txt=meta&&meta.at?('Updated '+_rxAgo(meta.at)):'Saved on this phone';
+    txt+=' · '+n+' receipt'+(n===1?'':'s');
+    if(_rxPeriodCount!=null) txt+=' ('+_rxPeriodCount+' this period)';
+    if(meta&&meta.failed){ txt+=' · last refresh failed'; warn=true; }
+    else if(meta&&meta.stale){ txt+=' · Receipts NZ was offline, this is the NAS copy'; warn=true; }
+  }
+  el.textContent=txt;
+  el.style.color=warn?'var(--orange)':'var(--t3)';
 }
-_loadRxCache();
+
+// Pull a fresh copy of every receipt. Resolves true if new data was stored.
+function refreshReceipts(manual){
+  if(_rxRefreshing) return _rxRefreshing;
+  if(!LS.get(LS_TOKEN)){ if(manual) showToast('Sign in first'); return Promise.resolve(false); }
+  _rxAutoTried=true;
+  _rxRefreshing=fetch(API_BASE+'/receipts-gst',{headers:authHeaders()})
+  .then(function(r){
+    if(r.status===401||r.status===403){ _rxGSTAuthFailed=true; return {_err:'your Income NZ sign-in has expired — sign in again'}; }
+    return r.json().catch(function(){ return {}; }).then(function(d){
+      if(!r.ok) return {_err:(d&&d.error)||('server error '+r.status)};
+      return d||{};
+    });
+  })
+  .catch(function(e){ return {_err:'NAS not reachable'+(e&&e.message?' ('+e.message+')':'')}; })
+  .then(function(d){
+    var meta=getRxMeta()||{};
+    if(d._err||!Array.isArray(d.receipts)){
+      meta.error=String(d._err||d.error||'no data returned').slice(0,140); meta.checked=Date.now(); meta.failed=true;
+      setRxMeta(meta);
+      if(manual) showToast('Couldn’t refresh: '+meta.error);
+      return false;
+    }
+    _rxGSTAuthFailed=false;
+    try{ localStorage.setItem('nzrt5_r',JSON.stringify(d.receipts)); }
+    catch(e){ if(manual) showToast('Phone storage is full — expenses not saved'); return false; }
+    var at=d.at?Date.parse(d.at):NaN;
+    setRxMeta({at:isNaN(at)?Date.now():at, count:d.receipts.length, stale:!!d.stale,
+               error:d.stale?String(d.error||'').slice(0,140):null, checked:Date.now()});
+    if(manual) showToast(d.stale
+      ? 'Receipts NZ is offline — using the NAS copy from '+_rxAgo(isNaN(at)?Date.now():at)
+      : 'Expenses updated — '+d.receipts.length+' receipts');
+    return true;
+  })
+  .finally(function(){
+    _rxRefreshing=null;
+    try{ renderTaxTab(); }catch(e){}
+    renderRxStatus();
+  });
+  renderRxStatus();
+  return _rxRefreshing;
+}
 
 function getReceiptsNZData(){
   try{
@@ -2017,50 +2097,23 @@ function gstForReceiptsItem(r){
 }
 
 function calcInputGST(receipts,start,end){
-  if(!receipts||!receipts.length) return {inputGST:0,totalExpenses:0,count:0,available:false};
+  if(!receipts||!receipts.length) return {inputGST:0,totalExpenses:0,count:0,available:false,linked:false};
   var periodR=receipts.filter(function(r){
     var d=parseDate(r.date||r.created_at||'');
     return d>=start&&d<=end;
   });
   var inputGST=periodR.reduce(function(s,r){return s+gstForReceiptsItem(r);},0);
   var totalExpenses=periodR.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
-  return {inputGST:inputGST,totalExpenses:totalExpenses,count:periodR.length,available:periodR.length>0};
+  return {inputGST:inputGST,totalExpenses:totalExpenses,count:periodR.length,available:periodR.length>0,linked:true};
 }
 
 function fetchReceiptsGST(start,end,callback){
-  var now=Date.now();
-  var cacheKey=start.toISOString().slice(0,10)+end.toISOString().slice(0,10);
-  if(_rxGSTCache&&now-_rxGSTCacheTime<300000&&_rxGSTCacheKey===cacheKey){
-    callback(calcInputGST(_rxGSTCache.receipts,start,end));
-    return;
-  }
-  // A failed link shouldn't be retried on every render. Once the endpoint
-  // returns 401 we fall back to the local cache until the next sign-in.
-  if(_rxGSTAuthFailed){
-    callback(calcInputGST(getReceiptsNZData().receipts,start,end));
-    return;
-  }
-
-  fetch(API_BASE+'/receipts-gst',{headers:authHeaders()})
-  .then(function(r){
-    if(r.status===401||r.status===403){
-      _rxGSTAuthFailed=true;
-      console.warn('[receipts] link unauthorised \u2014 using locally cached expenses');
-      return null;
-    }
-    return r.ok?r.json():null;
-  })
-  .then(function(data){
-    if(!data||!data.receipts){
-      callback(calcInputGST(getReceiptsNZData().receipts,start,end));
-      return;
-    }
-    _rxGSTAuthFailed=false;
-    try{localStorage.setItem('nzrt5_r',JSON.stringify(data.receipts));}catch(e){}
-    _rxGSTCache={receipts:data.receipts}; _rxGSTCacheTime=Date.now(); _rxGSTCacheKey=cacheKey; _saveRxCache(data.receipts,cacheKey);
-    callback(calcInputGST(data.receipts,start,end));
-  })
-  .catch(function(){callback(calcInputGST(getReceiptsNZData().receipts,start,end));});
+  // Always answer from the copy stored on this device — no network wait.
+  var res=calcInputGST(getReceiptsNZData().receipts,start,end);
+  // First run on this device (or after an update from ≤1.8.2): fetch once in
+  // the background; refreshReceipts re-renders the Tax tab when it lands.
+  if(!getRxMeta()&&!_rxAutoTried&&LS.get(LS_TOKEN)) refreshReceipts(false);
+  callback(res);
 }
 
 
@@ -3991,24 +4044,25 @@ function _renderTaxTabInner(){
   var _box7snap=box7, _perSnap=gstPer;
   gset('gst-box11','…'); gset('gst-box13','…');
   fetchReceiptsGST(gstPer.start, gstPer.end, function(rxData){
-    if(rxData&&rxData.available){
-      var box13=rxData.inputGST, box11=rxData.totalExpenses||0;
+    _rxPeriodCount=rxData&&rxData.linked?rxData.count:null;
+    if(rxData&&rxData.linked){
+      // Expenses are stored — a period with no receipts is genuinely $0 input tax
+      var box13=rxData.inputGST||0, box11=rxData.totalExpenses||0;
       var box15=Math.round((_box7snap-box13)*100)/100; // can be negative (refund)
       gset('gst-box11',box11>0?fmt(box11):'—');
       gset('gst-box13',fmt(box13));
       gset('gst-box15',fmt(box15));
       gset('gst-box15b',fmt(box15));
-      gset('gst-box15-sub','Output '+fmt(_box7snap)+' minus input '+fmt(box13));
+      gset('gst-box15-sub','Output '+fmt(_box7snap)+' minus input '+fmt(box13)+(rxData.count?'':' (no receipts this period)'));
       gset('gst-input',fmt(box13));
     } else {
-      // Distinguish 'never linked' from 'link expired' so the fix is obvious
-      var rxMsg = _rxGSTAuthFailed ? 'Sign in again' : 'Link Receipts NZ';
+      var rxMsg = _rxRefreshing ? 'Loading…' : (_rxGSTAuthFailed ? 'Sign in again' : 'Tap Refresh');
       gset('gst-box11', rxMsg);
       gset('gst-box13', rxMsg);
-      gset('gst-input', _rxGSTAuthFailed ? 'Link expired' : 'Not linked');
+      gset('gst-box15-sub','Output '+fmt(_box7snap)+' minus input (expenses not loaded)');
+      gset('gst-input', _rxRefreshing ? 'Loading…' : (_rxGSTAuthFailed ? 'Sign in again' : 'Not loaded'));
     }
-    var ll=document.getElementById('receipts-link-lbl');
-    if(ll) ll.textContent = _rxGSTAuthFailed ? 'Link expired \u2014 reconnect \u2192' : 'Open Receipts NZ \u2192';
+    renderRxStatus();
   });
 
   // ── Tile values ──
