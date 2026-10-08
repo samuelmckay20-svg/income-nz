@@ -190,8 +190,6 @@ body{
 .g-input::placeholder{color:var(--t4)}
 .g-select{background:none;border:none;outline:none;font-family:inherit;font-size:15px;color:var(--blue);-webkit-appearance:none;text-align:right;text-align-last:right;cursor:pointer;flex:1;direction:rtl}
 
-/* ── Upload zone ── */
-.upload-zone{margin:0 16px 12px;border:1.5px dashed var(--sep);border-radius:18px;padding:36px 16px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
 /* ── Capture card (matches Receipts NZ exactly) ── */
 .capture-card{margin:0 16px 8px;background:var(--surface);border-radius:16px;overflow:hidden}
 .photo-prev-wrap{position:relative}
@@ -215,10 +213,6 @@ body{
 .spinner{display:inline-block;width:15px;height:15px;border:2.5px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .65s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.upload-zone:active,.upload-zone.drag{border-color:var(--blue);background:rgba(0,122,255,0.04)}
-.uz-icon{font-size:38px;margin-bottom:12px;opacity:.6}
-.uz-title{font-size:16px;font-weight:600;margin-bottom:5px}
-.uz-sub{font-size:13px;color:var(--t3)}
 
 /* ── Empty state ── */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 32px;gap:10px;text-align:center}
@@ -339,31 +333,6 @@ body{
 .tax-prov-date { font-size:12px;color:var(--t3);width:72px;flex-shrink:0; }
 .tax-prov-lbl { font-size:13px;color:var(--t2);flex:1; }
 .tax-prov-val { font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0; }
-
-/* ── Tax grid + expandable tiles ── */
-.tax-grid {
-  display:grid; grid-template-columns:1fr 1fr;
-  gap:10px; padding:8px 16px 16px;
-}
-.tax-tile {
-  background:var(--surface); border-radius:18px;
-  padding:14px; box-shadow:var(--sh);
-  cursor:pointer; transition:box-shadow .2s;
-  overflow:hidden;
-}
-.tax-tile.open { grid-column:1 / -1; box-shadow:var(--sh-lg); }
-.tax-tile-top { display:flex; align-items:center; gap:10px; }
-.tax-tile-icon { width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
-.tax-tile-lbl { font-size:12px; font-weight:600; color:var(--t2); flex:1; letter-spacing:-0.1px; }
-.tax-tile-val { font-size:16px; font-weight:700; letter-spacing:-0.5px; font-variant-numeric:tabular-nums; flex-shrink:0; }
-.tax-tile-chev { font-size:16px; color:var(--t4); flex-shrink:0; transition:transform .25s; margin-left:2px; line-height:1; }
-.tax-tile.open .tax-tile-chev { transform:rotate(90deg); }
-.tax-tile-detail { display:none; }
-.tax-tile.open .tax-tile-detail { display:block; }
-.tax-tile-sep { height:0.5px; background:var(--sep); margin:12px 0 8px; }
-.tax-tile-row { display:flex; align-items:center; justify-content:space-between; padding:4px 0; }
-.tax-tile-row-lbl { font-size:13px; color:var(--t2); }
-.tax-tile-row-val { font-size:13px; font-weight:600; font-variant-numeric:tabular-nums; color:var(--t1); }
 
 /* ── Client inline expansion ── */
 .client-card { background:var(--surface);border-radius:18px;margin:0 0 10px;box-shadow:var(--sh);overflow:hidden;cursor:pointer;transition:box-shadow .2s; }
@@ -545,7 +514,7 @@ body{
           </div>
           <div class="tax-sc-divider"></div>
           <div class="tax-sc-stats">
-            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Earned (ex-GST)</div><div class="tax-sc-stat-val c-blue" id="inc-tax-gross">$0</div></div>
+            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Taxable income</div><div class="tax-sc-stat-val c-blue" id="inc-tax-gross">$0</div></div>
             <div class="tax-sc-stat-sep"></div>
             <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">W/H already paid</div><div class="tax-sc-stat-val c-green" id="inc-tax-residual">$0</div></div>
             <div class="tax-sc-stat-sep"></div>
@@ -823,7 +792,6 @@ body{
         </div>
       </div>
 
-      <!-- ── STUDENT LOAN ── -->
       <!-- ── Asset Depreciation ── -->
       <div class="shdr-row">
         <span class="shdr">Asset depreciation</span>
@@ -901,41 +869,6 @@ body{
           </div>
         </div>
       </div>
-
-      <div class="shdr">Student loan</div>
-      <div class="tax-section-card">
-        <div class="tax-sc-header">
-          <div class="tax-sc-icon" style="background:rgba(255,59,48,0.12)">🎓</div>
-          <div class="tax-sc-info">
-            <div class="tax-sc-lbl">Estimated repayment</div>
-            <div class="tax-sc-sub" id="sl-sub">12% on income over $24,128</div>
-          </div>
-          <div class="tax-sc-amount c-red" id="sl-total">$0</div>
-        </div>
-        <div class="tax-sc-divider"></div>
-        <div class="tax-sc-stats">
-          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Liable income</div><div class="tax-sc-stat-val c-blue" id="sl-liable">$0</div></div>
-          <div class="tax-sc-stat-sep"></div>
-          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Rate</div><div class="tax-sc-stat-val c-red">12%</div></div>
-          <div class="tax-sc-stat-sep"></div>
-          <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Set aside/mo</div><div class="tax-sc-stat-val c-red" id="sl-monthly">$0</div></div>
-        </div>
-        <div class="tax-sc-divider"></div>
-        <div class="g-row" style="padding:2px 0">
-          <div class="g-icon" style="background:rgba(255,59,48,0.12)">🎓</div>
-          <span class="g-lbl">Student loan</span>
-          <select class="g-select" id="sl-toggle" onchange="saveSettings();renderTaxTab()">
-            <option value="yes">Yes — I have one</option>
-            <option value="no">No student loan</option>
-          </select>
-        </div>
-        <div class="g-row" id="sl-voluntary-row" style="border-top:0.5px solid var(--sep);padding:10px 0 2px">
-          <div class="g-icon" style="background:rgba(255,59,48,0.12)">➕</div>
-          <span class="g-lbl">Extra repayment/yr</span>
-          <input class="g-input" id="sl-extra" type="text" placeholder="$0" inputmode="decimal" onblur="saveSettings();renderTaxTab()">
-        </div>
-      </div>
-
 
     </div><!-- /tab-gst -->
     
@@ -1028,6 +961,11 @@ body{
         <div class="g-row" style="cursor:pointer" onclick="closeModal('modal-account');restoreSnapshot()">
           <div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F504;</div>
           <span class="g-lbl">Restore last backup</span>
+          <span class="g-val" style="color:var(--blue)">&#x203A;</span>
+        </div>
+        <div class="g-row" style="cursor:pointer" onclick="closeModal('modal-account');checkExGstRemittances()">
+          <div class="g-icon" style="background:rgba(255,149,0,.12)">&#x1F9EE;</div>
+          <span class="g-lbl">Check remittance GST</span>
           <span class="g-val" style="color:var(--blue)">&#x203A;</span>
         </div>
       </div>
@@ -1133,7 +1071,7 @@ body{
       <div class="shdr">Tax</div>
       <div class="g-list">
         <div class="g-row"><div class="g-icon" style="background:rgba(15,157,79,0.12)">🧮</div><span class="g-lbl">GST</span><select class="g-select" id="f-gst"><option value="yes">Includes 15% GST</option><option value="no">No GST</option><option value="zero">Zero-rated</option></select></div>
-        <div class="g-row"><div class="g-icon" style="background:rgba(175,82,222,0.12)">🏛️</div><span class="g-lbl">W/H tax rate</span><select class="g-select" id="f-wht"><option value="0">None</option><option value="20">20%</option><option value="33">33%</option><option value="15">15%</option></select></div>
+        <div class="g-row"><div class="g-icon" style="background:rgba(175,82,222,0.12)">🏛️</div><span class="g-lbl">W/H tax rate</span><select class="g-select" id="f-wht"><option value="0">None</option><option value="20">20%</option><option value="33">33%</option><option value="45">45%</option><option value="15">15%</option></select></div>
       </div>
       <div class="shdr">Notes</div>
       <div class="g-list" style="margin-bottom:8px">
@@ -1149,67 +1087,12 @@ body{
   </div>
 </div>
 
-<!-- ══ AI SCAN MODAL ══ -->
-<div class="modal-bd" id="modal-scan">
-  <div class="modal-sheet" id="modal-scan-sheet">
-    <div class="modal-hdr">
-      <span class="modal-title">Scan Invoice</span>
-      <button class="modal-close" onclick="closeModal('modal-scan')">✕</button>
-    </div>
-    <div class="modal-scroll" style="padding:16px">
-
-      <!-- Upload zone -->
-      <div class="upload-zone" id="scan-drop" onclick="$el('scan-file-input').click()" style="margin:0 0 16px">
-        <div class="uz-icon">📄</div>
-        <div class="uz-title" id="scan-zone-title">Upload invoice</div>
-        <div class="uz-sub">PDF or photo · Claude will analyse it</div>
-      </div>
-      <input type="file" id="scan-file-input" accept="image/*,application/pdf" style="display:none" onchange="onScanFile(this)">
-
-      <!-- Status -->
-      <div id="scan-status" style="display:none;text-align:center;padding:20px;color:var(--t3);font-size:14px">🤖 Analysing with Claude…</div>
-
-      <!-- Result -->
-      <div id="scan-result" style="display:none">
-        <div class="shdr" style="padding:0 0 8px">Extracted details</div>
-        <div class="g-list" style="margin:0 0 12px">
-          <div class="g-row"><span class="g-lbl">Client</span><input class="g-input" id="sc-client" type="text" autocapitalize="words"></div>
-          <div class="g-row"><span class="g-lbl">Amount (incl. GST)</span><input class="g-input" id="sc-amount" type="text" inputmode="decimal"></div>
-          <div class="g-row"><span class="g-lbl">Invoice date</span><input class="g-input" id="sc-date" type="date"></div>
-          <div class="g-row"><span class="g-lbl">Invoice #</span><input class="g-input" id="sc-num" type="text"></div>
-          <div class="g-row"><span class="g-lbl">GST</span><select class="g-select" id="sc-gst"><option value="yes">Includes 15% GST</option><option value="no">No GST</option></select></div>
-          <div class="g-row"><span class="g-lbl">W/H rate</span><select class="g-select" id="sc-wht"><option value="0">None</option><option value="20">20%</option><option value="33">33%</option></select></div>
-        </div>
-        <div style="display:flex;gap:10px;padding-bottom:8px">
-          <button class="btn-primary" style="flex:1" onclick="scanCreateNew()">Create new invoice</button>
-          <button class="btn-primary" style="flex:1;background:var(--fill);color:var(--t1)" onclick="scanMatchExisting()">Match existing</button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<!-- ══ MATCH EXISTING MODAL ══ -->
-<div class="modal-bd" id="modal-match">
-  <div class="modal-sheet" id="modal-match-sheet">
-    <div class="modal-hdr">
-      <span class="modal-title">Match to invoice</span>
-      <button class="modal-close" onclick="closeModal('modal-match')">✕</button>
-    </div>
-    <div class="modal-scroll">
-      <div class="shdr">Select invoice</div>
-      <div id="match-list"></div>
-    </div>
-  </div>
-</div>
-
 <!-- ══ MARK AS PAID MODAL ══ -->
 <div class="modal-bd" id="modal-paid">
   <div class="modal-sheet" style="max-height:85vh">
     <div class="modal-hdr">
       <span class="modal-title" id="paid-modal-title">Mark as paid</span>
-      <button class="modal-close" onclick="closeModal('modal-paid')">&#x2715;</button>
+      <button class="modal-close" onclick="closePaidModal()">&#x2715;</button>
     </div>
     <div class="modal-scroll" style="padding:0 0 16px">
 
@@ -1268,6 +1151,7 @@ body{
               <option value="0">None</option>
               <option value="20">20%</option>
               <option value="33">33%</option>
+              <option value="45">45% (no IR330C)</option>
               <option value="15">15%</option>
             </select>
           </div>
@@ -1287,7 +1171,7 @@ body{
       <div class="g-list">
         <div class="g-row" style="border-bottom:0.5px solid var(--sep)">
           <div class="g-icon" style="background:rgba(0,122,255,.12)">&#x1F4CA;</div>
-          <span class="g-lbl">Gross</span>
+          <span class="g-lbl">Gross incl. GST</span>
           <input class="g-input" id="paid-gross" type="text" inputmode="decimal" placeholder="0.00" oninput="onPaidGrossInput()">
         </div>
         <div class="g-row" style="border-bottom:0.5px solid var(--sep)">
@@ -1504,7 +1388,7 @@ body{
 /* ═══════════════════════════════════════════════════════════
    DEBUG LOG — in-app diagnostics. Read-only; never writes data.
    Captures errors, failed fetches, sync results and a remittance
-   lifecycle trace. View via Account → tap Version 5×.
+   lifecycle trace. View it in the Debug tab.
    ═══════════════════════════════════════════════════════════ */
 var _dbgLog = [];
 var _dbgMax = 200;
@@ -1605,7 +1489,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.7.0-brackets2627';
+var APP_VERSION = '1.8.0';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -1641,14 +1525,13 @@ function accRatesFor(year){
   return ACC_RATES[year] || ACC_RATES[2026];
 }
 var TAX_RATES_CHECKED = '21 Jul 2026';
-var SL_THRESHOLD = 24128, SL_RATE = 0.12;
 
 var LS_TOKEN='nzin_token', LS_USER='nzin_username', LS_ROLE='nzin_role';
 var LS_SECRET='nzin_secret', LS_ETOKEN='nzin_etoken';
 var LS_INVOICES='nzin_invoices', LS_BANK='nzin_bank', LS_SETTINGS='nzin_settings';
 
 /* ── State ── */
-var invoices=[], bankTxns=[], invBin=[], clientProfiles={}, settings={}, _pendingMatchTxnId=null, _scanImageData=null, _scanMimeType=null;
+var invoices=[], bankTxns=[], invBin=[], clientProfiles={}, settings={}, _pendingMatchTxnId=null;
 var FY, currentPeriod='fy', statusFilter='all', currentTab='overview', editingId=null;
 var _syncInFlight=false, _syncPending=false, _imgCache=new Map(), _remCache=new Map(), _syncRetryTimer=null, _lastSyncTime=0;
 var invSearchQuery='';
@@ -1685,8 +1568,23 @@ function inPeriod(d){ if(!d)return false; var dt=parseDate(d),r=periodRange(curr
 function authHeaders(){
   return{'Content-Type':'application/json','x-api-secret':LS.get(LS_SECRET)||'','Authorization':'Bearer '+(LS.get(LS_TOKEN)||'')};
 }
-function clearAuth(){ LS.keys().forEach(function(k){ if(k.startsWith('nzin_'))LS.del(k); }); }
-function handle401(){ clearAuth(); showScreen('login-screen'); showToast('Session expired — please sign in again'); }
+/* Signing out or an expired session only removes the login itself. Invoices,
+   assets, client profiles, the bin and the backup snapshot stay on the
+   device — wiping them here used to destroy anything not on the server
+   every 30 days when the token expired. Local data is only wiped when a
+   DIFFERENT user signs in on this device (see doLogin). */
+function clearAuth(){ [LS_TOKEN,LS_USER,LS_ROLE,LS_SECRET,LS_ETOKEN].forEach(function(k){ LS.del(k); }); _serverHydrated=false; }
+function wipeLocalData(){
+  LS.keys().forEach(function(k){ if(k.startsWith('nzin_'))LS.del(k); });
+  invoices=[]; bankTxns=[]; settings={}; invBin=[]; clientProfiles={}; assets=[]; invPurge=[];
+  _imgCache.clear(); _remCache.clear();
+}
+function handle401(){
+  clearAuth();
+  var u=document.getElementById('l-user'); if(u&&!u.value) u.value=LS.get('nzin_owner')||'';
+  showScreen('login-screen');
+  showToast('Session expired — sign in again. Your data is kept.');
+}
 
 function doLogin(){
   var user=$el('l-user').value.trim();
@@ -1709,6 +1607,11 @@ function doLogin(){
   .then(function(res){
     btn.disabled=false; btn.textContent='Sign In';
     if(!res.ok){errEl.textContent=res.d.error||'Login failed';return;}
+    // A different person signing in on this device must not inherit (and
+    // then sync into their account) the previous user's local data.
+    var owner=LS.get('nzin_owner');
+    if(owner&&owner.toLowerCase()!==String(res.d.username||'').toLowerCase()) wipeLocalData();
+    LS.set('nzin_owner',res.d.username);
     LS.set(LS_TOKEN,res.d.token); LS.set(LS_USER,res.d.username); LS.set(LS_ROLE,res.d.role);
     if(res.d.apiSecret)LS.set(LS_SECRET,res.d.apiSecret);
     if(res.d.emailToken)LS.set(LS_ETOKEN,res.d.emailToken);
@@ -1732,14 +1635,15 @@ function afterLogin(data){
   $el('acct-name').textContent=uname;
   $el('acct-email').textContent=etoken?'Receipts2026+'+etoken+'@gmail.com':'(loading\u2026)';
   _rxGSTAuthFailed=false;
+  if(!LS.get('nzin_owner')) LS.set('nzin_owner',uname);
   refreshFY(); loadLocal(); loadAssets(); repairInvoiceGST(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
   var _vl=document.getElementById('app-version-label'); if(_vl) _vl.textContent=APP_VERSION;
 }
 
 function doLogout(){
-  showSheet('Sign out of Income NZ?',[
+  showSheet('Sign out of Income NZ? Your data stays on this device.',[
     {label:'Sign out',cls:'danger',fn:function(){
-      clearAuth(); invoices=[]; bankTxns=[]; settings={}; _imgCache.clear(); _remCache.clear();
+      clearAuth(); invoices=[]; bankTxns=[]; settings={}; invBin=[]; clientProfiles={}; assets=[]; _imgCache.clear(); _remCache.clear();
       closeModal('modal-account'); showScreen('login-screen');
       $el('l-user').value=''; $el('l-pass').value='';
     }},
@@ -1775,10 +1679,15 @@ function onFab(){ if(currentTab==='invoices')openAddInvoice(); else if(currentTa
 
 /* ── Storage ── */
 function saveLocal(){
-  if(invBin.length>50) invBin=invBin.slice(invBin.length-50); // keep last 50 deleted invoices only
+  // Bin keeps the newest 50 (newest are unshifted to the front). Anything
+  // trimmed off is purged from the server too, since it can't be restored.
+  if(invBin.length>50){
+    invBin.slice(50).forEach(function(i){ if(isServerId(i.id)&&invPurge.indexOf(String(i.id))===-1) invPurge.push(String(i.id)); });
+    invBin=invBin.slice(0,50);
+  }
   var slim=invoices.map(function(i){var c=Object.assign({},i);delete c.image;delete c.remittance_image;return c;});
   try{
-    LS.set(LS_INVOICES,JSON.stringify(slim)); LS.set(LS_BANK,JSON.stringify(bankTxns)); LS.set(LS_SETTINGS,JSON.stringify(settings)); LS.set('nzin_invbin',JSON.stringify(invBin)); LS.set('nzin_cp',JSON.stringify(clientProfiles));
+    LS.set(LS_INVOICES,JSON.stringify(slim)); LS.set(LS_BANK,JSON.stringify(bankTxns)); LS.set(LS_SETTINGS,JSON.stringify(settings)); LS.set('nzin_invbin',JSON.stringify(invBin)); LS.set('nzin_cp',JSON.stringify(clientProfiles)); LS.set('nzin_purge',JSON.stringify(invPurge));
     // Warn if approaching 5MB localStorage limit
     var used=Object.keys(localStorage).reduce(function(s,k){return s+(localStorage[k]||'').length;},0);
     if(used>4000000) showToast('⚠️ Storage nearly full ('+Math.round(used/1024)+'KB) — sync and clear old data');
@@ -1804,13 +1713,30 @@ function loadLocal(){
   try{settings=JSON.parse(LS.get(LS_SETTINGS)||'{}');}catch(e){settings={};}
   try{invBin=JSON.parse(LS.get('nzin_invbin')||'[]');}catch(e){invBin=[];}
   try{clientProfiles=JSON.parse(LS.get('nzin_cp')||'{}');}catch(e){clientProfiles={}; }
+  try{invPurge=JSON.parse(LS.get('nzin_purge')||'[]');}catch(e){invPurge=[];}
+  if(!clientProfiles||typeof clientProfiles!=='object'||Array.isArray(clientProfiles)) clientProfiles={};
+  delete settings.assets;
+  // Ids that are neither server integers nor local_ (e.g. the old 'approved_…'
+  // from Bank → Mark as approved income) were rejected by the server and broke
+  // every sync. Re-key them as local_ so they upload normally.
+  var remap={};
+  invoices.forEach(function(i){
+    if(!isServerId(i.id)&&!String(i.id).startsWith('local_')){
+      var n='local_'+String(i.id); remap[String(i.id)]=n; i.id=n; i._localOnly=true;
+    }
+  });
+  if(Object.keys(remap).length){
+    bankTxns.forEach(function(t){ if(t.matched_invoice_id!=null&&remap[String(t.matched_invoice_id)]) t.matched_invoice_id=remap[String(t.matched_invoice_id)]; });
+    LS.set('nzin_dirty','1'); saveLocal();
+    dbg('SYNC','re-keyed '+Object.keys(remap).length+' invoice id(s) the server could not accept');
+  }
 }
 function sanitizeInvoice(inv){
   // Only fix fields that are definitely wrong type — never change valid values
   // gst: must be string 'yes', 'no', or 'zero' — if it's a number (export bug) fix it
   if(typeof inv.gst !== 'string' || ['yes','no','zero'].indexOf(inv.gst) === -1) inv.gst = 'yes';
   // status: only fix if genuinely corrupt (not a string at all) — don't reset paid->unpaid
-  var validStatuses = ['unpaid','paid','overdue','draft'];
+  var validStatuses = ['unpaid','paid','overdue','draft','review'];
   if(typeof inv.status !== 'string' || validStatuses.indexOf(inv.status) === -1) inv.status = 'unpaid';
   // amounts: ensure numeric — parseFloat of a valid number returns same value
   if(inv.amount != null && typeof inv.amount !== 'number') inv.amount = parseFloat(inv.amount) || 0;
@@ -1820,13 +1746,107 @@ function sanitizeInvoice(inv){
 
 function save(){
   invoices.forEach(sanitizeInvoice); // validate before every save
-  saveLocal(); syncToServer();
+  saveLocal(); markDirty(); syncToServer();
 }
 
-/* ── Sync ── */
+/* ── Sync ──────────────────────────────────────────────────────────
+   One code path for every sync:
+     runSync()        pushes local state to the server
+     loadFromServer() pulls + merges, behind the data-loss guards
+     manualSync()     runSync() then loadFromServer()
+   Local edits are flagged dirty until the server confirms them, and a
+   pull never runs over dirty data — it syncs first, or keeps local. */
+var _serverHydrated=false;   // true once a server load has merged this session
+var _saveSeq=0;              // bumps on every save, so a sync knows if data changed mid-flight
+var _syncFailStreak=0;
+var invPurge=[];             // bin items deleted forever, awaiting server purge
 
+function isServerId(id){ return /^\d+$/.test(String(id)); }
+function markDirty(){ _saveSeq++; LS.set('nzin_dirty','1'); }
+function settingsForSync(){ var s=Object.assign({},settings); delete s.assets; return s; }
+
+function buildSyncPayload(){
+  var payload={
+    invoices:invoices.filter(function(inv){return inv.client&&parseFloat(inv.amount)>0;}).map(function(inv){
+      var out=Object.assign({},inv);
+      if(inv.image&&_imgCache.get(inv.id)===inv.image.length) delete out.image;
+      if(inv.remittance_image&&_remCache.get(inv.id)===inv.remittance_image.length) delete out.remittance_image;
+      return out;
+    }),
+    bankTxns:bankTxns,
+    settings:settingsForSync(),
+    deletedInvoiceIds:invBin.map(function(i){return String(i.id);}).filter(isServerId),
+    purgeInvoiceIds:invPurge.filter(isServerId)
+  };
+  // Client profiles and assets are only pushed once the server copy has been
+  // loaded this session — a fresh or signed-out device would otherwise push
+  // empty values over the good server copy.
+  if(_serverHydrated){ payload.clientProfiles=clientProfiles; payload.assets=assets; }
+  return payload;
+}
+
+function applySyncResult(data, sentPurge, sentRestore){
+  if(sentRestore&&sentRestore.length) invoices.forEach(function(i){ if(sentRestore.indexOf(String(i.id))!==-1) delete i._restore; });
+  (data.imageLengths||[]).forEach(function(e){_imgCache.set(e.id,e.len);});
+  (data.remLengths||[]).forEach(function(e){_remCache.set(e.id,e.len);});
+  if(data.idMap){
+    Object.keys(data.idMap).forEach(function(localId){
+      var newId=data.idMap[localId];
+      invoices.forEach(function(i){ if(String(i.id)===localId){ i.id=newId; delete i._localOnly; } });
+      // Bank matches made against a not-yet-synced invoice follow it to its new id
+      bankTxns.forEach(function(t){ if(t.matched_invoice_id!=null&&String(t.matched_invoice_id)===localId) t.matched_invoice_id=newId; });
+    });
+  }
+  invoices.forEach(function(inv){ if(isServerId(inv.id)) delete inv._localOnly; });
+  if(sentPurge&&sentPurge.length) invPurge=invPurge.filter(function(id){return sentPurge.indexOf(id)===-1;});
+  _lastSyncTime=Date.now();
+  saveLocal();
+}
+
+function runSync(){
+  if(!LS.get(LS_TOKEN)) return Promise.resolve(false);
+  if(_syncInFlight){ _syncPending=true; return Promise.resolve(false); }
+  _syncInFlight=true;
+  var seq=_saveSeq;
+  var payload=buildSyncPayload();
+  var sentPurge=payload.purgeInvoiceIds.slice();
+  var sentRestore=payload.invoices.filter(function(i){return i._restore;}).map(function(i){return String(i.id);});
+  try{ dbg('SYNC', 'sending '+payload.invoices.length+' invoices · '+payload.invoices.filter(function(i){return i.image;}).length+' img · '+payload.invoices.filter(function(i){return i.remittance_image;}).length+' rem · ls '+Math.round(_lsBytes()/1024)+'KB'); }catch(e){}
+  return fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
+  .then(function(r){
+    if(r.status===401){ handle401(); throw new Error('401'); }
+    if(!r.ok) return r.json().catch(function(){return {};}).then(function(d){ throw new Error(d.error||('server error '+r.status)); });
+    return r.json();
+  })
+  .then(function(data){
+    if(!data||!data.ok) throw new Error('bad server response');
+    applySyncResult(data, sentPurge, sentRestore);
+    if(seq===_saveSeq) LS.del('nzin_dirty');
+    if(_syncFailStreak) showToast('Sync recovered ✓');
+    _syncFailStreak=0;
+    if(_syncRetryTimer){clearTimeout(_syncRetryTimer);_syncRetryTimer=null;}
+    dbg('SYNC', 'ok — server has '+(data.imageLengths||[]).length+' images, '+(data.remLengths||[]).length+' remittances');
+    return true;
+  })
+  .catch(function(e){
+    dbg('FAIL', 'sync: '+e.message, 'err');
+    if(e.message==='401') return false;
+    // Say so once per failure streak — a silent failure means data that only
+    // exists on this device, which is how remittance files went missing.
+    if(!_syncFailStreak) showToast('⚠️ Sync failed — '+e.message+'. Retrying…');
+    _syncFailStreak++;
+    if(!_syncRetryTimer) _syncRetryTimer=setTimeout(function(){_syncRetryTimer=null;runSync();},30000);
+    return false;
+  })
+  .finally(function(){
+    _syncInFlight=false;
+    if(_syncPending){ _syncPending=false; runSync(); }
+  });
+}
+function syncToServer(){ runSync(); }
 
 function manualSync(){
+  if(_syncInFlight){ showToast('Sync already in progress'); return; }
   var btn=document.getElementById('nav-sync-btn');
   if(btn){btn.style.opacity='0.4';btn.style.pointerEvents='none';}
   var spinning=true, angle=0;
@@ -1835,55 +1855,8 @@ function manualSync(){
     if(btn) btn.style.transform='rotate('+angle+'deg)';
     if(!spinning){clearInterval(spinInterval);if(btn){btn.style.transform='';btn.style.opacity='';btn.style.pointerEvents='';}}
   },30);
-  var deletedIds=invBin.map(function(i){return String(i.id);}).filter(function(id){return !id.startsWith('local_');});
-  var payload={
-    invoices:invoices.filter(function(inv){return inv.client&&inv.amount>0;}).map(function(inv){var out=Object.assign({},inv);if(inv.image&&_imgCache.get(inv.id)===inv.image.length)delete out.image;if(inv.remittance_image&&_remCache.get(inv.id)===inv.remittance_image.length)delete out.remittance_image;return out;}),
-    bankTxns:bankTxns,settings:settings,clientProfiles:clientProfiles,deletedInvoiceIds:deletedIds
-  };
-  fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
-  .then(function(r){
-    if(r.status===401){handle401();spinning=false;return null;}
-    if(!r.ok) throw new Error('Server error '+r.status);
-    return r.json();
-  })
-  .then(function(data){
-    if(!data) return null;
-    if(data.imageLengths)data.imageLengths.forEach(function(e){_imgCache.set(e.id,e.len);});
-      if(data.remLengths)data.remLengths.forEach(function(e){_remCache.set(e.id,e.len);});
-      if(data.idMap){
-      Object.keys(data.idMap).forEach(function(localId){
-        var inv=invoices.find(function(i){return String(i.id)===localId;});
-        if(inv){inv.id=data.idMap[localId];delete inv._localOnly;}
-      });
-    }
-    invoices.forEach(function(inv){if(!String(inv.id).startsWith('local_')&&inv._localOnly) delete inv._localOnly;});
-    saveLocal();
-    return fetch(API_BASE+'/data',{headers:authHeaders()});
-  })
-  .then(function(r){if(!r) return null; if(!r.ok) throw new Error('Load error '+r.status); return r.json();})
-  .then(function(data){
-    if(!data) return;
-    var binnedIds=new Set(invBin.map(function(i){return String(i.id);}));
-    var serverInvoices=(data.invoices||[]).filter(function(i){return !binnedIds.has(String(i.id))&&i.client&&parseFloat(i.amount)>0;});
-    var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
-    var unsyncedLocal=invoices.filter(function(i){return String(i.id).startsWith('local_')&&!serverIds.has(String(i.id));});
-    invoices=serverInvoices.concat(unsyncedLocal);
-    var sBank=data.bankTxns||[];
-    var lBankMap={};
-    bankTxns.forEach(function(t){lBankMap[t.id]=t;});
-    bankTxns=sBank.map(function(t){
-      var l=lBankMap[t.id];
-      if(l){if(l.excluded)t.excluded=true;if(l.matched_invoice_id)t.matched_invoice_id=l.matched_invoice_id;}
-      return t;
-    });
-    sBank.forEach(function(t){delete lBankMap[t.id];});
-    Object.values(lBankMap).forEach(function(t){bankTxns.push(t);});
-    settings=data.settings||settings;
-    if(data.clientProfiles&&Object.keys(data.clientProfiles).length>0) clientProfiles=data.clientProfiles;
-    saveLocal(); renderAll();
-    showToast('Synced ✓');
-  })
-  .catch(function(e){showToast('Sync failed — '+e.message);})
+  runSync()
+  .then(function(ok){ if(ok) return loadFromServer({toast:true,afterSync:true}); })
   .finally(function(){spinning=false;});
 }
 
@@ -1903,13 +1876,16 @@ function autoDetectModel(){
 function getGSTSchedule(){
   var freq=settings.gstFreq||'2monthly';
   var months=freq==='1monthly'?1:freq==='6monthly'?6:2;
-  var periodEndMonths=freq==='1monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:freq==='6monthly'?[3,9]:[0,2,4,6,8,10];
+  // 6-monthly periods end with the 31 March balance date: Sep and Mar
+  var periodEndMonths=freq==='1monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:freq==='6monthly'?[2,8]:[0,2,4,6,8,10];
   var periods=[], y=new Date().getFullYear()-2;
   for(var iter=0;iter<6;iter++){
     periodEndMonths.forEach(function(pm){
       var end=new Date(y,pm+1,0);
       var start=new Date(y,pm+1-months,1);
-      var due=new Date(y,pm+1,28);
+      // Due the 28th of the following month, except IRD's two holiday dates:
+      // November periods are due 15 January, March periods 7 May.
+      var due=pm===10?new Date(y+1,0,15):pm===2?new Date(y,4,7):new Date(y,pm+1,28);
       periods.push({start:start,end:end,due:due});
     });
     y++;
@@ -1969,17 +1945,6 @@ function populateGSTPeriodSelector(){
   var curIdx=periods.findIndex(function(p2){return p2.start<=now&&p2.end>=now;});
   if(curIdx===-1) curIdx=0;
   var targetIdx=curIdx-_gstPeriodOffset;
-}
-
-function nextGSTDue(){
-  var p=currentGSTPeriod();
-  var now=new Date();
-  var days=Math.ceil((p.due-now)/86400000);
-  return{
-    date:p.due.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'}),
-    period:p.start.toLocaleDateString('en-NZ',{day:'numeric',month:'short'})+' – '+p.end.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'}),
-    days:days, overdue:days<0
-  };
 }
 
 /* ── Receipts NZ Integration ── */
@@ -2122,7 +2087,7 @@ function exportAnnualSummary(){
   doc.setFillColor(0,122,255);
   doc.roundedRect(M,y,cw,10,2,2,'F');
   doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255,255,255);
-  doc.text('Taxable income (ex-GST): '+fmt(totTaxable),M+4,y+6.5);
+  doc.text('Income (ex-GST): '+fmt(totTaxable),M+4,y+6.5);
   doc.text('GST number: '+(settings.gstNum||'—'),W-M-4,y+6.5,{align:'right'});
   doc.setTextColor(0,0,0);
   y+=16;
@@ -2221,7 +2186,7 @@ function exportPLReport(){
   // Income
   var totalIncome=fyInv.reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
   var totalGST=fyInv.filter(function(i){return i.gst==='yes';}).reduce(function(s,i){return s+Math.round((parseFloat(i.amount)||0)*3/23*100)/100;},0);
-  var totalWHT=fyInv.reduce(function(s,i){var w=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;return s+w;},0);
+  var totalWHT=fyInv.reduce(function(s,i){var w=invWHT(i);return s+w;},0);
   var netIncome=totalIncome-totalGST;
   var received=fyInv.reduce(function(s,i){return s+(i.paid_amount!=null&&i.paid_amount!==''?parseFloat(i.paid_amount):(parseFloat(i.amount)||0)-((parseFloat(i.wht_amount)||0)));},0);
 
@@ -2419,46 +2384,23 @@ function openReceiptsNZ(){
   window.open('https://samuelmckay20-svg.github.io/receipts-nz/','_blank');
 }
 
-/* ── NZ CSV normDate ── */
-
-function syncToServer(){
-  try{ dbg('SYNC', 'sending '+invoices.length+' invoices · '+invoices.filter(function(i){return i.image;}).length+' img · '+invoices.filter(function(i){return i.remittance_image;}).length+' rem · ls '+Math.round(_lsBytes()/1024)+'KB'); }catch(e){}
-  // Thin wrapper — delegates to manualSync but suppresses the toast and UI spinner
-  if(_syncInFlight||_syncPending){_syncPending=true;return;}
-  _syncInFlight=true;
-  var deletedIds=invBin.map(function(i){return String(i.id);}).filter(function(id){return !id.startsWith('local_');});
-  var payload={
-    invoices:invoices.filter(function(inv){return inv.client&&inv.amount>0;}).map(function(inv){var out=Object.assign({},inv);if(inv.image&&_imgCache.get(inv.id)===inv.image.length)delete out.image;if(inv.remittance_image&&_remCache.get(inv.id)===inv.remittance_image.length)delete out.remittance_image;return out;}),
-    bankTxns:bankTxns,settings:settings,clientProfiles:clientProfiles,deletedInvoiceIds:deletedIds
-  };
-  fetch(API_BASE+'/sync',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)})
-  .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
-  .then(function(data){
-    if(!data)return;
-    (data.imageLengths||[]).forEach(function(e){_imgCache.set(e.id,e.len);});
-    (data.remLengths||[]).forEach(function(e){_remCache.set(e.id,e.len);});
-    dbg('SYNC', 'ok — server has '+(data.imageLengths||[]).length+' images, '+(data.remLengths||[]).length+' remittances');
-    if(data.idMap){
-      Object.keys(data.idMap).forEach(function(localId){
-        var inv=invoices.find(function(i){return String(i.id)===localId;});
-        if(inv){inv.id=data.idMap[localId];delete inv._localOnly;}
-      });
-    }
-    invoices.forEach(function(inv){if(!String(inv.id).startsWith('local_')&&inv._localOnly) delete inv._localOnly;});
-    _lastSyncTime=Date.now();
-    saveLocal();
-    if(_syncRetryTimer){clearTimeout(_syncRetryTimer);_syncRetryTimer=null;}
+function loadFromServer(opts){
+  opts=opts||{};
+  if(!LS.get(LS_TOKEN)) return Promise.resolve();
+  // Local edits the server hasn't confirmed must go up before we pull, or
+  // the merge below would replace them with the older server copy.
+  if(LS.get('nzin_dirty')&&!opts.afterSync){
+    return runSync().then(function(ok){
+      if(ok) return loadFromServer(Object.assign({},opts,{afterSync:true}));
+      dbg('SYNC','load skipped — local changes not yet on server');
+    });
+  }
+  return fetch(API_BASE+'/data',{headers:authHeaders()})
+  .then(function(r){
+    if(r.status===401){handle401();return null;}
+    if(!r.ok) throw new Error('server error '+r.status);
+    return r.json();
   })
-  .catch(function(){
-    if(!_syncRetryTimer) _syncRetryTimer=setTimeout(function(){_syncRetryTimer=null;syncToServer();},30000);
-  })
-  .finally(function(){_syncInFlight=false;if(_syncPending){_syncPending=false;syncToServer();}});
-}
-
-function loadFromServer(){
-  if(!LS.get(LS_TOKEN))return;
-  fetch(API_BASE+'/data',{headers:authHeaders()})
-  .then(function(r){if(r.status===401){handle401();return null;}return r.json();})
   .then(function(data){
     if(!data)return;
 
@@ -2466,16 +2408,15 @@ function loadFromServer(){
     // A malformed, empty, or partial server response must never be
     // allowed to overwrite good local data. Bail out instead.
 
-    // Guard 0: response must actually contain an invoices array.
-    // A missing key means a broken response, not "you have no invoices".
-    // Populate length-hint caches so View buttons know which files exist
-    // on the server (without the heavy base64 being shipped in /api/data).
+    // Length-hint caches tell the View buttons which files exist on the
+    // server without shipping the heavy base64 in /api/data.
     if(data.imageLengths) data.imageLengths.forEach(function(e){ _imgCache.set(e.id, e.len); });
     if(data.remLengths)   data.remLengths.forEach(function(e){ _remCache.set(e.id, e.len); });
 
+    // Guard 0: a missing invoices array is a broken response, not "no invoices".
     if(!Array.isArray(data.invoices)){
       console.error('[sync] Aborted: server response had no invoices array', data);
-      showToast('Sync failed \u2014 bad server response. Your data is safe.');
+      showToast('Sync failed — bad server response. Your data is safe.');
       return;
     }
 
@@ -2484,33 +2425,38 @@ function loadFromServer(){
       return !binnedIds.has(String(i.id))&&i.client&&parseFloat(i.amount)>0;
     });
 
-    // How many invoices do we hold locally that the server should also have?
-    var localServerBacked=invoices.filter(function(i){
-      return !String(i.id).startsWith('local_');
-    }).length;
+    var localServerBacked=invoices.filter(function(i){ return isServerId(i.id); }).length;
 
     // Guard 1: server returned nothing but we hold real records.
     if(serverInvoices.length===0&&localServerBacked>0){
       console.error('[sync] Aborted: server returned 0 invoices, local has '+localServerBacked);
-      showToast('Sync aborted \u2014 server returned no data. Local data kept.');
+      showToast('Sync aborted — server returned no data. Local data kept.');
       return;
     }
 
     // Guard 2: server returned far fewer records than we hold.
-    // Only applies once there is enough data for the ratio to be meaningful.
     if(localServerBacked>=4&&serverInvoices.length<localServerBacked*0.5){
       console.error('[sync] Aborted: server has '+serverInvoices.length+', local has '+localServerBacked);
-      showToast('Sync aborted \u2014 server data incomplete ('+serverInvoices.length+' vs '+localServerBacked+'). Local data kept.');
+      showToast('Sync aborted — server data incomplete ('+serverInvoices.length+' vs '+localServerBacked+'). Local data kept.');
       return;
     }
 
-    // Passed the guards \u2014 snapshot current state so it can be rolled back.
+    // Passed the guards — snapshot current state so it can be rolled back.
     snapshotLocalData();
 
     // ── MERGE ──────────────────────────────────────────────────────
+    // Keep any document files already in memory (the server copy is slim).
+    var localById={};
+    invoices.forEach(function(i){ localById[String(i.id)]=i; });
+    serverInvoices.forEach(function(s){
+      var l=localById[String(s.id)];
+      if(!l) return;
+      if(l.image&&!s.image) s.image=l.image;
+      if(l.remittance_image&&!s.remittance_image) s.remittance_image=l.remittance_image;
+    });
     var serverIds=new Set(serverInvoices.map(function(i){return String(i.id);}));
     var unsyncedLocal=invoices.filter(function(i){
-      return String(i.id).startsWith('local_')&&!serverIds.has(String(i.id));
+      return !isServerId(i.id)&&!serverIds.has(String(i.id));
     });
     invoices=serverInvoices.concat(unsyncedLocal);
 
@@ -2518,7 +2464,6 @@ function loadFromServer(){
     var sBank=Array.isArray(data.bankTxns)?data.bankTxns:[];
     var localBankCount=bankTxns.length;
     if(sBank.length===0&&localBankCount>0){
-      // Server has no bank rows but we do \u2014 keep ours rather than wiping
       console.warn('[sync] Server returned 0 bank txns, keeping '+localBankCount+' local');
     } else {
       var lBankMap={};
@@ -2529,6 +2474,7 @@ function loadFromServer(){
           if(l.excluded) t.excluded=true;
           if(l.matched_invoice_id) t.matched_invoice_id=l.matched_invoice_id;
         }
+        if(t.excluded===0) delete t.excluded;
         return t;
       });
       sBank.forEach(function(t){delete lBankMap[t.id];});
@@ -2536,15 +2482,28 @@ function loadFromServer(){
     }
 
     // Settings: only replace when the server actually sent something.
-    // An empty object is truthy and would silently wipe local config.
     if(data.settings&&Object.keys(data.settings).length>0) settings=data.settings;
+    delete settings.assets;   // legacy: assets were once stored here as "[object Object]"
 
+    // Client profiles + assets: the server copy wins when it has one (local
+    // edits are already up — see the dirty check above). If the server has
+    // none yet, keep ours and push it.
+    var pushLocal=false;
     if(data.clientProfiles&&Object.keys(data.clientProfiles).length>0) clientProfiles=data.clientProfiles;
+    else if(Object.keys(clientProfiles).length) pushLocal=true;
+    if(Array.isArray(data.assets)&&data.assets.length){ assets=data.assets; LS.set('nzin_assets',JSON.stringify(assets)); }
+    else if(assets.length) pushLocal=true;
+    _serverHydrated=true;
 
     repairInvoiceGST(); saveLocal(); renderAll();
-    if(unsyncedLocal.length||binnedIds.size) syncToServer();
+    if(opts.toast) showToast('Synced ✓');
+    if(unsyncedLocal.length||binnedIds.size||invPurge.length||pushLocal) syncToServer();
   })
-  .catch(function(e){console.warn('Load:',e);});
+  .catch(function(e){
+    console.warn('Load:',e);
+    dbg('FAIL','load: '+e.message,'err');
+    if(opts.toast) showToast('Sync failed — '+e.message);
+  });
 }
 
 /* ── Local data snapshot / rollback ── */
@@ -2555,7 +2514,8 @@ function snapshotLocalData(){
       invoices:invoices.map(function(i){var c=Object.assign({},i);delete c.image;delete c.remittance_image;return c;}),
       bankTxns:bankTxns,
       settings:settings,
-      clientProfiles:clientProfiles
+      clientProfiles:clientProfiles,
+      assets:assets
     };
     LS.set('nzin_snapshot',JSON.stringify(snap));
   }catch(e){ /* snapshot is best-effort only */ }
@@ -2574,7 +2534,8 @@ function restoreSnapshot(){
       bankTxns=Array.isArray(snap.bankTxns)?snap.bankTxns:bankTxns;
       if(snap.settings&&Object.keys(snap.settings).length) settings=snap.settings;
       if(snap.clientProfiles&&Object.keys(snap.clientProfiles).length) clientProfiles=snap.clientProfiles;
-      saveLocal(); renderAll();
+      if(Array.isArray(snap.assets)&&snap.assets.length){ assets=snap.assets; LS.set('nzin_assets',JSON.stringify(assets)); }
+      save(); renderAll();
       showToast('Restored '+snap.invoices.length+' invoices');
     }},
     {label:'Cancel',cls:'cancel'}
@@ -2587,22 +2548,23 @@ function fmtShort(n){n=parseFloat(n)||0;if(Math.abs(n)>=1000)return'$'+(n/1000).
 function fmtDate(s){if(!s)return'\u2014';var d=parseDate(s);return d.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function isOverdue(inv){return inv.status!=='paid'&&inv.due_date&&parseDate(inv.due_date)<new Date();}
-function today(){return new Date().toISOString().slice(0,10);}
+// Local calendar date. toISOString() is UTC, which in NZ (UTC+12/13) gives
+// YESTERDAY's date every morning — that put wrong dates on new entries.
+function localISO(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function today(){return localISO(new Date());}
 function parseDate(s){
   // Parse YYYY-MM-DD as LOCAL time to avoid UTC offset issues
   if(!s)return new Date(0);
   var p=s.split('-');
   return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
 }
-function daysAhead(n){return new Date(Date.now()+n*86400000).toISOString().slice(0,10);}
+function daysAhead(n){var d=new Date();d.setDate(d.getDate()+n);return localISO(d);}
 
 /* ── Render Summary bar ── */
 function renderSummary(){
-  var fil=invoices.filter(function(i){return inPeriod(i.date);});
   var gross=0,rec=0,out=0;
-  // Use invoice date for gross/outstanding, paid_date for received (payments basis)
-  var allFY=invoices.filter(function(i){var d=parseDate(i.date);return d>=FY.start&&d<=FY.end;});
-  allFY.forEach(function(i){
+  // Follows the selected period chip (FY / month / quarter)
+  invoices.filter(function(i){return inPeriod(i.date);}).forEach(function(i){
     var a=parseFloat(i.amount)||0;
     if(i.status==='paid'){
       gross+=a;
@@ -2626,7 +2588,7 @@ function renderIncomeTab(){
 
   // W/H withheld = actual W/H deducted (use stored amount, fall back to rate calc)
   var whtTotal=paid.reduce(function(s,i){
-    var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;
+    var wa=invWHT(i);
     return s+wa;
   },0);
 
@@ -2634,7 +2596,7 @@ function renderIncomeTab(){
   // Use paid_amount if set (most accurate), otherwise derive from gross - W/H
   var received=paid.reduce(function(s,i){
     if(i.paid_amount!=null&&i.paid_amount!=='') return s+(parseFloat(i.paid_amount)||0);
-    var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;
+    var wa=invWHT(i);
     return s+(parseFloat(i.amount)||0)-wa;
   },0);
 
@@ -2650,22 +2612,18 @@ function renderIncomeTab(){
   var hg=document.getElementById('hero-gross'); if(hg) hg.textContent=fmt(grossInvoiced);
   $el('hero-period').textContent=FY.range;
   renderOverviewExtras(fy);
-  // ── Income tax on income tab ──
-  var grossIncome=fy.filter(function(i){return i.status==='paid';}).reduce(function(s,i){var amt=parseFloat(i.amount)||0;return s+(i.gst==='yes'?amt/1.15:amt);},0);
-  var incTax=calcIncomeTax(grossIncome);
-  var whtPaidInc=fy.filter(function(i){return i.status==='paid';}).reduce(function(s,i){
-    var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;
-    return s+wa;
-  },0);
-  var residualInc=Math.max(0,incTax.total-whtPaidInc);
+  // ── Income tax on income tab ── (same basis as the Tax tab)
+  var pos=calcFYTaxPosition();
+  var incTax=calcIncomeTax(pos.netProfit);
+  var residualInc=Math.max(0,incTax.total-pos.whtPaid);
   var monthsLeftInc=Math.max(1,Math.ceil((FY.end-new Date())/(30.5*24*3600*1000)));
-  var monthlyInc=residualInc/Math.max(1,monthsLeftInc);
+  var monthlyInc=residualInc/monthsLeftInc;
 
   var itEl=document.getElementById('inc-tax-total'); if(itEl) itEl.textContent=fmt(incTax.total);
-  var itSub=document.getElementById('inc-tax-sub'); if(itSub) itSub.textContent='On '+fmt(grossIncome)+' taxable income this FY';
-  var itGross=document.getElementById('inc-tax-gross'); if(itGross) itGross.textContent=fmt(grossIncome);
-  var itRes=document.getElementById('inc-tax-residual'); if(itRes) itRes.textContent=fmt(residualInc);
-  var itMo=document.getElementById('inc-tax-monthly'); if(itMo) itMo.textContent=fmt(monthlyInc)+'/mo';
+  var itSub=document.getElementById('inc-tax-sub'); if(itSub) itSub.textContent=residualInc>0?'Set aside '+fmt(monthlyInc)+'/mo to cover what\u2019s owed':'Covered by W/H tax so far';
+  var itGross=document.getElementById('inc-tax-gross'); if(itGross) itGross.textContent=fmt(pos.netProfit);
+  var itRes=document.getElementById('inc-tax-residual'); if(itRes) itRes.textContent=fmt(pos.whtPaid);
+  var itMo=document.getElementById('inc-tax-monthly'); if(itMo) itMo.textContent=fmt(residualInc);
 
   // Bracket breakdown mini
   var maxTaxInc=Math.max.apply(null,incTax.breakdown.map(function(b){return b.tax;}))||1;
@@ -2772,7 +2730,7 @@ function renderClientDetail(clientName, detailId){
     totalInv+=amt;
     if(inv.status==='paid'){
       totalRec+=parseFloat(inv.paid_amount||amt)||0;
-      var wa=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):(amt*(parseFloat(inv.wht_rate)||0)/100);
+      var wa=invWHT(inv);
       totalWHT+=wa;
     } else {
       totalOut+=amt;
@@ -2798,7 +2756,7 @@ function renderClientDetail(clientName, detailId){
     var status=isOverdue(inv)?'overdue':(inv.status||'unpaid');
     var dotCol={paid:'var(--green)',unpaid:'var(--orange)',overdue:'var(--red)',review:'var(--purple)',draft:'var(--t4)'}[status]||'var(--t4)';
     var amt=parseFloat(inv.amount)||0;
-    var wht=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):(amt*(parseFloat(inv.wht_rate)||0)/100);
+    var wht=invWHT(inv);
     var net=parseFloat(inv.paid_amount)||0;
 
     html+='<div class="pay-row">';
@@ -2833,97 +2791,6 @@ function renderClientDetail(clientName, detailId){
   el.innerHTML=html;
 }
 
-/* ── Render Sources ── */
-function renderSources(fyInvoices){
-  var el=document.getElementById('sources-list');
-  if(!el) return;
-
-  var clients={};
-  fyInvoices.forEach(function(inv){
-    var c=inv.client;
-    if(!clients[c]) clients[c]={invoiced:0,received:0,count:0,wht:0,gst:0};
-    var iAmt=parseFloat(inv.amount)||0;
-    clients[c].invoiced+=iAmt;
-    clients[c].count++;
-    if(inv.gst==='yes') clients[c].gst+=Math.round(iAmt*3/23*100)/100;
-    if(inv.status==='paid'){
-      clients[c].received+=parseFloat(inv.paid_amount||iAmt)||0;
-      var wa=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):(parseFloat(inv.amount)||0)*(parseFloat(inv.wht_rate)||0)/100;
-      clients[c].wht+=wa;
-    }
-  });
-
-  var sorted=Object.keys(clients).sort(function(a,b){return clients[b].invoiced-clients[a].invoiced;});
-  if(!sorted.length){el.innerHTML=emptyState('🏢','No clients yet','Invoices will appear here once added');return;}
-
-  var maxInvoiced=clients[sorted[0]].invoiced||1;
-  var html='';
-
-  sorted.forEach(function(name){
-    var c=clients[name];
-    var pct=Math.round((c.invoiced/maxInvoiced)*100);
-    var initials=name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
-    var col=clientColour(name);
-    var outstanding=fyInvoices.filter(function(i){return i.client===name&&i.status!=='paid';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
-    var id=clientId(name);
-
-    html+='<div class="client-card" id="'+id+'" data-client="'+esc(name)+'">';
-
-    // Header
-    html+='<div class="client-card-header">';
-    html+='<div style="width:38px;height:38px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0">'+esc(initials)+'</div>';
-    html+='<div style="flex:1;min-width:0">';
-    html+=  '<div style="font-size:15px;font-weight:600;color:var(--t1);margin-bottom:2px">'+esc(name)+'</div>';
-    html+='</div>';
-    html+='<div style="text-align:right;margin-right:8px">';
-    html+=  '<div style="font-size:17px;font-weight:700;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;color:var(--green)">'+fmt(c.received)+'</div>';
-    html+=  '<div style="font-size:11px;color:var(--t3)">net received</div>';
-    html+='</div>';
-    html+='<div class="client-chev">›</div>';
-    html+='</div>';
-
-
-    // Divider bar (always 100% — decorative)
-    html+='<div style="height:3px;background:var(--fill);margin:0 16px 12px;border-radius:2px;overflow:hidden">';
-    html+='<div style="height:100%;width:100%;background:'+col+';border-radius:2px"></div>';
-    html+='</div>';
-
-    // Bottom stats: Gross | GST | W/H
-    var hasGST=c.gst>0, hasWHT=c.wht>0;
-    var colCount=1+(hasGST?1:0)+(hasWHT?1:0);
-    html+='<div style="display:flex;padding:0 16px 14px;gap:0">';
-    html+='<div style="flex:1;'+(colCount>1?'border-right:0.5px solid var(--sep);padding-right:12px':'')+'">';
-    html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">Gross</div>';
-    html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--t1)">'+fmt(c.invoiced)+'</div>';
-    html+='</div>';
-    if(hasGST){
-      html+='<div style="flex:1;padding-left:12px;'+(hasWHT?'border-right:0.5px solid var(--sep);padding-right:12px':'')+'">';
-      html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">GST</div>';
-      html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--orange)">'+fmt(c.gst)+'</div>';
-      html+='</div>';
-    }
-    if(hasWHT){
-      html+='<div style="flex:1;padding-left:12px">';
-      html+=  '<div style="font-size:10px;font-weight:500;color:var(--t3);margin-bottom:3px">W/H tax</div>';
-      html+=  '<div style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--purple)">'+fmt(c.wht)+'</div>';
-      html+='</div>';
-    }
-    html+='</div>';
-
-    // Inline detail panel
-    html+='<div class="client-detail" id="'+id+'-d"></div>';
-    html+='</div>';
-  });
-
-  el.innerHTML=html;
-  // Delegated click — avoids JSON.stringify quote issues in onclick attrs
-  el.onclick=function(e){
-    var card=e.target.closest('.client-card');
-    if(card&&card.dataset.client) toggleClient(card.dataset.client);
-  };
-}
-
-/* ── Next GST due ── */
 
 
 /* ── SVG Chart ── */
@@ -3171,7 +3038,7 @@ function renderClientsTab(){
     clients[c].count++;
     if(inv.status==='paid'){
       clients[c].received+=parseFloat(inv.paid_amount||amt)||0;
-      var wa=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):(amt*(parseFloat(inv.wht_rate)||0)/100);
+      var wa=invWHT(inv);
       clients[c].wht+=wa;
     } else {
       clients[c].hasUnpaid=true;
@@ -3322,11 +3189,48 @@ function renderBank(){
   }
 }
 
-/* ── NZ Income Tax Calculation (2025/26 rates) ── */
+/* ── Withholding tax on one invoice ──
+   Uses the recorded amount; otherwise the rate applied to the ex-GST base
+   (schedular W/H is charged on the amount before GST). */
+function invWHT(i){
+  var w=parseFloat(i.wht_amount), rate=parseFloat(i.wht_rate)||0;
+  // A recorded amount wins. A stored 0 alongside a W/H rate means "never
+  // recorded" (the server saves a missing amount as 0), not "no W/H" — e.g.
+  // invoices marked paid by a bank match, which would otherwise lose their
+  // W/H credit in the tax calculation.
+  if(!isNaN(w)&&(w>0||rate<=0)) return w;
+  var a=parseFloat(i.amount)||0, base=i.gst==='yes'?a/1.15:a;
+  return Math.round(base*rate)/100;
+}
+
+/* ── Taxable income for the current FY ──
+   Single source for the Income tab, Tax tab and ACC. A sole trader is taxed
+   on NET PROFIT — income (ex-GST) less deductible expenses and depreciation —
+   not on gross income. Losses on sale are deductible; depreciation recovered
+   on sale is taxable. */
+function calcFYTaxPosition(){
+  var paid=invoices.filter(function(i){ var d=parseDate(i.date); return i.status==='paid'&&d>=FY.start&&d<=FY.end; });
+  var income=paid.reduce(function(s,i){ var a=parseFloat(i.amount)||0; return s+(i.gst==='yes'?a/1.15:a); },0);
+  var whtPaid=paid.reduce(function(s,i){ return s+invWHT(i); },0);
+  var exp=getFYExpenses();
+  var depr=0;
+  (assets||[]).forEach(function(a){
+    var r=calcDepreciation(a);
+    depr+=(r.depr||0)+(r.lossOnSale||0)-(r.depreciationRecovered||0);
+  });
+  depr=Math.round(depr*100)/100;
+  return {
+    income:Math.round(income*100)/100, whtPaid:Math.round(whtPaid*100)/100,
+    expenses:exp.total, expAvailable:exp.available, depr:depr,
+    netProfit:Math.max(0,Math.round((income-exp.total-depr)*100)/100)
+  };
+}
+
+/* ── NZ Income Tax Calculation (2026/27 rates) ── */
 function calcIncomeTax(income){
   // NZ individual tax rates — update when IRD changes brackets
   // FY2025-26 rates (check ird.govt.nz for updates each budget)
-  var brackets=settings.taxBrackets||[
+  var brackets=[
     {min:0,      max:15600,  rate:0.105},
     {min:15600,  max:53500,  rate:0.175},
     {min:53500,  max:78100,  rate:0.30},
@@ -3356,8 +3260,13 @@ function getFYExpenses(){
     return d >= FY.start && d <= FY.end;
   }).reduce(function(s,r){
     var amt = parseFloat(r.amount)||0;
-    // Expenses are GST-inclusive; the deductible cost is the ex-GST amount
-    return s + (r.gst === 'no' ? amt : amt/1.15);
+    // Deductible cost is ex-GST (GST is claimed back separately), apportioned
+    // by the same claim % as the GST claim — e.g. 50% for entertainment.
+    var exGst = amt - (r.gst==='no' ? 0 : r.gst==='partial' ? amt*3/23*0.5 : amt*3/23);
+    var claim = 1;
+    if(r.claimPct!=null && r.claimPct>=0 && r.claimPct<=100) claim = r.claimPct/100;
+    else if(RECEIPTS_ENT_CATS.indexOf(r.category)!==-1) claim = 0.5;
+    return s + exGst*claim;
   }, 0);
   return {total: Math.round(total*100)/100, available: true};
 }
@@ -3366,18 +3275,13 @@ function getFYExpenses(){
 var assets = [];
 
 function loadAssets(){
-  try{ assets=JSON.parse(localStorage.getItem('nzin_assets')||'[]'); }catch(e){ assets=[]; }
+  try{ assets=JSON.parse(LS.get('nzin_assets')||'[]'); }catch(e){ assets=[]; }
+  if(!Array.isArray(assets)) assets=[];
 }
 
 function saveAssets(){
-  localStorage.setItem('nzin_assets', JSON.stringify(assets));
-  syncAssetsToServer();
-}
-
-function syncAssetsToServer(){
-  // Piggyback on settings sync
-  settings.assets = assets;
-  save();
+  LS.set('nzin_assets', JSON.stringify(assets));
+  save();   // assets travel in the sync payload and are stored server-side
 }
 
 function calcDepreciation(asset, forFY){
@@ -3511,7 +3415,7 @@ function calcDepreciation(asset, forFY){
 }
 
 function renderAssets(){
-  loadAssets();
+  // In-memory list is the source of truth (loaded at sign-in / boot)
   var el = document.getElementById('asset-list');
   var summaryRow = document.getElementById('asset-summary-row');
   var totalEl = document.getElementById('asset-total-depr');
@@ -3629,6 +3533,11 @@ function openAddAsset(){
   $el('asset-cost').value = '';
   $el('asset-date').value = today();
   $el('asset-biz-pct').value = '100';
+  $el('asset-category').value = '50';
+  $el('asset-custom-rate').value = '';
+  $el('asset-gst').value = 'yes';
+  $el('asset-boost').value = 'no';
+  onAssetCategoryChange();
   openModal('modal-asset');
 }
 
@@ -3657,7 +3566,11 @@ function saveAsset(){
   if(!name){ showToast('Enter asset name'); return; }
   if(!cost||isNaN(+cost)||+cost<=0){ showToast('Enter purchase price'); return; }
   var gstInc = (document.getElementById('asset-gst')||{}).value !== 'no';
-  assets.push({ name:name, cost:+cost, date:date, rate:rate, label:label.replace(/\s*\(.*\)/,'').trim(), bizPct:+bizPct, gstIncluded:gstInc });
+  var boost = (document.getElementById('asset-boost')||{}).value === 'yes';
+  if(boost && parseDate(date) < new Date(2025,4,22)){ showToast('Investment Boost only applies to assets bought on or after 22 May 2025'); return; }
+  var biz = parseFloat(bizPct);
+  if(isNaN(biz) || biz <= 0 || biz > 100){ showToast('Business use must be between 1 and 100%'); return; }
+  assets.push({ name:name, cost:+cost, date:date, rate:rate, label:label.replace(/\s*\(.*\)/,'').trim(), bizPct:biz, gstIncluded:gstInc, investmentBoost:boost });
   saveAssets();
   renderAssets();
   closeModal('modal-asset');
@@ -3705,26 +3618,19 @@ function renderTaxTab(){
 function _renderTaxTabInner(){
   var fy=invoices.filter(function(i){var d=parseDate(i.date);return d>=FY.start&&d<=FY.end;});
 
-  // Gross income = ex-GST income on PAID invoices only (what IRD actually sees as received)
-  var grossIncome=fy.filter(function(i){return i.status==='paid';}).reduce(function(s,i){
-    var amt=parseFloat(i.amount)||0;
-    return s+(i.gst==='yes'?amt/1.15:amt);
-  },0);
-
-  // W/H tax already paid (on paid invoices only)
-  var whtPaid=fy.filter(function(i){return i.status==='paid';}).reduce(function(s,i){
-    var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;
-    return s+wa;
-  },0);
+  // Taxable income = net profit (income less expenses and depreciation)
+  var pos=calcFYTaxPosition();
+  var grossIncome=pos.income;
+  var whtPaid=pos.whtPaid;
 
   // Income tax
-  var tax=calcIncomeTax(grossIncome);
+  var tax=calcIncomeTax(pos.netProfit);
   var stillOwe=Math.max(0,tax.total-whtPaid);
 
   // Update hero
   // ── Income tax display ──
   // tax-income-total removed — use inc-tax-total instead
-  $el('tax-gross').textContent=fmt(grossIncome);
+  $el('tax-gross').textContent=fmt(pos.netProfit);
   $el('tax-on-income').textContent=fmt(tax.total);
   $el('tax-wht-paid').textContent=fmt(whtPaid);
   $el('tax-still-owe').textContent=fmt(stillOwe);
@@ -3763,7 +3669,8 @@ function _renderTaxTabInner(){
   var provSection = document.getElementById('prov-section');
   if(provSection) provSection.style.display = provOn ? 'block' : 'none';
   if(provOn) {
-    var instalment=tax.total/3;
+    // Residual income tax (after W/H already deducted) is what provisional covers
+    var instalment=Math.max(0,tax.total-whtPaid)/3;
     var fyYear=FY.startYear;
     $el('prov-1').textContent=fmt(instalment);
     $el('prov-2').textContent=fmt(instalment);
@@ -3783,10 +3690,9 @@ function _renderTaxTabInner(){
   var accY = accRatesFor(FY.startYear);
   var workRate = parseFloat(settings.accRate||0.53)/100;
 
-  var exp = getFYExpenses();
-  var deprThisFY = (typeof assets !== 'undefined' && assets.length)
-    ? assets.reduce(function(s,a){ return s + (calcDepreciation(a).depr||0); }, 0) : 0;
-  var netProfit = Math.max(0, grossIncome - exp.total - deprThisFY);
+  var exp = {total:pos.expenses, available:pos.expAvailable};
+  var deprThisFY = pos.depr;
+  var netProfit = pos.netProfit;
 
   var liableEarnings = Math.min(netProfit, accY.maxLiable);
   var accEarner  = Math.round(liableEarnings * accY.earner * 100)/100;
@@ -3803,7 +3709,7 @@ function _renderTaxTabInner(){
   // Explain how liable earnings were derived, and flag what is missing
   var basis;
   if(!exp.available){
-    basis = 'Based on ' + fmt(grossIncome) + ' income \u2014 link Receipts NZ to deduct expenses';
+    basis = 'Based on ' + fmt(grossIncome) + ' income' + (deprThisFY > 0 ? ' less ' + fmt(deprThisFY) + ' depreciation' : '') + ' \u2014 link Receipts NZ to deduct expenses';
   } else {
     basis = fmt(grossIncome) + ' income less ' + fmt(exp.total) + ' expenses'
           + (deprThisFY > 0 ? ' and ' + fmt(deprThisFY) + ' depreciation' : '');
@@ -3899,29 +3805,12 @@ function _renderTaxTabInner(){
     if(ll) ll.textContent = _rxGSTAuthFailed ? 'Link expired \u2014 reconnect \u2192' : 'Open Receipts NZ \u2192';
   });
 
-  // ── Student loan ──
-  var slToggle2=document.getElementById('sl-toggle');
-  var hasLoan2=settings.studentLoan!=='no';
-  if(slToggle2)slToggle2.value=hasLoan2?'yes':'no';
-  var SL_THRESHOLD=24128,SL_RATE=0.12;
-  var slLiable=Math.max(0,grossIncome-SL_THRESHOLD);
-  var slAmount=slLiable*SL_RATE;
-  var slExtra=parseFloat(settings.slExtra||0)||0;
-  var slTotal=slAmount+slExtra;
-  var slMonthly=slTotal/12;
-  var slExtraEl=document.getElementById('sl-extra');
-  if(slExtraEl&&!slExtraEl.value&&settings.slExtra)slExtraEl.value=settings.slExtra;
-  var slVolRow=document.getElementById('sl-voluntary-row');
-  if(slVolRow)slVolRow.style.display=hasLoan2?'flex':'none';
-  $el('sl-liable').textContent=hasLoan2?fmt(slLiable):'—';
-  $el('sl-monthly').textContent=hasLoan2?fmt(slMonthly)+'/mo':'—';
-
   // ── Tile values ──
   $el('tax-total-all').textContent=fmt(tax.total);
   $el('tax-total-sub').textContent=FY.label;
 
   // ── Asset depreciation ──
-  loadAssets(); renderAssets();
+  renderAssets();
 
   // ── Set-aside tracker ──
   // GST owing for full FY (not just current period) — all paid invoices
@@ -3991,6 +3880,8 @@ function openNewRemittance(){
   $el('paid-date').value=today();
   var pc=document.getElementById('paid-client'); if(pc) pc.value='';
   var pn=document.getElementById('paid-inv-num'); if(pn) pn.value='';
+  $el('paid-wht-rate').value='0'; $el('paid-gst').value='yes';
+  window._lastRemittanceScan=null;
   updatePaidSummary();
   var extraFields=document.getElementById('paid-extra-fields');
   if(extraFields) extraFields.style.display='block';
@@ -4024,6 +3915,7 @@ function saveInvoice(){
   var targetInv;
   if(editingId){
     targetInv=invoices.find(function(i){return i.id===editingId;});
+    if(targetInv&&targetInv.status==='review') targetInv.status='unpaid';   // edited & saved = reviewed
     if(targetInv){targetInv.client=client;targetInv.amount=+amount;targetInv.date=date;targetInv.due_date=due||null;targetInv.invoice_number=num||null;targetInv.gst=gst;targetInv.wht_rate=+wht;targetInv.notes=notes||null;targetInv.updated_at=new Date().toISOString();}
   }else{
     targetInv={id:'local_'+Date.now(),client:client,amount:+amount,date:date,due_date:due||null,invoice_number:num||null,gst:gst,wht_rate:+wht,notes:notes||null,status:'unpaid',source:'manual',_localOnly:true,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
@@ -4077,58 +3969,6 @@ function onInvAnyFile(e){
     };
     r.readAsDataURL(f);
   }
-}
-
-function openInvCamera(){
-  var isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  var input=document.getElementById('inv-cam-input');
-  if(isMobile){
-    // On mobile, capture attribute triggers camera
-    input.setAttribute('capture','environment');
-  } else {
-    input.removeAttribute('capture');
-  }
-  input.click();
-}
-
-function onInvFile(e){
-  var f=e.target.files[0]; if(!f)return;
-  e.target.value='';
-  var reader=new FileReader();
-  reader.onload=function(ev){
-    var data=ev.target.result;
-    // Store globally
-    window._invImgData=data;
-    window._invImgMime=f.type;
-    // Show image preview
-    $el('inv-prev-wrap').style.display='block';
-    $el('inv-pdf-wrap').style.display='none';
-    $el('inv-prev-img').src=data;
-    $el('inv-retake-row').style.display='block';
-    $el('inv-ai-wrap').style.display='block';
-    $el('inv-ai-result').style.display='none';
-  };
-  reader.readAsDataURL(f);
-}
-
-function onInvPDF(e){
-  var f=e.target.files[0]; if(!f)return;
-  e.target.value='';
-  var reader=new FileReader();
-  reader.onload=function(ev){
-    var data=ev.target.result;
-    window._invImgData=data;
-    window._invImgMime='application/pdf';
-    // Show PDF preview
-    $el('inv-prev-wrap').style.display='none';
-    $el('inv-pdf-wrap').style.display='block';
-    $el('inv-pdf-name').textContent=f.name+' · '+(f.size/1024).toFixed(0)+' KB';
-    $el('inv-retake-row').style.display='block';
-    $el('inv-ai-wrap').style.display='block';
-    $el('inv-ai-result').style.display='none';
-    renderInvPDFPreview(data);
-  };
-  reader.readAsDataURL(f);
 }
 
 function renderInvPDFPreview(dataUrl){
@@ -4349,7 +4189,7 @@ function openInvDetail(id){
   var status=isOverdue(inv)?'overdue':(inv.status||'unpaid');
   var amt=parseFloat(inv.amount)||0;
   var gstAmt=inv.gst==='yes'?amt*3/23:0;
-  var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):(amt*(parseFloat(inv.wht_rate)||0)/100);
+  var whtAmt=invWHT(inv);
   var netAmt=whtAmt>0?(inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):amt-whtAmt):amt;
 
   // Title
@@ -4503,12 +4343,14 @@ function renderInvBin(){
     var btn=e.target.closest('[data-bi]'); if(!btn) return;
     var i=parseInt(btn.dataset.bi);
     if(btn.classList.contains('bin-restore')){
-      var r=invBin[i]; delete r.deletedAt; invoices.unshift(r); invBin.splice(i,1);
+      var r=invBin[i]; delete r.deletedAt; if(isServerId(r.id)) r._restore=true; invoices.unshift(r); invBin.splice(i,1);
       save(); renderSummary(); renderInvoices(); renderInvBin(); showToast('Invoice restored');
     }
     if(btn.classList.contains('bin-perm')){
       if(!confirm('Permanently delete? Cannot be undone.')) return;
-      invBin.splice(i,1); save(); renderInvBin(); showToast('Permanently deleted');
+      var gone=invBin.splice(i,1)[0];
+      if(gone&&isServerId(gone.id)) invPurge.push(String(gone.id));
+      save(); renderInvBin(); showToast('Permanently deleted');
     }
   };
 }
@@ -4516,6 +4358,7 @@ function renderInvBin(){
 function emptyInvBin(){
   if(!invBin.length){showToast('Bin is already empty');return;}
   if(!confirm('Permanently delete all '+invBin.length+' invoices? Cannot be undone.')) return;
+  invBin.forEach(function(i){ if(isServerId(i.id)) invPurge.push(String(i.id)); });
   invBin=[]; save(); renderInvBin(); showToast('Bin emptied');
 }
 
@@ -4551,12 +4394,12 @@ async function exportInvoicePDF(){
     // Summary
     var totalGross=fy.reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
     var totalPaid=fy.filter(function(i){return i.status==='paid';}).reduce(function(s,i){
-      var wa=i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100;
+      var wa=invWHT(i);
       return s+(parseFloat(i.amount)||0)-wa;
     },0);
     var totalGST=fy.filter(function(i){return i.gst==='yes';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0)*3/23;},0);
     var totalWHT=fy.filter(function(i){return i.status==='paid';}).reduce(function(s,i){
-      return s+(i.wht_amount!=null&&i.wht_amount!==''?parseFloat(i.wht_amount):(parseFloat(i.amount)||0)*(parseFloat(i.wht_rate)||0)/100);
+      return s+(invWHT(i));
     },0);
 
     var bw=(cw-12)/4;
@@ -4584,7 +4427,7 @@ async function exportInvoicePDF(){
       if(idx%2===0){doc.setFillColor(250,250,248);doc.rect(mg,cy-1,cw,7,'F');}
       var amt=parseFloat(inv.amount)||0;
       var gstAmt=inv.gst==='yes'?amt*3/23:0;
-      var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):(amt*(parseFloat(inv.wht_rate)||0)/100);
+      var whtAmt=invWHT(inv);
       var net=inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):amt-whtAmt;
       var status=isOverdue(inv)?'Overdue':(inv.status||'unpaid').charAt(0).toUpperCase()+(inv.status||'unpaid').slice(1);
       var statusC={Paid:[36,138,61],Unpaid:[255,149,0],Overdue:[255,59,48],Review:[175,82,222]}[status]||[100,100,105];
@@ -4626,7 +4469,7 @@ function exportInvoiceCSV(){
     var amt=parseFloat(inv.amount)||0;
     var gstAmt=inv.gst==='yes'?+(amt*3/23).toFixed(2):0;
     var whtRate=parseFloat(inv.wht_rate)||0;
-    var whtAmt=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):+(amt*whtRate/100).toFixed(2);
+    var whtAmt=round2(invWHT(inv));
     var net=inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):+(amt-whtAmt).toFixed(2);
     rows.push([
       inv.invoice_number||'',
@@ -4660,25 +4503,36 @@ function renderInvoiceList(){
 }
 
 
+/* ── Mark paid / remittance modal ──────────────────────────────────
+   One convention everywhere: an invoice's `amount` is the GST-INCLUSIVE
+   total, and the modal's Gross field means the same thing. So:
+       Gross (incl. GST) − W/H = Net to bank
+   W/H is charged on the ex-GST base (Gross ÷ 1.15). Payslip-style
+   remittances list "Total Gross" BEFORE GST — the scan adds the GST on. */
+function round2(n){ return Math.round((parseFloat(n)||0)*100)/100; }
+function paidExtraVisible(){ var x=document.getElementById('paid-extra-fields'); return !!(x&&x.style.display!=='none'); }
+function paidGstMode(){
+  if(paidExtraVisible()) return ($el('paid-gst').value||'yes');
+  var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
+  return inv?inv.gst:'yes';
+}
+
 function openMarkPaid(id){
   var inv=invoices.find(function(i){return String(i.id)===String(id);});
   if(!inv) return;
   _paidInvId=id;
+  window._lastRemittanceScan=null;
   clearPaidFile();
   $el('paid-modal-title').textContent='Mark paid — '+inv.client;
   $el('paid-ai-result').style.display='none';
   var amt=parseFloat(inv.amount)||0;
-  var gstIncluded=inv.gst==='yes';
-  var base=gstIncluded?amt/1.15:amt; // ex-GST base
-  var whtAmt=inv.wht_amount&&parseFloat(inv.wht_amount)>0
-    ?parseFloat(inv.wht_amount)  // use stored amount if available
-    :Math.round(base*(parseFloat(inv.wht_rate)||0)/100*100)/100; // else calc from base
-  var net=Math.round((amt-whtAmt)*100)/100;
+  var whtAmt=round2(invWHT(inv));
   $el('paid-gross').value=String(amt);
-  $el('paid-gst-amt').value=inv.gst==='yes'?String(Math.round(amt*3/23*100)/100):'';
-  $el('paid-net').value=whtAmt>0?String(net):'';
+  $el('paid-gst-amt').value=inv.gst==='yes'?String(round2(amt*3/23)):'';
   $el('paid-wht').value=whtAmt>0?String(whtAmt):'';
+  $el('paid-net').value=String(round2(amt-whtAmt));
   $el('paid-date').value=today();
+  $el('paid-inv-num').value='';   // hidden field — must not carry a previous remittance's number
   var dateLbl=document.getElementById('paid-date-lbl'); if(dateLbl) dateLbl.textContent='Payment date';
   var extraFields=document.getElementById('paid-extra-fields'); if(extraFields) extraFields.style.display='none';
   updatePaidSummary();
@@ -4686,54 +4540,53 @@ function openMarkPaid(id){
 }
 
 function onPaidGrossInput(){
-  // Auto-calc GST and net when gross is entered with a known W/H rate
   var gross=parseFloat($el('paid-gross').value)||0;
-  var wht=parseFloat($el('paid-wht').value)||0;
-  var whtRateEl=document.getElementById('paid-wht-rate');
-  var rate=whtRateEl?parseFloat(whtRateEl.value)||0:0;
   if(gross>0){
-    // GST = gross * 3/23 if GST invoice
-    var gstEl=document.getElementById('paid-gst');
-    var gstMode=gstEl?gstEl.value:'yes';
-    if(gstMode==='yes'){
-      var gstAmt=Math.round(gross*3/23*100)/100;
-      $el('paid-gst-amt').value=String(gstAmt);
-    }
-    // W/H = rate% of (gross - gst) if rate is set
-    if(rate>0&&!$el('paid-wht').value){
-      var baseExGst=gross*(23/38); // gross excl GST from inclusive
-      var whtAmt=Math.round(baseExGst*rate/100*100)/100;
-      $el('paid-wht').value=String(whtAmt);
-    }
-    // Net = (gross + gst) - wht (GST passes through to bank, W/H deducted from base)
-    var whtVal=parseFloat($el('paid-wht').value)||0;
-    var gstVal=parseFloat($el('paid-gst-amt').value)||0;
-    $el('paid-net').value=String(Math.round((gross+gstVal-whtVal)*100)/100);
+    var gstYes=paidGstMode()==='yes';
+    $el('paid-gst-amt').value=gstYes?String(round2(gross*3/23)):'';
+    // A chosen W/H rate (new remittances only) recalculates W/H on the ex-GST base
+    var rate=paidExtraVisible()?(parseFloat($el('paid-wht-rate').value)||0):0;
+    if(rate>0) $el('paid-wht').value=String(round2((gstYes?gross/1.15:gross)*rate/100));
+    var wht=parseFloat($el('paid-wht').value)||0;
+    $el('paid-net').value=String(round2(gross-wht));
   }
+  updatePaidSummary();
+}
+function applyRemittanceWHT(){ onPaidGrossInput(); }
+function paidAddGstToGross(){
+  var base=parseFloat($el('paid-gross').value)||0;
+  if(!(base>0)) return;
+  var gst=round2(base*0.15);
+  $el('paid-gross').value=String(round2(base+gst));
+  $el('paid-gst-amt').value=String(gst);
   updatePaidSummary();
 }
 
 function updatePaidSummary(){
   var el=document.getElementById('paid-summary');
   var gross=parseFloat($el('paid-gross').value)||0;
-  var gst=parseFloat($el('paid-gst-amt').value)||0;
   var wht=parseFloat($el('paid-wht').value)||0;
   var net=parseFloat($el('paid-net').value)||0;
   if(!gross&&!net){el.style.display='none';return;}
-  // (Gross + GST) - W/H = Net (GST passes through, W/H from base only)
-  var calcNetA=gross>0?Math.round((gross+gst-wht)*100)/100:0;
-  var calcNetB=gross>0?Math.round((gross-wht)*100)/100:0;
-  var valid=net>0&&gross>0&&(Math.abs(calcNetA-net)<0.10||Math.abs(calcNetB-net)<0.10);
   el.style.display='block';
   if(gross>0&&net>0){
-    if(valid){
+    var expected=round2(gross-wht);
+    // Payslips show "Total Gross" BEFORE GST. If that was typed in, gross +
+    // GST − W/H will equal net — offer to convert it rather than just warn.
+    var gstOnTop=round2(gross*0.15);
+    var looksExGst=paidGstMode()==='yes'&&Math.abs(expected-net)>=0.10&&Math.abs(gross+gstOnTop-wht-net)<0.10;
+    if(Math.abs(expected-net)<0.10){
       el.style.background='rgba(15,157,79,.1)';
       el.style.color='var(--green)';
-      el.textContent='✓ Numbers check out — (Gross + GST) − W/H = Net';
+      el.textContent='✓ Numbers check out — Gross (incl. GST) − W/H = Net';
+    } else if(looksExGst){
+      el.style.background='rgba(255,149,0,.1)';
+      el.style.color='var(--orange)';
+      el.innerHTML='Looks like the gross was entered before GST. <button onclick="paidAddGstToGross()" style="margin-left:6px;padding:5px 10px;border-radius:10px;border:none;background:var(--orange);color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">Add GST ('+fmt(gstOnTop)+')</button>';
     } else {
       el.style.background='rgba(255,149,0,.1)';
       el.style.color='var(--orange)';
-      el.textContent='⚠ Expected net: '+fmt(calcNet)+' — check W/H and GST amounts';
+      el.textContent='⚠ Expected net '+fmt(expected)+' (gross − W/H) — check the amounts';
     }
   } else {
     el.style.background='var(--fill)';
@@ -4783,15 +4636,17 @@ function renderPaidPDFPreview(dataUrl){
 
 function viewPaidFile(){ openViewer(window._paidFileData,'Remittance'); }
 
+// Every way out of the paid modal goes through here, so a blank
+// "new remittance" stub never survives as a $0 entry.
 function onClosePaidModal(){
-  // Remove empty stub if modal closed without saving
   if(_paidInvId){
-    var stub=invoices.find(function(i){return String(i.id)===String(_paidInvId)&&i.amount===0&&i.client==='';});
-    if(stub){invoices=invoices.filter(function(i){return i.id!==stub.id;});saveLocal();}
+    var stub=invoices.find(function(i){return String(i.id)===String(_paidInvId)&&!(parseFloat(i.amount)>0)&&!i.client;});
+    if(stub){invoices=invoices.filter(function(i){return i!==stub;});saveLocal();}
   }
   window._newRemStub=null;
-  _paidInvId=null; // always reset so next modal open starts clean
+  _paidInvId=null;
 }
+function closePaidModal(){ onClosePaidModal(); closeModal('modal-paid'); }
 
 function clearPaidFile(){
   dbg('REM', 'cleared by clearPaidFile');
@@ -4801,6 +4656,24 @@ function clearPaidFile(){
   $el('paid-retake-row').style.display='none';
   $el('paid-ai-wrap').style.display='none';
   var fi=document.getElementById('paid-file-input'); if(fi) fi.value='';
+}
+
+/* Pick the GST-inclusive gross from a scan. Models sometimes put a payslip's
+   pre-GST "Total Gross" in gross_inc_gst, so every reading is tested against
+   the arithmetic (gross − W/H = net) and the one that balances wins. */
+function reconcileRemittance(p){
+  function num(v){ var n=parseFloat(v); return isNaN(n)?null:n; }
+  var g=num(p.gross_inc_gst), b=num(p.base_ex_gst), gst=num(p.gst_amount), w=num(p.wht_amount)||0, n=num(p.net_paid);
+  var cands=[];
+  if(b!=null&&gst!=null) cands.push(b+gst);
+  if(g!=null) cands.push(g);
+  if(g!=null&&gst!=null) cands.push(g+gst);
+  if(b!=null&&gst==null) cands.push(b);
+  var pick=null;
+  if(n!=null) for(var i=0;i<cands.length;i++){ if(Math.abs(cands[i]-w-n)<0.10){ pick=cands[i]; break; } }
+  var balanced=pick!=null;
+  if(pick==null) pick=cands.length?cands[0]:(n!=null?n+w:null);
+  return {gross:pick!=null?round2(pick):null, gst:gst, wht:w, net:n, balanced:balanced};
 }
 
 function scanRemittance(){
@@ -4818,27 +4691,28 @@ function scanRemittance(){
   updatePaidSummary();
   var isImage=mime.startsWith('image/');
   var b64=data.split(',')[1];
-  var remPrompt='Analyse this NZ payment document and extract payment details. Reply ONLY with valid JSON, no markdown.'+
-    '\n\nFind these values by looking at the wage summary column on the right side of the payslip:'+
-    '\n- gross_inc_gst: the Total Gross line'+
-    '\n- gst_amount: the GST or GST/VAT line (NOT the OT line even if same number)'+
-    '\n- wht_amount: the Taxation line (withholding tax)'+
+  var remPrompt='Analyse this NZ payment document (a payslip-style contractor pay advice, or a remittance advice) and extract the payment. Reply ONLY with valid JSON, no markdown.'+
+    '\n\nFields:'+
+    '\n- base_ex_gst: the amount BEFORE GST. On a payslip this is the "Total Gross" line in the wage summary.'+
+    '\n- gst_amount: the GST or GST/VAT line (NOT an OT line even if the number is the same)'+
+    '\n- gross_inc_gst: the total INCLUDING GST (base_ex_gst + gst_amount). On a remittance advice that lists invoices, the invoice total.'+
+    '\n- wht_amount: withholding tax deducted (the "Taxation" line), 0 if none'+
+    '\n- wht_rate: withholding rate as a percentage, e.g. 20'+
     '\n- net_paid: the Net Pay line or bank transfer amount'+
-    '\n- wht_rate: 20 or 33 typically'+
-    '\n- base_ex_gst: gross before GST added'+
     '\n- payment_date: Payment Date field (YYYY-MM-DD)'+
     '\n- payer: production company name'+
-    '\n- invoice_number: Trans. No value'+
+    '\n- invoice_number: Trans. No or invoice number'+
     '\n- period_start and period_end: Pay Period dates (YYYY-MM-DD)'+
     '\n- payer_gst: the CLIENT/PRODUCTION COMPANY GST or IRD number. The document often shows two IRD/GST numbers - one for the contractor and one for the company. Find the one associated with the production company name and their address. Digits only (e.g. 074620000). Return null if only one GST number is shown (it may be the contractor\'s)'+
-    '\n\nNZ rule: Total Gross + GST - Taxation = Net Pay. Verify this before returning.'+
-    '\nReturn: {"gross_inc_gst":null,"base_ex_gst":null,"gst_amount":null,"wht_amount":null,"wht_rate":null,"net_paid":null,"payment_date":null,"payer":null,"invoice_number":null,"period_start":null,"period_end":null,"payer_gst":null}';
+    '\n- invoices: if the document pays SEVERAL separate invoices (e.g. a remittance listing multiple invoice numbers), one entry per invoice: {"invoice_number":"","gross_inc_gst":0,"wht_amount":0,"net_paid":0}. Otherwise [].'+
+    '\n\nCheck before returning: gross_inc_gst - wht_amount = net_paid (equivalently base_ex_gst + gst_amount - wht_amount = net_paid).'+
+    '\nReturn: {"base_ex_gst":null,"gst_amount":null,"gross_inc_gst":null,"wht_amount":null,"wht_rate":null,"net_paid":null,"payment_date":null,"payer":null,"invoice_number":null,"period_start":null,"period_end":null,"payer_gst":null,"invoices":[]}';
   var messages=[{role:'user',content:[
     isImage?{type:'image',source:{type:'base64',media_type:mime,data:b64}}:{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
     {type:'text',text:remPrompt}
   ]}];
-  fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:1024,messages:messages})})
-  .then(function(r){if(r.status===401){throw new Error('401');} return r.json();})
+  fetch(API_BASE+'/claude',{method:'POST',headers:authHeaders(),body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2048,messages:messages})})
+  .then(function(r){if(r.status===401){handle401();throw new Error('401');} return r.json();})
   .then(function(resp){
     if(resp.error) throw new Error('API: '+(resp.error.message||'error'));
     var text=(resp.content||[]).filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
@@ -4847,38 +4721,52 @@ function scanRemittance(){
     var js2=ct.indexOf('{'),je2=ct.lastIndexOf('}')+1;
     if(js2===-1||je2===0) throw new Error('No JSON in response: '+ct.slice(0,60));
     var parsed=JSON.parse(ct.slice(js2,je2));
-    if(parsed.gross_inc_gst!=null) $el('paid-gross').value=String(parsed.gross_inc_gst);
-    if(parsed.gst_amount!=null) $el('paid-gst-amt').value=String(parsed.gst_amount);
-    if(parsed.wht_amount!=null) $el('paid-wht').value=String(parsed.wht_amount);
-    if(parsed.net_paid!=null) $el('paid-net').value=String(parsed.net_paid);
+    var rc=reconcileRemittance(parsed);
+    var isNew=paidExtraVisible();
+    if(isNew){
+      // GST mode follows the document: an explicit 0 GST means a non-GST payment
+      if(rc.gst===0) $el('paid-gst').value='no'; else $el('paid-gst').value='yes';
+      var wr=parseFloat(parsed.wht_rate)||0;
+      var rsel=$el('paid-wht-rate');
+      rsel.value=[0,15,20,33,45].indexOf(wr)!==-1?String(wr):'0';
+    }
+    if(rc.gross!=null) $el('paid-gross').value=String(rc.gross);
+    if(rc.gst!=null) $el('paid-gst-amt').value=String(rc.gst);
+    else if(rc.gross!=null&&paidGstMode()==='yes') $el('paid-gst-amt').value=String(round2(rc.gross*3/23));
+    $el('paid-wht').value=rc.wht?String(rc.wht):'';
+    if(rc.net!=null) $el('paid-net').value=String(rc.net);
     if(parsed.payment_date) $el('paid-date').value=parsed.payment_date;
-    // Fill extra fields if new remittance
-    if(parsed.payer){var pc=document.getElementById('paid-client');if(pc)pc.value=parsed.payer;}
-    // Always overwrite invoice number from scan
-    var pn=document.getElementById('paid-inv-num');
-    if(pn) pn.value=parsed.invoice_number||pn.value||'';
-    // Store scan data for client profile pre-fill
+    if(isNew){
+      if(parsed.payer) $el('paid-client').value=parsed.payer;
+      $el('paid-inv-num').value=parsed.invoice_number||$el('paid-inv-num').value||'';
+    }
+    var multi=Array.isArray(parsed.invoices)?parsed.invoices.filter(function(x){return x&&(x.gross_inc_gst||x.net_paid);}):[];
     window._lastRemittanceScan={
       payer:parsed.payer||null,
-      whtRate:parsed.wht_rate||0,
-      whtAmount:parsed.wht_amount||0,
-      grossIncGst:parsed.gross_inc_gst||null,
+      whtRate:parseFloat(parsed.wht_rate)||0,
+      whtAmount:rc.wht||0,
+      grossIncGst:rc.gross,
       baseExGst:parsed.base_ex_gst||null,
-      gstAmount:parsed.gst_amount||null,
+      gstAmount:rc.gst,
       payerGst:parsed.payer_gst||null,
       invoiceNumber:parsed.invoice_number||null,
       periodStart:parsed.period_start||null,
-      periodEnd:parsed.period_end||null
+      periodEnd:parsed.period_end||null,
+      paymentDate:parsed.payment_date||null,
+      multiInvoices:multi.length>1?multi:null
     };
-    // If gross_inc_gst detected, store it for confirmMarkPaid to use as invoice amount
-    if(parsed.gross_inc_gst) window._lastRemittanceScan.invoiceAmount=parsed.gross_inc_gst;
     updatePaidSummary();
-    var resultParts=['Net: <strong>'+fmt(parsed.net_paid||0)+'</strong>'];
-    if(parsed.wht_amount) resultParts.push('W/H: <strong>'+fmt(parsed.wht_amount)+'</strong>');
-    if(parsed.gst_amount) resultParts.push('GST: <strong>'+fmt(parsed.gst_amount)+'</strong>');
-    if(parsed.gross_inc_gst) resultParts.push('Gross: <strong>'+fmt(parsed.gross_inc_gst)+'</strong>');
+    var resultParts=['Net: <strong>'+fmt(rc.net||0)+'</strong>'];
+    if(rc.wht) resultParts.push('W/H: <strong>'+fmt(rc.wht)+'</strong>');
+    if(rc.gst) resultParts.push('GST: <strong>'+fmt(rc.gst)+'</strong>');
+    if(rc.gross!=null) resultParts.push('Gross incl. GST: <strong>'+fmt(rc.gross)+'</strong>');
+    var html='&#x2713; '+resultParts.join(' &nbsp;&middot;&nbsp; ');
+    if(!rc.balanced) html+='<br><span style="color:var(--orange)">⚠ The figures on this document don’t balance — check them before saving.</span>';
+    if(multi.length>1&&isNew){
+      html+='<button onclick="createMultiRemittance()" style="display:block;width:100%;margin-top:10px;padding:11px;border-radius:12px;border:none;background:var(--green);color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">Create '+multi.length+' invoices from this remittance</button>';
+    }
     resultEl.className='ai-inv-result-ok'; resultEl.style.display='block';
-    resultEl.innerHTML='&#x2713; '+resultParts.join(' &nbsp;&middot;&nbsp; ');
+    resultEl.innerHTML=html;
   })
   .catch(function(e){
     if(e.message!=='401'){
@@ -4889,101 +4777,124 @@ function scanRemittance(){
   .finally(function(){btn.disabled=false; btn.innerHTML='<span>&#x2736;</span> Read remittance';});
 }
 
+/* Sky-style remittances pay several invoices at once: one entry each. */
 function createMultiRemittance(){
   var scan=window._lastRemittanceScan;
   if(!scan||!scan.multiInvoices){showToast('No multi-invoice data');return;}
-  var payer=scan.payer||(document.getElementById('paid-client')||{}).value||'';
-  var paymentDate=scan.paymentDate||$el('paid-date').value||today();
-  var gstSetting='yes';
-
-  scan.multiInvoices.forEach(function(inv){
-    var gross=parseFloat(inv.gross_inc_gst)||0;
-    var wht=parseFloat(inv.wht_amount)||0;
-    var net=parseFloat(inv.net_paid)||(gross-wht);
-    var whtRate=gross>0?Math.round(wht/gross*100*100)/100:0;
-    var newInv={
-      id:'local_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
-      client:payer,
-      amount:gross,
-      date:paymentDate,
-      due_date:null,
-      invoice_number:inv.invoice_number||null,
-      gst:gstSetting,
-      wht_rate:whtRate,
-      wht_amount:wht,
-      status:'paid',
-      paid_date:paymentDate,
-      paid_amount:net,
-      source:'manual',
-      _localOnly:true,
-      created_at:new Date().toISOString(),
-      updated_at:new Date().toISOString()
-    };
-    if(window._paidFileData) newInv.remittance_image=window._paidFileData;
-    invoices.unshift(newInv);
+  var payer=(($el('paid-client').value||'').trim())||scan.payer||'';
+  if(!payer){showToast('Enter a client name');return;}
+  var paymentDate=$el('paid-date').value||scan.paymentDate||today();
+  var created=0;
+  scan.multiInvoices.forEach(function(line,idx){
+    var wht=parseFloat(line.wht_amount)||0;
+    var gross=parseFloat(line.gross_inc_gst)||0;
+    var net=parseFloat(line.net_paid);
+    if(!(gross>0)&&net>0) gross=net+wht;
+    if(!(gross>0)) return;
+    if(isNaN(net)) net=gross-wht;
+    var base=gross/1.15;
+    invoices.unshift({
+      id:'local_'+Date.now()+'_'+idx+'_'+Math.random().toString(36).slice(2,6),
+      client:payer, amount:round2(gross), date:paymentDate, due_date:null,
+      invoice_number:line.invoice_number||null, gst:'yes',
+      gst_amount:round2(gross*3/23),
+      wht_rate:wht>0?round2(wht/base*100):0, wht_amount:round2(wht),
+      status:'paid', paid_date:paymentDate, paid_amount:round2(net),
+      remittance_image:window._paidFileData||undefined,
+      source:'manual', _localOnly:true,
+      created_at:new Date().toISOString(), updated_at:new Date().toISOString()
+    });
+    created++;
   });
-
-  save(); renderSummary(); renderInvoices(); closeModal('modal-paid');
-  showToast(scan.multiInvoices.length+' invoices saved from '+payer);
+  if(!created){showToast('No usable invoice lines found');return;}
+  closePaidModal();          // also removes the blank stub the modal opened with
+  save(); renderAll();
+  showToast(created+' invoices saved from '+payer);
   window._lastRemittanceScan=null;
-  window._newRemStub=null;
-  checkNewClient(payer);
+  checkNewClient(payer, scan);
 }
 
-
-
 function confirmMarkPaid(){
-  // Stub is already in invoices array — find it by _paidInvId
   var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
-  if(!inv){showToast('Error: try again');closeModal('modal-paid');return;}
+  if(!inv){showToast('Error: try again');closePaidModal();return;}
 
   var grossField=parseFloat($el('paid-gross').value)||0;
   var gstAmt=parseFloat($el('paid-gst-amt').value)||0;
   var net=parseFloat($el('paid-net').value)||0;
   var wht=parseFloat($el('paid-wht').value)||0;
-  var dateVal=$el('paid-date').value;
-  var extraFields=document.getElementById('paid-extra-fields');
-  var isNew=!!(extraFields&&extraFields.style.display!=='none'&&inv.amount===0);
+  var dateVal=$el('paid-date').value||today();
+  var isNew=paidExtraVisible()&&!(parseFloat(inv.amount)>0);
 
   if(isNew){
     var client=($el('paid-client').value||'').trim();
     if(!client){showToast('Enter a client name');return;}
-    var gross=grossField>0?grossField:(wht>0?net+wht:net);
-    if(gross<=0&&net<=0){showToast('Enter the net received amount');return;}
+    var gross=grossField>0?grossField:round2(net+wht);
+    if(!(gross>0)){showToast('Enter the gross or net amount');return;}
     inv.client=client;
-    inv.amount=gross;
-    inv.date=dateVal||today();
-    inv.invoice_number=($el('paid-inv-num').value||'').trim()||null;
-    var gstEl=document.getElementById('paid-gst'); inv.gst=gstEl?gstEl.value:'yes';
-    inv.wht_rate=wht>0&&gross>0?Math.round(wht/gross*100*100)/100:0;
-    if(extraFields) extraFields.style.display='none';
+    inv.amount=round2(gross);
+    inv.gst=$el('paid-gst').value||'yes';
+    var num=($el('paid-inv-num').value||'').trim();
+    inv.invoice_number=num||null;
+    inv.date=dateVal;
   }
 
+  var amt=parseFloat(inv.amount)||0;
   inv.status='paid';
-  inv.paid_date=dateVal||today();
-  if(isNew) inv.date=inv.paid_date;
-  inv.paid_amount=net>0?net:parseFloat(inv.amount)||0;
-  if(gstAmt>0) inv.gst_amount=gstAmt;
-  if(wht>0){
-    inv.wht_amount=wht;
-    var scanD=window._lastRemittanceScan;
-    if(scanD&&scanD.whtRate>0) inv.wht_rate=scanD.whtRate;
-  }
+  inv.paid_date=dateVal;
+  inv.paid_amount=net>0?round2(net):round2(amt-wht);
+  inv.wht_amount=round2(wht);
+  // W/H rate is a % of the ex-GST base; snap to a whole number when it's within rounding
+  var base=inv.gst==='yes'?amt/1.15:amt;
+  var rate=wht>0&&base>0?wht/base*100:0;
+  inv.wht_rate=Math.abs(rate-Math.round(rate))<0.15?Math.round(rate):round2(rate);
+  if(gstAmt>0&&inv.gst==='yes') inv.gst_amount=round2(gstAmt);
   if(window._paidFileData) inv.remittance_image=window._paidFileData;
-  // DIAGNOSTIC: surface whether the remittance is attached at save time
-  dbg('REM', window._paidFileData ? ('save: attached '+Math.round(window._paidFileData.length/1024)+'KB') : 'save: EMPTY at confirmMarkPaid');
-  var pnEl=document.getElementById('paid-inv-num');
-  if(pnEl&&pnEl.value.trim()) inv.invoice_number=pnEl.value.trim();
-  var sd=window._lastRemittanceScan; if(sd&&sd.payerGst) inv.client_gst=sd.payerGst;
+  dbg('REM', window._paidFileData ? ('save: attached '+Math.round(window._paidFileData.length/1024)+'KB') : 'save: no remittance file attached');
+  var scan=window._lastRemittanceScan;
+  if(scan&&scan.payerGst) inv.client_gst=scan.payerGst;
   inv.updated_at=new Date().toISOString();
-  window._newRemStub=null;
 
+  closePaidModal();
   save();
-  closeModal('modal-paid');
   renderAll();
   showToast((isNew?'Remittance saved':'Payment recorded')+' — '+inv.client);
   window._lastRemittanceScan=null;
-  if(isNew) checkNewClient(inv.client);
+  if(isNew) checkNewClient(inv.client, scan);
+}
+
+/* ── One-off repair: remittances saved with the pre-GST gross ──────
+   Before v1.8 a payslip's "Total Gross" (before GST) was stored as the
+   invoice amount, while every calculation treats amount as GST-inclusive —
+   so those entries under-counted sales, GST and income by 15%. They are
+   recognisable: GST is 15% OF the amount, and amount + GST − W/H = net. */
+function findExGstRemittances(){
+  return invoices.filter(function(i){
+    if(i.status!=='paid'||i.gst!=='yes') return false;
+    var a=parseFloat(i.amount)||0, g=parseFloat(i.gst_amount)||0, w=parseFloat(i.wht_amount)||0, n=parseFloat(i.paid_amount);
+    if(!(a>0&&g>0)||isNaN(n)) return false;
+    return Math.abs(g-a*0.15)<0.06 && Math.abs(a+g-w-n)<0.10 && Math.abs(a-w-n)>=0.10;
+  });
+}
+function checkExGstRemittances(){
+  var list=findExGstRemittances();
+  if(!list.length){showToast('All remittance amounts look right');return;}
+  var missing=list.reduce(function(s,i){return s+(parseFloat(i.gst_amount)||0);},0);
+  list.forEach(function(i){ dbg('INFO','ex-GST entry: '+i.client+' '+(i.invoice_number||'')+' '+i.date+' amount '+fmt(i.amount)+' + GST '+fmt(i.gst_amount)); });
+  showSheet(list.length+' remittance'+(list.length===1?' was':'s were')+' saved without the GST in the gross ('+fmt(missing)+' of GST missing from sales). Add the GST to each? A backup is taken first.',[
+    {label:'Fix '+list.length+' entr'+(list.length===1?'y':'ies'),fn:function(){
+      snapshotLocalData();
+      list.forEach(function(i){
+        var a=parseFloat(i.amount), g=parseFloat(i.gst_amount), w=parseFloat(i.wht_amount)||0;
+        i.amount=round2(a+g);
+        if(w>0){ var r=w/a*100; i.wht_rate=Math.abs(r-Math.round(r))<0.15?Math.round(r):round2(r); }
+        i.updated_at=new Date().toISOString();
+      });
+      save(); renderAll();
+      showToast('Fixed '+list.length+' — undo via Restore last backup');
+    }},
+    {label:'Show the list (Debug tab)',fn:function(){ closeModal('modal-account'); switchTab('debug'); }},
+    {label:'Cancel',cls:'cancel'}
+  ]);
 }
 
 /* ── Bank CSV ── */
@@ -5103,14 +5014,14 @@ function openBankDetail(id){
 
   if(txn.matched_invoice_id){
     actions.push({label:'Remove match',cls:'danger',fn:function(){
-      var prev=invoices.find(function(i){return i.id===txn.matched_invoice_id;});
+      var prev=invoices.find(function(i){return String(i.id)===String(txn.matched_invoice_id);});
       if(prev){prev.status='unpaid';prev.paid_date=null;prev.paid_amount=null;}
       txn.matched_invoice_id=null; save(); renderBank(); renderInvoices(); showToast('Match removed');
     }});
   } else if(amt>0){
     actions.push({label:'Mark as approved income',fn:function(){
       var newInv={
-        id:'approved_'+Date.now(),
+        id:'local_'+Date.now(),
         client:txn.description||'Unknown',
         amount:amt, date:txn.date, due_date:txn.date,
         invoice_number:txn.reference||null,
@@ -5134,7 +5045,6 @@ function openBankDetail(id){
       $el('f-gst').value=settings.defaultGST||'yes';
       $el('f-wht').value=String(settings.defaultWHT||'0');
       $el('f-notes').value='';
-      var al=document.getElementById('f-attach-label'); if(al) al.textContent='Upload PDF / photo';
       hideErr('inv-err');
       _pendingMatchTxnId=id;
       openModal('modal-invoice');
@@ -5159,7 +5069,7 @@ function openBankDetail(id){
     matchable.forEach(function(m){
       var inv=m.inv;
       var mAmt=parseFloat(inv.amount)||0;
-      var mWht=inv.wht_amount!=null&&inv.wht_amount!==''?parseFloat(inv.wht_amount):mAmt*(parseFloat(inv.wht_rate)||0)/100;
+      var mWht=invWHT(inv);
       var mNet=inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):(mWht>0?Math.round((mAmt-mWht)*100)/100:mAmt);
       var amtNote=m.amtDiff<0.10?'':' (±'+fmt(m.amtDiff)+')';
       var label=(inv.status==='paid'?'✓ ':'')+inv.client+' net '+fmt(mNet)+amtNote+(inv.invoice_number?' #'+inv.invoice_number:'');
@@ -5190,7 +5100,7 @@ function runAutoMatch(){
   invoices.forEach(function(inv){
     var invAmt=parseFloat(inv.amount)||0; if(!invAmt) return;
     var whtRate=parseFloat(inv.wht_rate)||0;
-    var net=inv.paid_amount!=null?parseFloat(inv.paid_amount):Math.round(invAmt*(1-whtRate/100)*100)/100;
+    var net=inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):round2(invAmt-invWHT(inv));
     // Index by rounded amount (within $1) - bucket by floor dollar
     var bucket=Math.floor(net);
     if(!invByAmt[bucket]) invByAmt[bucket]=[];
@@ -5244,8 +5154,6 @@ function saveSettings(){
   var gf=document.getElementById('gst-freq'); if(gf) settings.gstFreq=gf.value;
   var gn=document.getElementById('gst-num'); if(gn) settings.gstNum=gn.value.trim();
   var ar=document.getElementById('acc-rate'); if(ar) settings.accRate=ar.value;
-  var sl=document.getElementById('sl-toggle'); if(sl) settings.studentLoan=sl.value;
-  var se=document.getElementById('sl-extra'); if(se&&se.value) settings.slExtra=se.value;
   var pt=document.getElementById('prov-toggle'); if(pt) settings.provTax=pt.value;
   save();
 }
@@ -5369,15 +5277,6 @@ function emptyState(icon,title,sub,pad){return'<div class="empty" style="padding
 $el('l-user').addEventListener('keydown',function(e){if(e.key==='Enter')$el('l-pass').focus();});
 $el('l-pass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 
-/* ── Drag-drop on bank ── */
-(function(){
-  var zone=document.querySelector('.upload-zone');
-  if(!zone)return;
-  ['dragover','dragenter'].forEach(function(ev){zone.addEventListener(ev,function(e){e.preventDefault();zone.classList.add('drag');});});
-  ['dragleave','drop'].forEach(function(ev){zone.addEventListener(ev,function(e){e.preventDefault();zone.classList.remove('drag');});});
-  zone.addEventListener('drop',function(e){var f=e.dataTransfer.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){parseCSV(ev.target.result);};r.readAsText(f);});
-})();
-
 /* ── Hourly FY refresh ── */
 setInterval(refreshFY,60*60*1000);
 
@@ -5475,30 +5374,12 @@ function loadDemoData(){
     {id:'t26',date:dt(2026,4,18),amount:-89,description:'ADOBE CC',reference:'',matched_invoice_id:null,source:'anz',imported_at:dt(2026,4,18)},
   ];
 
-  settings={gstFreq:'2monthly',gstNum:'123-456-789',defaultWHT:'0',studentLoan:'yes',accRate:'0.53'};
+  settings={gstFreq:'2monthly',gstNum:'123-456-789',defaultWHT:'0',accRate:'0.53'};
 }
 
 
-/* ── Overview donut + cards ── */
+/* ── Overview donut ── */
 function renderOverviewExtras(fyInvoices){
-  // Cards: GST due + outstanding
-  var cardsEl=document.getElementById('overview-cards');
-  if(cardsEl){
-    var outstanding=fyInvoices.filter(function(i){return i.status!=='paid';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
-    var gstDue=nextGSTDue();
-    cardsEl.innerHTML=
-      '<div style="background:var(--surface);border-radius:14px;padding:14px">'
-        +'<div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Outstanding</div>'
-        +'<div style="font-size:22px;font-weight:700;color:'+(outstanding>0?'var(--orange)':'var(--t3)')+';font-variant-numeric:tabular-nums">'+fmt(outstanding)+'</div>'
-        +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+(outstanding>0?fyInvoices.filter(function(i){return i.status!=='paid';}).length+' unpaid':'All clear')+'</div>'
-      +'</div>'
-      +'<div style="background:var(--surface);border-radius:14px;padding:14px">'
-        +'<div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">GST due</div>'
-        +'<div style="font-size:15px;font-weight:700;color:var(--blue)">'+gstDue.date+'</div>'
-        +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+gstDue.period+'</div>'
-      +'</div>';
-  }
-
   // Donut chart by client
   var donutEl=document.getElementById('overview-donut');
   if(!donutEl) return;
@@ -5515,9 +5396,7 @@ function renderOverviewExtras(fyInvoices){
     if(inv.paid_amount!=null&&inv.paid_amount!==''){
       net=parseFloat(inv.paid_amount)||0;
     } else {
-      var wht=inv.wht_amount!=null&&inv.wht_amount!==''
-        ? parseFloat(inv.wht_amount)
-        : amt*(parseFloat(inv.wht_rate)||0)/100;
+      var wht=invWHT(inv);
       net=amt-wht;
     }
     clients[c]=(clients[c]||0)+net;
@@ -5793,21 +5672,17 @@ function applyClientProfile(name, inputId){
     if(whtEl) whtEl.value=String(profile.whtRate||0);
     if(gstEl) gstEl.value=profile.gst||'yes';
     if(dueEl&&!dueEl.value){
-      var terms=profile.terms||30;
-      dueEl.value=daysAhead(terms);
+      var terms=profile.terms!=null?parseInt(profile.terms):30;
+      if(terms===20){
+        // "20th of month" = the 20th of the month after the invoice
+        var d=new Date(); dueEl.value=localISO(new Date(d.getFullYear(),d.getMonth()+1,20));
+      } else dueEl.value=daysAhead(terms);
     }
-  }
-  // Apply to quick-add
-  if(inputId==='qa-client'||inputId.startsWith('qa-')){
-    var qwht=document.getElementById('qa-wht');
-    var qgst=document.getElementById('qa-gst');
-    if(qwht) qwht.value=String(profile.whtRate||0);
-    if(qgst) qgst.value=profile.gst||'yes';
   }
 }
 
 // After saving an invoice with a new client, prompt to create profile
-function checkNewClient(clientName){
+function checkNewClient(clientName, scan){
   if(!clientName) return;
   var profile=getClientProfile(clientName);
   if(profile) return; // already known — skip scanning
@@ -5818,7 +5693,7 @@ function checkNewClient(clientName){
   var isNew=!invoices.slice(1).some(function(i){return (i.client||'').toLowerCase()===clientName.toLowerCase();});
   if(!profile&&isNew){
     var actions=[
-      {label:'Set up client profile',fn:function(){openClientProfile(clientName,window._lastRemittanceScan);}}
+      {label:'Set up client profile',fn:function(){openClientProfile(clientName,scan||window._lastRemittanceScan);}}
     ];
     if(allClients.length){
       actions.push({label:'Use existing client instead',fn:function(){pickExistingClient(clientName);}});
@@ -5827,26 +5702,6 @@ function checkNewClient(clientName){
     setTimeout(function(){
       showSheet('"'+clientName+'" looks like a new client',[].concat(actions));
     },400);
-  }
-}
-
-function applyRemittanceWHT(){
-  var rateEl=document.getElementById('paid-wht-rate');
-  var netEl=document.getElementById('paid-net');
-  var whtEl=document.getElementById('paid-wht');
-  if(!rateEl) return;
-  var rate=parseFloat(rateEl.value)||0;
-  if(rate>0){
-    // Auto-fill W/H from invoice amount if we know it
-    var inv=invoices.find(function(i){return String(i.id)===String(_paidInvId);});
-    if(inv&&inv.amount){
-      var gross=parseFloat(inv.amount)||0;
-      var wht=Math.round(gross*rate/100*100)/100;
-      var net=Math.round((gross-wht)*100)/100;
-      if(whtEl) whtEl.value=String(wht);
-      if(netEl) netEl.value=String(net);
-      updatePaidSummary();
-    }
   }
 }
 
@@ -5908,171 +5763,15 @@ function initPinchZoom(){
     var u=LS.get(LS_USER)||'?';
     $el('nav-avatar').textContent=u.charAt(0).toUpperCase();
     $el('acct-name').textContent=u;
-    $el('acct-email').textContent=LS.get(LS_ETOKEN)||'';
-    loadLocal(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
+    $el('acct-email').textContent=LS.get(LS_ETOKEN)?'Receipts2026+'+LS.get(LS_ETOKEN)+'@gmail.com':'';
+    if(!LS.get('nzin_owner')) LS.set('nzin_owner',u);
+    var _vl0=document.getElementById('app-version-label'); if(_vl0) _vl0.textContent=APP_VERSION;
+    loadLocal(); loadAssets(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
   } else {
     showScreen('login-screen');
   }
 })();
 
-/* ── Tax tile expand/collapse ── */
-var _openTile = null;
-function toggleTile(name) {
-  var tile = document.getElementById('tile-' + name);
-  if (!tile) return;
-  var isOpen = tile.classList.contains('open');
-
-  // Close all
-  ['income','acc','sl','gst'].forEach(function(n) {
-    var t = document.getElementById('tile-' + n);
-    if (t) t.classList.remove('open');
-  });
-
-  // Open this one if it was closed
-  if (!isOpen) {
-    tile.classList.add('open');
-    _openTile = name;
-  } else {
-    _openTile = null;
-  }
-}
-
-
-/* ── AI Invoice Scanner ── */
-var _pendingMatchTxnId = _pendingMatchTxnId || null;
-var _scanImageData = null, _scanMimeType = null;
-
-function openScanModal(){
-  _scanImageData=null; _scanMimeType=null;
-  $el('scan-zone-title').textContent='Upload invoice';
-  $el('scan-status').style.display='none';
-  $el('scan-result').style.display='none';
-  $el('scan-file-input').value='';
-  openModal('modal-scan');
-}
-
-function onScanFile(input){
-  var file=input.files[0]; if(!file)return;
-  $el('scan-zone-title').textContent=file.name;
-  $el('scan-status').style.display='block';
-  $el('scan-result').style.display='none';
-
-  var reader=new FileReader();
-  reader.onload=function(e){
-    var dataUrl=e.target.result;
-    _scanMimeType=file.type;
-    _scanImageData=dataUrl.split(',')[1];
-    callClaudeForScan(_scanImageData, _scanMimeType);
-  };
-  reader.readAsDataURL(file);
-}
-
-function callClaudeForScan(b64, mime){
-  var isImage=mime.startsWith('image/');
-  var messages=[{
-    role:'user',
-    content:[
-      isImage
-        ?{type:'image',source:{type:'base64',media_type:mime,data:b64}}
-        :{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
-      {type:'text',text:'Extract invoice details from this document. Respond with ONLY a JSON object (no markdown) with these fields: client (string), amount (number, GST-inclusive total), date (YYYY-MM-DD), invoice_number (string or null), gst (yes/no/zero), wht_rate (number: 0, 15, 20, or 33), notes (string or null). If you cannot determine a field, use null.'}
-    ]
-  }];
-
-  fetch(API_BASE+'/claude',{
-    method:'POST',
-    headers:authHeaders(),
-    body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:500,messages:messages})
-  })
-  .then(function(r){return r.json();})
-  .then(function(data){
-    $el('scan-status').style.display='none';
-    try{
-      var text=data.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('');
-      var clean=text.replace(/```json|```/g,'').trim();
-      var parsed=JSON.parse(clean);
-      $el('sc-client').value=parsed.client||'';
-      $el('sc-amount').value=parsed.amount||'';
-      $el('sc-date').value=parsed.date||today();
-      $el('sc-num').value=parsed.invoice_number||'';
-      $el('sc-gst').value=parsed.gst||'yes';
-      $el('sc-wht').value=String(parsed.wht_rate||0);
-      $el('scan-result').style.display='block';
-    }catch(e){
-      showToast('Could not parse invoice — check the file');
-      $el('scan-zone-title').textContent='Upload invoice';
-    }
-  })
-  .catch(function(e){
-    $el('scan-status').style.display='none';
-    showToast('AI scan failed — '+e.message);
-  });
-}
-
-function scanCreateNew(){
-  var client=$el('sc-client').value.trim();
-  var amount=$el('sc-amount').value;
-  var date=$el('sc-date').value;
-  var num=$el('sc-num').value.trim();
-  var gst=$el('sc-gst').value;
-  var wht=$el('sc-wht').value;
-
-  closeModal('modal-scan');
-  editingId=null;
-  $el('inv-modal-title').textContent='New Invoice';
-  $el('f-client').value=client;
-  $el('f-amount').value=amount;
-  $el('f-date').value=date;
-  $el('f-due').value=daysAhead(30);
-  $el('f-num').value=num;
-  $el('f-gst').value=gst;
-  $el('f-wht').value=wht;
-  $el('f-notes').value='';
-  // Pre-load attachment
-  var al=document.getElementById('f-attach-label');
-  if(al&&_scanImageData){al.textContent='Scanned document attached'; al._b64=_scanImageData; al._mime=_scanMimeType;}
-  hideErr('inv-err');
-  openModal('modal-invoice');
-}
-
-function scanMatchExisting(){
-  var el=document.getElementById('match-list');
-  var unpaid=invoices.filter(function(i){return i.status!=='paid';})
-    .sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-  if(!unpaid.length){showToast('No unpaid invoices to match');return;}
-  var html='';
-  unpaid.forEach(function(inv){
-    html+='<div class="r-card" data-invid="'+esc(String(inv.id))+'">'
-      +'<div class="r-bar" style="background:var(--orange)"></div>'
-      +'<div class="r-body"><div class="r-top"><div>'
-      +'<div class="r-title">'+esc(inv.client)+'</div>'
-      +'<div class="r-sub">'+fmtDate(inv.date)+(inv.invoice_number?' · #'+esc(inv.invoice_number):'')+'</div>'
-      +'</div><div class="r-amount" style="color:var(--green)">'+fmt(inv.paid_amount!=null&&inv.paid_amount!==''?parseFloat(inv.paid_amount):parseFloat(inv.amount)||0)+'</div></div></div></div>';
-  });
-  el.innerHTML=html;
-  el.onclick=function(e){
-    var card=e.target.closest('.r-card');
-    if(card&&card.dataset.invid) confirmScanMatch(card.dataset.invid);
-  };
-  closeModal('modal-scan');
-  openModal('modal-match');
-}
-function confirmScanMatch(invId){
-  var inv=invoices.find(function(i){return i.id===invId;});
-  if(!inv)return;
-  // Attach scanned image to invoice
-  if(_scanImageData){inv.image=_scanImageData; inv.image_type=_scanMimeType;}
-  // Mark paid if not already
-  if(inv.status!=='paid'){
-    inv.status='paid';
-    inv.paid_date=today();
-    inv.paid_amount=inv.amount;
-  }
-  inv.updated_at=new Date().toISOString();
-  save(); renderAll();
-  closeModal('modal-match');
-  showToast('Invoice updated');
-}
   /* ── Error boundaries ────────────────────────────────────────────
      Each render function is wrapped so a failure in one section
      (usually a missing DOM element) degrades that section only,
@@ -6101,7 +5800,6 @@ function confirmScanMatch(invId){
   renderInvoices       = _boundary('renderInvoices',       renderInvoices);
   renderClientsTab     = _boundary('renderClientsTab',     renderClientsTab);
   renderClientDetail   = _boundary('renderClientDetail',   renderClientDetail);
-  renderSources        = _boundary('renderSources',        renderSources);
   renderBank           = _boundary('renderBank',           renderBank);
   renderAssets         = _boundary('renderAssets',         renderAssets);
   renderSetAside       = _boundary('renderSetAside',       renderSetAside);
