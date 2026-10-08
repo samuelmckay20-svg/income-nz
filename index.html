@@ -795,7 +795,10 @@ body{
       <!-- ── Asset Depreciation ── -->
       <div class="shdr-row">
         <span class="shdr">Asset depreciation</span>
+        <span style="display:flex;gap:6px">
+        <button onclick="openAssetImport()" style="padding:6px 12px;border-radius:16px;border:none;background:var(--fill);color:var(--t2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">Import</button>
         <button onclick="openAddAsset()" style="padding:6px 14px;border-radius:16px;border:none;background:rgba(15,157,79,.1);color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">+ Add asset</button>
+        </span>
       </div>
       <div id="asset-list" style="padding:0 16px 4px">
         <div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">No assets added yet</div>
@@ -812,7 +815,7 @@ body{
       <div class="modal-bd" id="modal-asset">
         <div class="modal-sheet" id="modal-asset-sheet">
           <div class="modal-hdr">
-            <div class="modal-title">Add asset</div>
+            <div class="modal-title" id="asset-modal-title">Add asset</div>
             <button class="modal-close" onclick="closeModal('modal-asset')">&#x2715;</button>
           </div>
           <div class="modal-scroll" style="padding:16px">
@@ -822,26 +825,54 @@ body{
               <div class="g-row"><div class="g-icon">&#x1F4C5;</div><span class="g-lbl">Purchase date</span><input class="g-input" id="asset-date" type="date" style="max-width:160px;text-align:right"></div>
               <div class="g-row"><div class="g-icon">&#x1F4CA;</div><span class="g-lbl">IRD category</span>
                 <select class="g-select" id="asset-category" style="font-size:13px;max-width:210px" onchange="onAssetCategoryChange()">
-                  <option value="50" data-label="Computers &amp; laptops">Computers &amp; laptops (50%)</option>
-                  <option value="67" data-label="Tablets &amp; smartphones">Tablets &amp; smartphones (67%)</option>
-                  <option value="30" data-label="Motor vehicles">Motor vehicles (30%)</option>
-                  <option value="100" data-label="Low value (under $1,000)">Low value under $1,000 (100%)</option>
-                  <option value="custom" data-label="Custom">Custom rate…</option>
+                  <option value="computers">Computers &amp; laptops</option>
+                  <option value="tablets">Tablets &amp; smartphones</option>
+                  <option value="vehicles">Motor vehicles</option>
+                  <option value="lowvalue">Low value (under $1,000)</option>
+                  <option value="custom">Other (enter rate)</option>
                 </select>
               </div>
-              <div class="g-row" id="asset-custom-row" style="display:none"><div class="g-icon">&#x270F;&#xFE0F;</div><span class="g-lbl">DV rate %</span><input class="g-input" id="asset-custom-rate" type="text" inputmode="decimal" placeholder="e.g. 25" style="max-width:80px;text-align:right"></div>
+              <div class="g-row"><div class="g-icon">&#x1F4C9;</div><span class="g-lbl">Method</span>
+                <select class="g-select" id="asset-method" style="font-size:13px;width:auto" onchange="onAssetCategoryChange()">
+                  <option value="DV">Diminishing value</option>
+                  <option value="SL">Straight line</option>
+                </select>
+              </div>
+              <div class="g-row"><div class="g-icon">&#x270F;&#xFE0F;</div><span class="g-lbl">Rate %</span><input class="g-input" id="asset-rate" type="text" inputmode="decimal" placeholder="e.g. 40" style="max-width:80px;text-align:right"></div>
               <div class="g-row"><div class="g-icon">&#x1F4F1;</div><span class="g-lbl">Business use %</span><input class="g-input" id="asset-biz-pct" type="text" inputmode="numeric" placeholder="100" style="max-width:80px;text-align:right"></div>
               <div class="g-row"><div class="g-icon">&#x1F4B3;</div><span class="g-lbl">Price includes GST?</span><select class="g-select" id="asset-gst" style="font-size:13px;width:auto"><option value="yes">Yes — I'm GST registered</option><option value="no">No — ex-GST price</option></select></div>
               <div class="g-row" id="asset-boost-row"><div class="g-icon">&#x26A1;</div><span class="g-lbl">Investment Boost (20%)?</span><select class="g-select" id="asset-boost" style="font-size:13px;width:auto"><option value="no">No</option><option value="yes">Yes — new asset after 22 May 2025</option></select></div>
             </div>
             <div style="margin-top:12px;padding:12px;background:var(--fill);border-radius:12px;font-size:12px;color:var(--t3)">
-              Diminishing value method. Only rates confirmed against IRD's IR265 schedule are listed &mdash; for anything else (camera bodies, lenses, audio gear, tools) look up the exact rate and enter it as a custom rate.<br>
+              <b>Diminishing value</b> takes the rate off the remaining value each year. <b>Straight line</b> takes the same amount (rate &times; cost) each year until it's written off. Use the method your tax return was filed with &mdash; Hnry files straight line.<br><br>
+              Rates are IRD's paired rates: computers 50% DV / 40% SL, phones &amp; tablets 67% / 67%, vehicles 30% / 21%. For anything else (camera bodies, lenses, audio gear) look up the rate and choose &ldquo;Other&rdquo;.<br>
               <a href="https://www.ird.govt.nz/income-tax/income-tax-for-businesses-and-organisations/types-of-business-expenses/depreciation/claiming-depreciation/work-out-your-assets-rate-and-depreciation-value" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;font-weight:600">IRD depreciation rate finder &#x2197;</a><br><br>
               Assets under $1,000 (ex-GST) can be written off in full in the year of purchase.
             </div>
           </div>
           <div class="modal-foot">
-            <button class="btn-primary" onclick="saveAsset()">Add asset</button>
+            <button class="btn-primary" id="asset-save-btn" onclick="saveAsset()">Add asset</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Import from Hnry modal -->
+      <div class="modal-bd" id="modal-asset-import">
+        <div class="modal-sheet" id="modal-asset-import-sheet">
+          <div class="modal-hdr">
+            <div class="modal-title">Import from Hnry</div>
+            <button class="modal-close" onclick="closeModal('modal-asset-import')">&#x2715;</button>
+          </div>
+          <div class="modal-scroll" style="padding:16px">
+            <div style="font-size:13px;color:var(--t2);line-height:1.5;margin-bottom:10px">
+              In Hnry, open <b>Asset register</b>, select the whole page and copy it, then paste below. Each asset is brought in with Hnry's method and rate, and checked against Hnry's year-by-year figures.
+            </div>
+            <textarea id="asset-import-text" placeholder="Paste the Hnry asset register here" style="width:100%;min-height:120px;box-sizing:border-box;border-radius:12px;border:0.5px solid var(--sep);background:var(--surface);color:var(--t1);padding:10px;font-family:inherit;font-size:13px"></textarea>
+            <button onclick="previewAssetImport()" style="margin-top:8px;width:100%;padding:11px;border-radius:12px;border:none;background:var(--fill);color:var(--blue);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">Read assets</button>
+            <div id="asset-import-preview" style="margin-top:12px"></div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn-primary" id="asset-import-btn" onclick="confirmAssetImport()" disabled>Import</button>
           </div>
         </div>
       </div>
@@ -1489,7 +1520,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.8.0';
+var APP_VERSION = '1.8.1';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -3284,134 +3315,129 @@ function saveAssets(){
   save();   // assets travel in the sync payload and are stored server-side
 }
 
+/* ── Asset depreciation engine ─────────────────────────────────────
+   IRD rules (ird.govt.nz/depreciation, DEP54 / DEP87):
+   1. GST-registered: the ex-GST cost is the depreciable base
+   2. Year 1 apportioned by MONTHS owned; the month of purchase counts in full
+   3. Two methods, chosen per asset:
+        DV  diminishing value — rate × opening book value each year
+        SL  straight line     — rate × cost each year, until written off
+      (paired IRD rates: computers 50% DV / 40% SL, phones & tablets 67/67,
+       vehicles 30/21)
+   4. Book value never goes below zero; the final year takes what is left
+      (DV sweeps a remainder under $1 rather than shrinking forever)
+   5. Low-value assets (<$1,000 ex-GST, rate 100%): written off in full in the
+      year of purchase, with no month apportionment
+   6. Investment Boost (bought on/after 22 May 2025): 20% of cost deducted in
+      year 1, then depreciation runs on the remaining 80%
+   7. Business use reduces the CLAIM, not the book value — otherwise the
+      private share would be counted twice when the asset is sold
+   8. No depreciation in the year of disposal. Instead:
+        book value > sale price → deductible loss on sale
+        sale price > book value → depreciation recovered (taxable), capped at
+        the depreciation actually claimed (anything above cost is capital)
+      Both apportioned by business use. */
+var ASSET_CATEGORIES = {
+  computers: { label:'Computers & laptops',    dv:50,  sl:40  },
+  tablets:   { label:'Tablets & smartphones',  dv:67,  sl:67  },
+  vehicles:  { label:'Motor vehicles',         dv:30,  sl:21  },
+  lowvalue:  { label:'Low value (under $1,000)', dv:100, sl:100 }
+};
+function r2(n){ return Math.round((+n||0)*100)/100; }
+function fyStartOf(d){ return d.getMonth()>=3 ? new Date(d.getFullYear(),3,1) : new Date(d.getFullYear()-1,3,1); }
+
+function assetCostBase(asset){
+  var raw=parseFloat(asset.cost)||0;
+  return asset.gstIncluded!==false ? r2(raw/1.15) : raw;
+}
+
+// Full year-by-year schedule from the year of purchase until the asset is
+// written off or disposed of. Each row: one financial year (ending 31 March).
+function assetSchedule(asset){
+  var base   = assetCostBase(asset);
+  var method = asset.method==='SL' ? 'SL' : 'DV';
+  var rate   = (parseFloat(asset.rate)||0)/100;
+  var biz    = (parseFloat(asset.bizPct)||100)/100;
+  var bought = parseDate(asset.date);
+  var firstFY= fyStartOf(bought);
+  var disposed = asset.disposedDate ? parseDate(asset.disposedDate) : null;
+  var boostOK  = !!asset.investmentBoost && bought >= new Date(2025,4,22);
+  var rows=[], book=base, slBase=base, claimedSoFar=0;
+
+  for(var i=0, fyS=firstFY; i<80; i++, fyS=new Date(fyS.getFullYear()+1,3,1)){
+    var fyE  = new Date(fyS.getFullYear()+1,2,31);
+    var first= i===0;
+    var row  = { fyStart:fyS, yearEnd:fyS.getFullYear()+1, method:method, rate:rate*100, bizPct:biz*100,
+                 opening:book, months:0, boost:0, depr:0, closing:book, claim:0 };
+
+    // Year of disposal: no depreciation, loss or recovery instead
+    if(disposed && disposed>=fyS && disposed<=fyE){
+      var proceeds=parseFloat(asset.saleProceeds)||0;
+      var diff=r2((book-proceeds)*biz);
+      row.disposal={ date:asset.disposedDate, proceeds:proceeds,
+        lossOnSale: diff>0?diff:0,
+        recovered:  diff<0?Math.min(-diff, r2(claimedSoFar)):0 };
+      row.closing=0; rows.push(row); break;
+    }
+    // Already written off: nothing to show until a later disposal (if any)
+    if(book<=0){ if(disposed&&disposed>fyE) continue; break; }
+
+    // Low value: full write-off in the year of purchase
+    if(rate>=1){
+      row.depr=book; row.closing=0; row.claim=r2(book*biz); row.months=12; row.lowValue=true;
+      claimedSoFar+=row.claim; rows.push(row);
+      if(disposed){ book=0; continue; } break;
+    }
+
+    if(first && boostOK){
+      row.boost=r2(base*0.20);
+      book=r2(base-row.boost); slBase=book;
+    }
+    var months = first ? Math.max(1,Math.min(12,(fyE.getFullYear()-bought.getFullYear())*12+(2-bought.getMonth())+1)) : 12;
+    var full = method==='SL' ? r2(slBase*rate*months/12) : r2(book*rate*months/12);
+    if(full>=book || (method==='DV' && book-full<1)) full=book;   // final year takes the remainder
+    row.months=months; row.depr=full; row.closing=r2(book-full);
+    row.claim=r2(full*biz)+r2(row.boost*biz);
+    claimedSoFar+=row.claim;
+    rows.push(row);
+    book=row.closing;
+  }
+  return rows;
+}
+
+// One financial year's figures (shape kept from the previous engine, so the
+// tax calculation and every caller work unchanged).
 function calcDepreciation(asset, forFY){
-  /* IRD-compliant depreciation — ird.govt.nz/depreciation
-     1. GST-registered: ex-GST cost is the depreciable base
-     2. Year 1 pro-rated by MONTHS held; part-months count as whole months
-     3. Diminishing value applied to closing book value each subsequent year
-     4. Low-value assets (<$1,000 ex-GST): 100% written off in year of purchase,
-        with NO month pro-rating
-     5. Investment Boost (assets acquired on/after 22 May 2025): optional 20%
-        immediate deduction, then DV on the remaining 80%
-     6. Book value floors at zero — the residual is written off once it drops
-        below $1 rather than shrinking asymptotically forever
-     7. Disposed assets stop depreciating from the FY after disposal */
-
-  var fy = forFY || FY;
-  var costRaw   = parseFloat(asset.cost)||0;
-  var cost      = asset.gstIncluded!==false ? Math.round(costRaw/1.15*100)/100 : costRaw;
-  var dvRate    = (parseFloat(asset.rate)||0)/100;
-  var bizPct    = (parseFloat(asset.bizPct)||100)/100;
-  var purchaseDate = parseDate(asset.date);
-
-  var nil = {depr:0, bookOpen:0, bookClose:0, monthsHeld:0};
-
-  // Not yet acquired in this FY
-  if(purchaseDate > fy.end) return {depr:0, bookOpen:cost, bookClose:cost, monthsHeld:0, notYetOwned:true};
-
-  // Disposed in an earlier FY — nothing left to claim
-  var disposedDate = asset.disposedDate ? parseDate(asset.disposedDate) : null;
-  if(disposedDate && disposedDate < fy.start){
-    return {depr:0, bookOpen:0, bookClose:0, monthsHeld:0, disposed:true};
+  var fy=forFY||FY;
+  var rows=assetSchedule(asset);
+  var bought=parseDate(asset.date);
+  if(bought>fy.end) return {depr:0, bookOpen:assetCostBase(asset), bookClose:assetCostBase(asset), monthsHeld:0, notYetOwned:true};
+  var row=null;
+  for(var i=0;i<rows.length;i++){ if(rows[i].fyStart.getTime()===fy.start.getTime()){ row=rows[i]; break; } }
+  if(!row){
+    var last=rows[rows.length-1];
+    var wasDisposed=!!(last&&last.disposal);
+    return {depr:0, bookOpen:0, bookClose:0, monthsHeld:0, disposed:wasDisposed, fullyDepreciated:!wasDisposed, lowValue:!!(last&&last.lowValue)};
   }
-
-  // Which FY did the purchase fall in? (NZ FY runs 1 Apr – 31 Mar)
-  var pMonth = purchaseDate.getMonth(), pYear = purchaseDate.getFullYear();
-  var purchaseFYStart = pMonth >= 3 ? new Date(pYear,3,1) : new Date(pYear-1,3,1);
-  var isPurchaseFY = (purchaseFYStart.getTime() === fy.start.getTime());
-
-  // Low-value asset: full write-off in the purchase year, no pro-rating
-  if(dvRate >= 1){
-    if(isPurchaseFY){
-      return {depr: Math.round(cost*bizPct*100)/100, bookOpen: cost, bookClose: 0,
-              monthsHeld: 12, lowValue: true};
-    }
-    return {depr:0, bookOpen:0, bookClose:0, monthsHeld:0, lowValue:true, fullyDepreciated:true};
+  if(row.disposal){
+    return {depr:0, deprDVOnly:0, boostAmount:0, bookOpen:row.opening, bookClose:row.opening, monthsHeld:0,
+            disposedThisFY:true, saleProceeds:row.disposal.proceeds,
+            lossOnSale:row.disposal.lossOnSale, depreciationRecovered:row.disposal.recovered};
   }
+  return {depr:row.claim, deprDVOnly:r2(row.depr*row.bizPct/100), boostAmount:row.boost,
+          bookOpen:row.opening, bookClose:row.closing, monthsHeld:row.months,
+          lowValue:!!row.lowValue, fullyDepreciated:row.closing===0,
+          disposed:!!(asset.disposedDate && parseDate(asset.disposedDate)<=new Date(row.fyStart.getFullYear()+1,2,31))};
+}
 
-  var investBoostCutoff = new Date(2025,4,22);
-  var qualifiesForBoost = asset.investmentBoost && purchaseDate >= investBoostCutoff;
+var _assetOpen = {};   // which asset cards have their year-by-year table open
 
-  var bookValue = cost;
-  var simFYStart = purchaseFYStart;
-
-  while(simFYStart <= fy.start){
-    var simFYEnd  = new Date(simFYStart.getFullYear()+1, 2, 31);
-    var isFirstFY = (simFYStart.getTime() === purchaseFYStart.getTime());
-    var isTargetFY= (simFYStart.getTime() === fy.start.getTime());
-    var bookOpen  = bookValue;
-    var boostAmount = 0;
-
-    // Investment Boost — purchase year only, 20% of original ex-GST cost
-    if(isFirstFY && qualifiesForBoost){
-      boostAmount = Math.round(cost * 0.20 * 100) / 100;
-      bookValue = Math.round((cost - boostAmount) * 100) / 100;
-    }
-
-    // Already written down to nothing
-    if(bookValue < 1){
-      if(isTargetFY) return {depr:0, bookOpen:bookOpen, bookClose:0, monthsHeld:0, fullyDepreciated:true};
-      bookValue = 0;
-      simFYStart = new Date(simFYStart.getFullYear()+1, 3, 1);
-      continue;
-    }
-
-    // Months held — part-months count as whole months
-    var monthsHeld = 12;
-    if(isFirstFY){
-      monthsHeld = (simFYEnd.getFullYear() - purchaseDate.getFullYear()) * 12
-                 + (2 - purchaseDate.getMonth()) + 1;
-      monthsHeld = Math.max(1, Math.min(monthsHeld, 12));
-    }
-    // IRD: no depreciation may be claimed in the year an asset is disposed of.
-    // Instead a loss or gain is calculated against the sale price:
-    //   (adjusted tax value - sale price) x business use %
-    if(disposedDate && disposedDate >= simFYStart && disposedDate <= simFYEnd){
-      if(isTargetFY){
-        var proceeds = parseFloat(asset.saleProceeds)||0;
-        var lossGain = Math.round((bookValue - proceeds) * bizPct * 100)/100;
-        return {
-          depr: 0, deprDVOnly: 0, boostAmount: 0,
-          bookOpen: bookOpen, bookClose: bookValue, monthsHeld: 0,
-          disposedThisFY: true, saleProceeds: proceeds,
-          lossOnSale: lossGain > 0 ? lossGain : 0,
-          depreciationRecovered: lossGain < 0 ? Math.abs(lossGain) : 0
-        };
-      }
-      bookValue = 0;
-      simFYStart = new Date(simFYStart.getFullYear()+1, 3, 1);
-      continue;
-    }
-
-    // The FULL depreciation reduces the adjusted tax value; only the
-    // business-use share is deductible. Apportioning the book value too
-    // would double-count the private portion at disposal.
-    var fullDepr   = Math.round(bookValue * dvRate * (monthsHeld/12) * 100) / 100;
-    var afterDepr  = Math.round((bookValue - fullDepr) * 100) / 100;
-    if(afterDepr < 1){          // sweep the final remainder rather than
-      fullDepr  = bookValue;    // shrinking towards zero indefinitely
-      afterDepr = 0;
-    }
-    var annualDepr = Math.round(fullDepr * bizPct * 100) / 100;
-
-    if(isTargetFY){
-      return {
-        depr: Math.round((annualDepr + (isFirstFY ? boostAmount : 0)) * 100)/100,
-        deprDVOnly: annualDepr,
-        boostAmount: boostAmount,
-        bookOpen: bookOpen,
-        bookClose: afterDepr,
-        monthsHeld: monthsHeld,
-        disposed: !!(disposedDate && disposedDate <= simFYEnd),
-        fullyDepreciated: afterDepr === 0
-      };
-    }
-
-    bookValue = afterDepr;
-    simFYStart = new Date(simFYStart.getFullYear()+1, 3, 1);
-  }
-
-  return {depr:0, bookOpen:bookValue, bookClose:bookValue, monthsHeld:0};
+function assetMethodName(m){ return m==='SL' ? 'straight line' : 'diminishing value'; }
+function assetCategoryKey(asset){
+  if(asset.category && (ASSET_CATEGORIES[asset.category] || asset.category==='custom')) return asset.category;
+  var m=asset.method==='SL'?'sl':'dv', r=parseFloat(asset.rate);
+  for(var k in ASSET_CATEGORIES){ if(ASSET_CATEGORIES[k][m]===r) return k; }
+  return 'custom';
 }
 
 function renderAssets(){
@@ -3422,58 +3448,58 @@ function renderAssets(){
   if(!el) return;
 
   if(!assets.length){
-    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">No assets added yet \u2014 tap + Add asset</div>';
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">No assets added yet — tap + Add asset, or Import from Hnry</div>';
     if(summaryRow) summaryRow.style.display='none';
     return;
   }
 
   var totalDepr = 0;
   var html = '';
+  var cell = function(lbl,val,col,last){
+    return '<div style="flex:1;padding:10px 16px;'+(last?'':'border-right:0.5px solid var(--sep)')+'"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">'+lbl+'</div><div style="font-size:13px;font-weight:'+(col?'700':'600')+';'+(col?'color:'+col+';':'')+'font-variant-numeric:tabular-nums">'+val+'</div></div>';
+  };
   assets.forEach(function(asset, idx){
     var r       = calcDepreciation(asset);
     var depr    = r.depr||0;
-    var bookVal = r.bookOpen||0;
-    var cost    = parseFloat(asset.cost)||0;
+    var base    = assetCostBase(asset);
     totalDepr  += depr;
 
-    // Status badge
     var badge = '';
     if(r.disposedThisFY)        badge = '<span class="badge" style="background:rgba(255,149,0,.12);color:var(--orange)">Sold this FY</span>';
     else if(r.disposed)         badge = '<span class="badge" style="background:rgba(120,120,128,.12);color:var(--t3)">Disposed</span>';
-    else if(r.fullyDepreciated) badge = '<span class="badge" style="background:rgba(120,120,128,.12);color:var(--t3)">Fully depreciated</span>';
-    else if(r.lowValue)         badge = '<span class="badge" style="background:rgba(15,157,79,.12);color:var(--green)">Low value</span>';
     else if(r.notYetOwned)      badge = '<span class="badge" style="background:rgba(120,120,128,.12);color:var(--t3)">Not yet owned</span>';
+    else if(r.lowValue&&depr>0) badge = '<span class="badge" style="background:rgba(15,157,79,.12);color:var(--green)">Low value</span>';
+    else if(r.fullyDepreciated&&depr>0) badge = '<span class="badge" style="background:rgba(15,157,79,.12);color:var(--green)">Final year</span>';
+    else if(r.fullyDepreciated) badge = '<span class="badge" style="background:rgba(120,120,128,.12);color:var(--t3)">Fully depreciated</span>';
+    if(asset.source==='hnry') badge += (badge?' ':'')+'<span class="badge" style="background:rgba(0,122,255,.1);color:var(--blue)">From Hnry</span>';
 
-    var boostBadge = asset.investmentBoost ? ' \u00b7 \u26A1 Boost' : '';
-    var dim = (r.disposed || r.fullyDepreciated) ? 'opacity:0.55;' : '';
+    var boostBadge = asset.investmentBoost ? ' · ⚡ Boost' : '';
+    var dim = ((r.disposed||r.fullyDepreciated) && depr===0 && !r.disposedThisFY) ? 'opacity:0.55;' : '';
+    var catLbl = asset.label || (ASSET_CATEGORIES[assetCategoryKey(asset)]||{}).label || 'Asset';
 
     html += '<div style="'+dim+'background:var(--surface);border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:var(--sh)">';
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--sep)">';
-    html += '<div style="min-width:0"><div style="font-size:14px;font-weight:600;color:var(--t1)">'+esc(asset.name)+'</div>';
-    html += '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+esc(asset.label)+' \u00b7 '+(parseFloat(asset.bizPct)||100)+'% business \u00b7 '+parseFloat(asset.rate)+'% DV'+boostBadge+'</div>';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:0.5px solid var(--sep)">';
+    html += '<div style="min-width:0"><div style="font-size:14px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(asset.name)+'</div>';
+    html += '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+esc(catLbl)+' · '+parseFloat(asset.rate)+'% '+assetMethodName(asset.method)+' · '+(parseFloat(asset.bizPct)||100)+'% business'+boostBadge+'</div>';
     if(badge) html += '<div style="margin-top:6px">'+badge+'</div>';
     html += '</div>';
-    html += '<button onclick="assetActions('+idx+')" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--fill);color:var(--t2);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0">\u22EF</button>';
+    html += '<button onclick="assetActions('+idx+')" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--fill);color:var(--t2);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0">⋯</button>';
     html += '</div>';
 
     if(r.disposedThisFY){
-      // Disposal year: no depreciation claimable, show the loss/gain instead
       var lossLbl = r.lossOnSale > 0 ? 'Loss on sale' : 'Deprec. recovered';
       var lossVal = r.lossOnSale > 0 ? r.lossOnSale : r.depreciationRecovered;
       var lossCol = r.lossOnSale > 0 ? 'var(--green)' : 'var(--red)';
-      html += '<div style="display:flex;gap:0">';
-      html += '<div style="flex:1;padding:10px 16px;border-right:0.5px solid var(--sep)"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">Value at sale</div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">'+fmt(r.bookClose)+'</div></div>';
-      html += '<div style="flex:1;padding:10px 16px;border-right:0.5px solid var(--sep)"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">Sold for</div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">'+fmt(r.saleProceeds)+'</div></div>';
-      html += '<div style="flex:1;padding:10px 16px"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">'+lossLbl+'</div><div style="font-size:13px;font-weight:700;color:'+lossCol+';font-variant-numeric:tabular-nums">'+fmt(lossVal)+'</div></div>';
-      html += '</div>';
+      html += '<div style="display:flex">'+cell('Value at sale',fmt(r.bookClose))+cell('Sold for',fmt(r.saleProceeds))+cell(lossLbl,fmt(lossVal),lossCol,true)+'</div>';
       html += '<div style="padding:8px 16px;background:rgba(255,149,0,.06);font-size:11px;color:var(--t3)">No depreciation is claimable in the year of disposal (IRD rule).</div>';
     } else {
-      html += '<div style="display:flex;gap:0">';
-      html += '<div style="flex:1;padding:10px 16px;border-right:0.5px solid var(--sep)"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">Cost</div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">'+fmt(cost)+'</div></div>';
-      html += '<div style="flex:1;padding:10px 16px;border-right:0.5px solid var(--sep)"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">Book value</div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">'+fmt(bookVal)+'</div></div>';
-      html += '<div style="flex:1;padding:10px 16px"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">This FY</div><div style="font-size:13px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums">'+fmt(depr)+'</div></div>';
-      html += '</div>';
+      html += '<div style="display:flex">'+cell('Cost (ex-GST)',fmt(base))+cell('Value at 1 Apr',fmt(r.notYetOwned?base:(r.bookOpen||0)))+cell('This FY',fmt(depr),'var(--green)',true)+'</div>';
     }
+
+    // Year-by-year schedule (like Hnry's register)
+    var open = !!_assetOpen[idx];
+    html += '<button onclick="toggleAssetSchedule('+idx+')" style="width:100%;padding:9px 16px;border:none;border-top:0.5px solid var(--sep);background:none;color:var(--blue);font-family:inherit;font-size:12px;font-weight:600;text-align:left;cursor:pointer">'+(open?'Hide year-by-year ▴':'Year-by-year ▾')+'</button>';
+    if(open) html += assetScheduleHTML(asset);
     html += '</div>';
   });
 
@@ -3482,20 +3508,57 @@ function renderAssets(){
   if(summaryRow) summaryRow.style.display = 'flex';
 }
 
+function toggleAssetSchedule(idx){ _assetOpen[idx]=!_assetOpen[idx]; renderAssets(); }
+
+function assetScheduleHTML(asset){
+  var rows=assetSchedule(asset);
+  var raw=parseFloat(asset.cost)||0, base=assetCostBase(asset);
+  var note = asset.gstIncluded!==false
+    ? 'Cost base '+fmt(base)+' — GST removed from '+fmt(raw)+'.'
+    : 'Cost '+fmt(base)+' entered excluding GST.';
+  if(rows.length && rows[0].months && rows[0].months<12 && !rows[0].lowValue) note += ' Year 1 apportioned for '+rows[0].months+' month'+(rows[0].months===1?'':'s')+' owned.';
+  if(rows.length && rows[0].boost) note += ' Investment Boost of '+fmt(rows[0].boost)+' claimed in year 1.';
+  var showBiz = (parseFloat(asset.bizPct)||100) < 100;
+  var th='font-size:10px;font-weight:600;color:var(--t3);text-align:right;padding:6px 4px';
+  var td='font-size:12px;text-align:right;padding:6px 4px;font-variant-numeric:tabular-nums;white-space:nowrap';
+  var h='<div style="padding:4px 12px 12px;overflow-x:auto">';
+  h+='<table style="width:100%;border-collapse:collapse">';
+  h+='<tr><th style="'+th+';text-align:left">Year to 31 Mar</th><th style="'+th+'">Opening</th><th style="'+th+'">Depreciation</th><th style="'+th+'">Closing</th>'+(showBiz?'<th style="'+th+'">Claim</th>':'')+'</tr>';
+  rows.forEach(function(row){
+    var cur = row.fyStart.getTime()===FY.start.getTime();
+    var bg = cur ? 'background:rgba(15,157,79,.08);font-weight:700;' : '';
+    h+='<tr style="'+bg+'border-top:0.5px solid var(--sep)">';
+    h+='<td style="'+td+';text-align:left">'+row.yearEnd+(cur?' •':'')+'</td>';
+    if(row.disposal){
+      var d=row.disposal;
+      var txt = d.lossOnSale>0 ? 'Loss '+fmt(d.lossOnSale) : d.recovered>0 ? 'Recovered '+fmt(d.recovered) : 'Sold, no gain/loss';
+      h+='<td style="'+td+'">'+fmt(row.opening)+'</td><td colspan="'+(showBiz?3:2)+'" style="'+td+';color:var(--orange)">Sold '+fmt(d.proceeds)+' · '+txt+'</td>';
+    } else {
+      var dep = fmt(row.depr) + (row.boost?' <span style="color:var(--t3);font-weight:400">+ '+fmt(row.boost)+' boost</span>':'');
+      h+='<td style="'+td+'">'+fmt(row.opening)+'</td><td style="'+td+';color:var(--green)">'+dep+'</td><td style="'+td+'">'+fmt(row.closing)+'</td>'+(showBiz?'<td style="'+td+'">'+fmt(row.claim)+'</td>':'');
+    }
+    h+='</tr>';
+  });
+  h+='</table>';
+  h+='<div style="font-size:11px;color:var(--t3);margin-top:8px;line-height:1.45">'+esc(note)+(showBiz?' Claim = depreciation × '+(parseFloat(asset.bizPct)||100)+'% business use.':'')+' • = this financial year.</div>';
+  h+='</div>';
+  return h;
+}
+
 function assetActions(idx){
   var a = assets[idx];
   if(!a) return;
-  var acts = [];
+  var acts = [{label:'Edit asset', fn:function(){ openAddAsset(idx); }}];
   if(!a.disposedDate){
     acts.push({label:'Mark as sold or disposed', fn:function(){ openDisposeAsset(idx); }});
   } else {
     acts.push({label:'Undo disposal', fn:function(){
       delete assets[idx].disposedDate; delete assets[idx].saleProceeds;
-      saveAssets(); renderAssets(); showToast('Disposal removed');
+      saveAssets(); renderAssets(); renderTaxTab(); showToast('Disposal removed');
     }});
   }
   acts.push({label:'Delete asset', cls:'danger', fn:function(){
-    assets.splice(idx,1); saveAssets(); renderAssets(); showToast('Asset removed');
+    assets.splice(idx,1); _assetOpen={}; saveAssets(); renderAssets(); renderTaxTab(); showToast('Asset removed');
   }});
   acts.push({label:'Cancel', cls:'cancel'});
   showSheet(a.name, acts);
@@ -3518,63 +3581,199 @@ function confirmDisposeAsset(){
   if(idx==null || !assets[idx]){ closeModal('modal-dispose'); return; }
   var d = $el('dispose-date').value;
   if(!d){ showToast('Enter the disposal date'); return; }
+  if(parseDate(d) < parseDate(assets[idx].date)){ showToast('Disposal date is before the purchase date'); return; }
   var proceeds = parseFloat(String($el('dispose-proceeds').value).replace(/[^0-9.]/g,''))||0;
   assets[idx].disposedDate  = d;
   assets[idx].saleProceeds  = proceeds;
-  saveAssets(); renderAssets();
+  saveAssets(); renderAssets(); renderTaxTab();
   closeModal('modal-dispose');
   window._disposingAsset = null;
   showToast(assets[idx].name + ' marked as disposed');
 }
 
-
-function openAddAsset(){
-  $el('asset-name').value = '';
-  $el('asset-cost').value = '';
-  $el('asset-date').value = today();
-  $el('asset-biz-pct').value = '100';
-  $el('asset-category').value = '50';
-  $el('asset-custom-rate').value = '';
-  $el('asset-gst').value = 'yes';
-  $el('asset-boost').value = 'no';
+// Add (idx undefined) or edit (idx = position in assets)
+function openAddAsset(idx){
+  var editing = typeof idx==='number' && assets[idx];
+  window._editingAsset = editing ? idx : null;
+  var a = editing ? assets[idx] : {};
+  $el('asset-modal-title').textContent = editing ? 'Edit asset' : 'Add asset';
+  $el('asset-save-btn').textContent = editing ? 'Save changes' : 'Add asset';
+  $el('asset-name').value = a.name || '';
+  $el('asset-cost').value = a.cost!=null ? String(a.cost) : '';
+  $el('asset-date').value = a.date || today();
+  $el('asset-biz-pct').value = String(a.bizPct || 100);
+  $el('asset-gst').value = a.gstIncluded===false ? 'no' : 'yes';
+  $el('asset-boost').value = a.investmentBoost ? 'yes' : 'no';
+  $el('asset-method').value = a.method==='SL' ? 'SL' : 'DV';
+  $el('asset-category').value = editing ? assetCategoryKey(a) : 'computers';
   onAssetCategoryChange();
+  if(editing) $el('asset-rate').value = String(parseFloat(a.rate));
   openModal('modal-asset');
 }
 
-
+// Category + method fill in IRD's paired rate; "Other" leaves the rate to you
 function onAssetCategoryChange(){
-  var sel = document.getElementById('asset-category');
-  var row = document.getElementById('asset-custom-row');
-  if(!sel || !row) return;
-  row.style.display = sel.value === 'custom' ? 'flex' : 'none';
+  var cat = ASSET_CATEGORIES[$el('asset-category').value];
+  var m = $el('asset-method').value==='SL' ? 'sl' : 'dv';
+  var rateEl = $el('asset-rate');
+  if(cat){ rateEl.value = String(cat[m]); rateEl.readOnly = true; rateEl.style.color='var(--t2)'; }
+  else { if(rateEl.readOnly) rateEl.value=''; rateEl.readOnly = false; rateEl.style.color=''; }
 }
 
 function saveAsset(){
   var name = $el('asset-name').value.trim();
   var cost = $el('asset-cost').value.replace(/[^0-9.]/g,'');
   var date = $el('asset-date').value;
-  var catEl = document.getElementById('asset-category');
-  var rate;
-  if(catEl && catEl.value === 'custom'){
-    rate = parseFloat(String((document.getElementById('asset-custom-rate')||{}).value||'').replace(/[^0-9.]/g,''));
-    if(!rate || rate <= 0 || rate > 100){ showToast('Enter a DV rate between 1 and 100'); return; }
-  } else {
-    rate = catEl ? parseFloat(catEl.value) : 50;
-  }
-  var label = catEl ? (catEl.options[catEl.selectedIndex]||{}).text || '' : '';
-  var bizPct = $el('asset-biz-pct').value || '100';
+  var catKey = $el('asset-category').value;
+  var method = $el('asset-method').value==='SL' ? 'SL' : 'DV';
+  var rate = parseFloat(String($el('asset-rate').value).replace(/[^0-9.]/g,''));
   if(!name){ showToast('Enter asset name'); return; }
   if(!cost||isNaN(+cost)||+cost<=0){ showToast('Enter purchase price'); return; }
-  var gstInc = (document.getElementById('asset-gst')||{}).value !== 'no';
-  var boost = (document.getElementById('asset-boost')||{}).value === 'yes';
+  if(!date){ showToast('Enter purchase date'); return; }
+  if(!rate || rate <= 0 || rate > 100){ showToast('Enter a rate between 1 and 100'); return; }
+  var gstInc = $el('asset-gst').value !== 'no';
+  var boost = $el('asset-boost').value === 'yes';
   if(boost && parseDate(date) < new Date(2025,4,22)){ showToast('Investment Boost only applies to assets bought on or after 22 May 2025'); return; }
-  var biz = parseFloat(bizPct);
+  var biz = parseFloat($el('asset-biz-pct').value || '100');
   if(isNaN(biz) || biz <= 0 || biz > 100){ showToast('Business use must be between 1 and 100%'); return; }
-  assets.push({ name:name, cost:+cost, date:date, rate:rate, label:label.replace(/\s*\(.*\)/,'').trim(), bizPct:biz, gstIncluded:gstInc, investmentBoost:boost });
+  var label = ASSET_CATEGORIES[catKey] ? ASSET_CATEGORIES[catKey].label : 'Other';
+  var fields = { name:name, cost:+cost, date:date, rate:rate, method:method, category:catKey, label:label,
+                 bizPct:biz, gstIncluded:gstInc, investmentBoost:boost };
+  var idx = window._editingAsset;
+  if(typeof idx==='number' && assets[idx]){
+    assets[idx] = Object.assign({}, assets[idx], fields);   // keeps disposal + source
+  } else {
+    assets.push(fields);
+  }
+  window._editingAsset = null;
   saveAssets();
-  renderAssets();
+  renderAssets(); renderTaxTab();
   closeModal('modal-asset');
-  showToast(name + ' added');
+  showToast(name + (typeof idx==='number' ? ' updated' : ' added'));
+}
+
+/* ── Import from Hnry's asset register ─────────────────────────────
+   Reads the text of Hnry's Asset register page (copied, or the saved
+   page's HTML). For each asset it takes the purchase date, cost, method,
+   rate and business use, then re-runs our own schedule and compares it
+   with Hnry's filed year-by-year figures before anything is saved. */
+var _assetImport = null;
+var MONTHS_EN = {january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
+
+function parseHnryAssets(text){
+  if(/<[a-z][^>]*>/i.test(text)){
+    var div=document.createElement('div');
+    div.innerHTML=text.replace(/<(script|style|svg)[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]+>/g,' ');
+    text=div.textContent||'';
+  }
+  text=text.replace(/ /g,' ').replace(/\s+/g,' ');
+  var num=function(s){ return parseFloat(String(s).replace(/[$,\s]/g,'')); };
+  var out=[];
+  text.split(/Description:/i).slice(1).forEach(function(chunk){
+    var nm=chunk.split(/Purchase\s*\/\s*start date:/i)[0].trim();
+    var dm=/Purchase\s*\/\s*start date:\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/i.exec(chunk);
+    var cm=/Initial cost:\s*\$?\s*([\d,]+(?:\.\d+)?)/i.exec(chunk);
+    if(!dm||!cm||MONTHS_EN[dm[2].toLowerCase()]==null) return;
+    var date=dm[3]+'-'+String(MONTHS_EN[dm[2].toLowerCase()]+1).padStart(2,'0')+'-'+String(dm[1]).padStart(2,'0');
+    var rows=[], re=/\b(20\d\d)\s+\$\s?([\d,]+\.\d\d)\s+([\d.]+)\s*%\s*(SL|DV)\s+\$\s?([\d,]+\.\d\d)\s+\$\s?([\d,]+\.\d\d)\s+([\d.]+)\s*%\s+\$\s?([\d,]+\.\d\d)/gi, m;
+    while((m=re.exec(chunk))){
+      rows.push({yearEnd:+m[1], opening:num(m[2]), rate:num(m[3]), method:m[4].toUpperCase(), depr:num(m[5]), closing:num(m[6]), bizPct:num(m[7]), claim:num(m[8])});
+    }
+    if(!rows.length) return;
+    var short=nm;
+    if(short.length>40 && short.indexOf('. ')>0) short=short.slice(0,short.indexOf('. '));
+    short=short.replace(/\.$/,'').trim();
+    var rate=rows[0].rate, method=rows[0].method;
+    var cat='custom';
+    for(var k in ASSET_CATEGORIES){ if(ASSET_CATEGORIES[k][method==='SL'?'sl':'dv']===rate){ cat=k; break; } }
+    out.push({
+      asset:{ name:short, notes:nm!==short?nm:undefined, cost:num(cm[1]), date:date, rate:rate, method:method,
+              category:cat, label:ASSET_CATEGORIES[cat]?ASSET_CATEGORIES[cat].label:'Other',
+              bizPct:rows[0].bizPct||100, gstIncluded:!/GST exclusive/i.test(chunk), investmentBoost:false, source:'hnry' },
+      hnryRows:rows
+    });
+  });
+  return out;
+}
+
+// Does our engine reproduce Hnry's figures for this asset?
+function compareWithHnry(asset, hnryRows){
+  var ours={}; assetSchedule(asset).forEach(function(r){ ours[r.yearEnd]=r; });
+  var diffs=[];
+  hnryRows.forEach(function(h){
+    var o=ours[h.yearEnd];
+    if(!o || Math.abs(o.depr-h.depr)>0.01 || Math.abs(o.closing-h.closing)>0.01)
+      diffs.push(h.yearEnd+': Hnry '+fmt(h.depr)+', app '+(o?fmt(o.depr):'—'));
+  });
+  return diffs;
+}
+
+// An existing asset that is the same purchase (same date, same cost with or without GST)
+function findMatchingAsset(a){
+  for(var i=0;i<assets.length;i++){
+    var x=assets[i], c=parseFloat(x.cost)||0;
+    if(x.date!==a.date) continue;
+    if(Math.abs(c-a.cost)<0.01 || Math.abs(c/1.15-a.cost)<0.01 || Math.abs(c-a.cost*1.15)<0.02) return i;
+  }
+  return -1;
+}
+
+function openAssetImport(){
+  _assetImport=null;
+  $el('asset-import-text').value='';
+  $el('asset-import-preview').innerHTML='';
+  $el('asset-import-btn').disabled=true;
+  $el('asset-import-btn').textContent='Import';
+  openModal('modal-asset-import');
+}
+
+function previewAssetImport(){
+  var found=parseHnryAssets($el('asset-import-text').value||'');
+  var prev=$el('asset-import-preview'), btn=$el('asset-import-btn');
+  if(!found.length){
+    prev.innerHTML='<div style="font-size:13px;color:var(--orange);padding:4px 2px">No assets found. Copy the whole Asset register page from Hnry, including the year-by-year tables.</div>';
+    btn.disabled=true; _assetImport=null; return;
+  }
+  _assetImport=found.map(function(f){ return {asset:f.asset, hnryRows:f.hnryRows, diffs:compareWithHnry(f.asset,f.hnryRows), match:findMatchingAsset(f.asset)}; });
+  var html='';
+  _assetImport.forEach(function(it){
+    var a=it.asset, r=calcDepreciation(a);
+    html+='<div style="background:var(--surface);border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--sh)">';
+    html+='<div style="font-size:14px;font-weight:600;color:var(--t1)">'+esc(a.name)+'</div>';
+    html+='<div style="font-size:12px;color:var(--t3);margin-top:2px">'+fmtDate(a.date)+' · '+fmt(a.cost)+(a.gstIncluded?'':' ex-GST')+' · '+a.rate+'% '+assetMethodName(a.method)+'</div>';
+    html+='<div style="font-size:12px;margin-top:6px">This FY: <b style="color:var(--green)">'+fmt(r.depr||0)+'</b></div>';
+    html+= it.diffs.length
+      ? '<div style="font-size:12px;color:var(--orange);margin-top:4px">⚠ Differs from Hnry — '+esc(it.diffs.join('; '))+'</div>'
+      : '<div style="font-size:12px;color:var(--green);margin-top:4px">✓ Matches Hnry’s figures for every year</div>';
+    if(it.match>=0) html+='<div style="font-size:12px;color:var(--blue);margin-top:4px">Replaces your “'+esc(assets[it.match].name)+'” (same purchase)</div>';
+    html+='</div>';
+  });
+  var nNew=_assetImport.filter(function(i){return i.match<0;}).length, nRep=_assetImport.length-nNew;
+  prev.innerHTML=html;
+  btn.disabled=false;
+  btn.textContent='Import '+_assetImport.length+' asset'+(_assetImport.length===1?'':'s')+(nRep?' ('+nRep+' replaced)':'');
+}
+
+function confirmAssetImport(){
+  if(!_assetImport||!_assetImport.length) return;
+  snapshotLocalData();   // undo via Account → Data safety → Restore last backup
+  _assetImport.forEach(function(it){
+    var a=it.asset;
+    if(a.notes===undefined) delete a.notes;
+    if(it.match>=0){
+      var old=assets[it.match];
+      // Keep your name and any disposal; take Hnry's method, rate, cost basis
+      assets[it.match]=Object.assign({}, old, a, { name:old.name||a.name, hnryName:a.name,
+        disposedDate:old.disposedDate, saleProceeds:old.saleProceeds });
+      if(!old.disposedDate){ delete assets[it.match].disposedDate; delete assets[it.match].saleProceeds; }
+    } else {
+      assets.push(a);
+    }
+  });
+  var n=_assetImport.length; _assetImport=null; _assetOpen={};
+  saveAssets(); renderAssets(); renderTaxTab();
+  closeModal('modal-asset-import');
+  showToast(n+' asset'+(n===1?'':'s')+' imported from Hnry');
 }
 
 
