@@ -5067,24 +5067,34 @@ function confirmMarkPaid(){
    so those entries under-counted sales, GST and income by 15%. They are
    recognisable: GST is 15% OF the amount, and amount + GST − W/H = net. */
 function findExGstRemittances(){
+  // Recognised from the arithmetic alone, so it also catches entries saved
+  // without a GST amount: the bank amount only adds up once GST is added
+  // on top (amount × 1.15 − W/H = net), and does NOT add up as stored.
   return invoices.filter(function(i){
     if(i.status!=='paid'||i.gst!=='yes') return false;
-    var a=parseFloat(i.amount)||0, g=parseFloat(i.gst_amount)||0, w=parseFloat(i.wht_amount)||0, n=parseFloat(i.paid_amount);
-    if(!(a>0&&g>0)||isNaN(n)) return false;
-    return Math.abs(g-a*0.15)<0.06 && Math.abs(a+g-w-n)<0.10 && Math.abs(a-w-n)>=0.10;
+    var a=parseFloat(i.amount)||0, w=parseFloat(i.wht_amount)||0, n=parseFloat(i.paid_amount);
+    if(!(a>0)||isNaN(n)||!(n>0)) return false;
+    if(Math.abs(a-w-n)<0.10) return false;                 // already correct
+    var g=parseFloat(i.gst_amount);
+    if(!(g>0)||Math.abs(g-a*0.15)>=0.06) g=round2(a*0.15); // GST on top of the stored amount
+    return Math.abs(a+g-w-n)<0.10;
   });
+}
+function exGstMissing(i){
+  var a=parseFloat(i.amount)||0, g=parseFloat(i.gst_amount);
+  return (g>0&&Math.abs(g-a*0.15)<0.06) ? g : round2(a*0.15);
 }
 function checkExGstRemittances(){
   var list=findExGstRemittances();
   if(!list.length){showToast('All remittance amounts look right');return;}
-  var missing=list.reduce(function(s,i){return s+(parseFloat(i.gst_amount)||0);},0);
-  list.forEach(function(i){ dbg('INFO','ex-GST entry: '+i.client+' '+(i.invoice_number||'')+' '+i.date+' amount '+fmt(i.amount)+' + GST '+fmt(i.gst_amount)); });
+  var missing=list.reduce(function(s,i){return s+exGstMissing(i);},0);
+  list.forEach(function(i){ dbg('INFO','ex-GST entry: '+i.client+' '+(i.invoice_number||'')+' '+i.date+' amount '+fmt(i.amount)+' + GST '+fmt(exGstMissing(i))); });
   showSheet(list.length+' remittance'+(list.length===1?' was':'s were')+' saved without the GST in the gross ('+fmt(missing)+' of GST missing from sales). Add the GST to each? A backup is taken first.',[
     {label:'Fix '+list.length+' entr'+(list.length===1?'y':'ies'),fn:function(){
       snapshotLocalData();
       list.forEach(function(i){
-        var a=parseFloat(i.amount), g=parseFloat(i.gst_amount), w=parseFloat(i.wht_amount)||0;
-        i.amount=round2(a+g);
+        var a=parseFloat(i.amount), g=exGstMissing(i), w=parseFloat(i.wht_amount)||0;
+        i.amount=round2(a+g); i.gst_amount=round2(g);
         if(w>0){ var r=w/a*100; i.wht_rate=Math.abs(r-Math.round(r))<0.15?Math.round(r):round2(r); }
         i.updated_at=new Date().toISOString();
       });
