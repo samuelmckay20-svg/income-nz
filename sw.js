@@ -1,4 +1,4 @@
-const VERSION = '2.10.1';
+const VERSION = '2.10.2';
 const CACHE = 'income-nz-' + VERSION;
 
 // Files worth pre-caching. index.html is the only one that MUST succeed —
@@ -37,6 +37,11 @@ self.addEventListener('install', function(e) {
   );
 });
 
+// The app's "Check for update" button asks a waiting worker to take over now.
+self.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('activate', function(e) {
   e.waitUntil(
     caches.keys().then(function(keys) {
@@ -67,6 +72,9 @@ self.addEventListener('fetch', function(e) {
   // Only ever cache our own assets. Anything cross-origin (API, CDN,
   // analytics, extensions) passes straight through untouched.
   if (url.origin !== self.location.origin) return;
+
+  // The app's update check must reach the server, never this cache
+  if (url.searchParams.has('nzin-update-check')) return;
 
   e.respondWith(
     fetch(e.request)

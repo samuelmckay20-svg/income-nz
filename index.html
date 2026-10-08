@@ -1003,6 +1003,11 @@ body{
       <div class="shdr">App</div>
       <div class="g-list">
         <div class="g-row"><div class="g-icon" style="background:var(--fill)">ℹ️</div><span class="g-lbl">Version</span><span class="g-val" id="app-version-label">1.0.0</span></div>
+        <div class="g-row" style="cursor:pointer" onclick="checkForUpdate(true)">
+          <div class="g-icon" style="background:rgba(0,122,255,.12)">&#x2B07;&#xFE0F;</div>
+          <span class="g-lbl">Check for update</span>
+          <span class="g-val" id="update-status" style="color:var(--blue)">&#x203A;</span>
+        </div>
       </div>
       <div class="shdr">Account</div>
       <div class="g-list" style="margin-bottom:8px">
@@ -1408,6 +1413,7 @@ body{
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="update-banner" onclick="applyUpdate()" style="display:none;position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:3000;background:var(--blue);color:#fff;border-radius:14px;padding:12px 16px;font-size:14px;font-weight:600;box-shadow:0 6px 24px rgba(0,0,0,.25);cursor:pointer;text-align:center"></div>
 <div class="sheet-bg" id="sheet-bg" onclick="closeSheet()"></div>
 <div class="action-sheet" id="action-sheet"></div>
 
@@ -1520,7 +1526,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.8.1';
+var APP_VERSION = '1.8.2';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -1668,6 +1674,7 @@ function afterLogin(data){
   _rxGSTAuthFailed=false;
   if(!LS.get('nzin_owner')) LS.set('nzin_owner',uname);
   refreshFY(); loadLocal(); loadAssets(); repairInvoiceGST(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
+  setTimeout(autoCheckForUpdate, 4000);
   var _vl=document.getElementById('app-version-label'); if(_vl) _vl.textContent=APP_VERSION;
 }
 
@@ -5393,6 +5400,110 @@ function closeSheet(){var bg=document.getElementById('sheet-bg'),sh=document.get
 /* ── Toast ── */
 var _toastTmr;
 
+/* ── App updates ───────────────────────────────────────────────────
+   iOS keeps a home-screen PWA's page cached, so a new deploy can take a
+   long time to appear. This checks the live site for a newer version and,
+   when asked, syncs first, clears the old caches, updates the service
+   worker and reloads. Local data (localStorage) is never touched. */
+var _liveVersion=null, _lastUpdateCheck=0, _updating=false;
+
+function pageURL(){ return location.href.split('#')[0].split('?')[0]; }
+
+// Fetch the live page straight from the server (bypassing every cache)
+// and read its APP_VERSION.
+function fetchLiveVersion(){
+  // The marker tells the service worker to stay out of the way, so an
+  // offline check fails honestly instead of answering from its cache.
+  return fetch(pageURL()+'?nzin-update-check='+Date.now(), {cache:'no-store', credentials:'same-origin'})
+    .then(function(r){ if(!r.ok) throw new Error('server '+r.status); return r.text(); })
+    .then(function(t){
+      var m=/var APP_VERSION\s*=\s*'([^']+)'/.exec(t);
+      if(!m) throw new Error('version not found');
+      _liveVersion=m[1]; _lastUpdateCheck=Date.now();
+      return m[1];
+    });
+}
+
+// manual=true: from the Account button (always answers). Otherwise a quiet
+// background check that only speaks up if there is something new.
+function checkForUpdate(manual){
+  var st=document.getElementById('update-status');
+  if(manual&&st) st.textContent='Checking\u2026';
+  return fetchLiveVersion().then(function(live){
+    var newer = live!==APP_VERSION;
+    if(st) st.textContent = newer ? live+' available' : 'Up to date';
+    if(newer) showUpdateBanner(live);
+    if(manual){
+      if(newer){
+        showSheet('Version '+live+' is available (you have '+APP_VERSION+'). Update now? Your data stays on this device and is synced first.',[
+          {label:'Update now',fn:applyUpdate},
+          {label:'Later',cls:'cancel'}
+        ]);
+      } else {
+        showSheet('You\u2019re on the latest version ('+APP_VERSION+').',[
+          {label:'Reload anyway',fn:applyUpdate},
+          {label:'OK',cls:'cancel'}
+        ]);
+      }
+    }
+  }).catch(function(e){
+    dbg('INFO','update check failed: '+e.message);
+    if(st&&manual) st.textContent='\u203A';
+    if(manual) showToast('Couldn\u2019t reach the update server \u2014 check your connection');
+  });
+}
+
+function showUpdateBanner(live){
+  var b=document.getElementById('update-banner'); if(!b) return;
+  b.textContent='\u2B07\uFE0F  New version '+live+' available \u2014 tap to update';
+  b.style.display='block';
+}
+
+function applyUpdate(){
+  if(_updating) return; _updating=true;
+  var b=document.getElementById('update-banner');
+  if(b){ b.style.display='block'; b.textContent='Updating\u2026'; }
+  showToast('Updating\u2026');
+  var timeout=function(ms){ return new Promise(function(res){ setTimeout(res,ms); }); };
+  // 1. Get unsynced changes onto the server first (best effort, max 8s)
+  var syncFirst = LS.get('nzin_dirty') ? Promise.race([runSync(), timeout(8000)]) : Promise.resolve();
+  syncFirst
+  // 2. Pull the new page into the browser's HTTP cache
+  .then(function(){ return fetch(pageURL(),{cache:'reload',credentials:'same-origin'}).catch(function(){}); })
+  // 3. Drop the service worker's old cached copies
+  .then(function(){ return (window.caches&&caches.keys) ? caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); }) : null; })
+  // 4. Ask the service worker to update itself (new sw.js installs + takes over)
+  .then(function(){
+    if(!('serviceWorker' in navigator)) return;
+    return navigator.serviceWorker.getRegistration().then(function(reg){
+      if(!reg) return;
+      return Promise.race([
+        reg.update().then(function(){
+          var w=reg.installing||reg.waiting;
+          if(!w) return;
+          return new Promise(function(res){
+            navigator.serviceWorker.addEventListener('controllerchange',function(){ res(); },{once:true});
+            if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
+          });
+        }).catch(function(){}),
+        timeout(5000)
+      ]);
+    });
+  })
+  // 5. Reload into the new version
+  .then(function(){ location.reload(); })
+  .catch(function(){ location.reload(); });
+}
+
+// Quiet check when the app opens or comes back to the foreground (max every 30 min)
+function autoCheckForUpdate(){
+  if(!LS.get(LS_TOKEN)) return;
+  if(Date.now()-_lastUpdateCheck < 30*60*1000) return;
+  _lastUpdateCheck=Date.now();
+  checkForUpdate(false);
+}
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') autoCheckForUpdate(); });
+
 /* ── Debug panel ── */
 var _dbgFilter = 'all';
 
@@ -5976,6 +6087,7 @@ function initPinchZoom(){
     if(!LS.get('nzin_owner')) LS.set('nzin_owner',u);
     var _vl0=document.getElementById('app-version-label'); if(_vl0) _vl0.textContent=APP_VERSION;
     loadLocal(); loadAssets(); showScreen('main-screen'); renderAll(); loadFromServer(); autoDetectModel();
+    setTimeout(autoCheckForUpdate, 4000);
   } else {
     showScreen('login-screen');
   }
