@@ -1537,7 +1537,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.8.7';
+var APP_VERSION = '1.8.8';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -3431,10 +3431,10 @@ function getFYExpenses(){
     var d = parseDate(r.date || r.created_at || '1970-01-01');
     return d >= FY.start && d <= FY.end;
   });
-  var exGstTotal=0, gstBack=0, accAll=0;
+  var exGstTotal=0, gstBack=0, accAll=0, accAllEx=0;
   fyR.forEach(function(r){
     var amt = parseFloat(r.amount)||0, claim = receiptClaimPct(r);
-    if(isAccReceipt(r)){ accAll += amt*claim; return; }   // ACC: only the work levies count — see calcAccDeduction
+    if(isAccReceipt(r)){ accAll += amt*claim; accAllEx += receiptExGst(r)*claim; return; }   // ACC: only the work levies count — see calcAccDeduction
     // Deductible cost is ex-GST (GST is claimed back separately), apportioned
     // by the same claim % as the GST claim — e.g. 50% for entertainment.
     var exGst = receiptExGst(r);
@@ -3446,7 +3446,9 @@ function getFYExpenses(){
     total: r2(exGstTotal + mile.value), available: true,
     receiptsExGst: r2(exGstTotal), gstBack: r2(gstBack), accAll: r2(accAll), mileage: mile,
     // what Receipts NZ calls "Claimable": GST-inclusive, everything, plus mileage
-    rxClaimable: r2(exGstTotal + gstBack + accAll + mile.value)
+    rxClaimable: r2(exGstTotal + gstBack + accAll + mile.value),
+    // Receipts NZ 2.2.1+ "Deductible ex GST" (when a GST# is saved there)
+    rxDeductible: r2(exGstTotal + accAllEx + mile.value), accAllEx: r2(accAllEx)
   };
 }
 
@@ -3985,13 +3987,11 @@ function _renderTaxTabInner(){
   var trl=document.getElementById('tax-rx-line'), ed=pos.expDetail||{};
   if(trl){
     if(ed.available&&ed.rxClaimable>0){
-      var parts=[fmt(ed.receiptsExGst)+' receipts ex GST'];
-      if(ed.mileage&&ed.mileage.value>0) parts.push(fmt(ed.mileage.value)+' mileage ('+ed.mileage.km+' km)');
-      var outs=[];
-      if(ed.gstBack>0) outs.push(fmt(ed.gstBack)+' GST you claim back in your GST returns');
-      if(ed.accAll>0) outs.push(fmt(ed.accAll)+' ACC payment (only the work levies, '+fmt(pos.accDed)+', are deductible)');
-      trl.textContent='Receipts NZ \u201cClaimable\u201d '+fmt(ed.rxClaimable)+' = expenses '+fmt(pos.expenses)+' ('+parts.join(' + ')+')'
-        +(outs.length?' + '+outs.join(' + '):'')+'.';
+      trl.textContent='Receipts NZ \u201cDeductible ex GST\u201d '+fmt(ed.rxDeductible)
+        +(ed.accAllEx>0
+          ? ' = expenses '+fmt(pos.expenses)+' + '+fmt(ed.accAllEx)+' ACC payment (only the work levies, '+fmt(pos.accDed)+', are deductible here).'
+          : ' = expenses '+fmt(pos.expenses)+' here \u2713')
+        +(ed.mileage&&ed.mileage.value>0?' Includes '+fmt(ed.mileage.value)+' mileage ('+ed.mileage.km+' km).':'');
       trl.style.display='';
     } else trl.style.display='none';
   }
