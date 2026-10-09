@@ -514,7 +514,7 @@ body{
           </div>
           <div class="tax-sc-divider"></div>
           <div class="tax-sc-stats">
-            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Taxable income</div><div class="tax-sc-stat-val c-blue" id="inc-tax-gross">$0</div></div>
+            <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">Income ex GST</div><div class="tax-sc-stat-val c-blue" id="inc-tax-gross">$0</div></div>
             <div class="tax-sc-stat-sep"></div>
             <div class="tax-sc-stat"><div class="tax-sc-stat-lbl">W/H already paid</div><div class="tax-sc-stat-val c-green" id="inc-tax-residual">$0</div></div>
             <div class="tax-sc-stat-sep"></div>
@@ -635,7 +635,7 @@ body{
           <div class="hero-divider"></div>
           <div class="hero-stats">
             <div class="hero-stat" style="min-width:0">
-              <div class="hs-lbl" style="font-size:9px">Taxable income</div>
+              <div class="hs-lbl" style="font-size:9px">Income ex GST</div>
               <div class="hs-val c-blue" style="font-size:17px;letter-spacing:-0.5px" id="tax-gross">$0</div>
             </div>
             <div class="hero-stat-sep"></div>
@@ -649,7 +649,8 @@ body{
               <div class="hs-val c-green" style="font-size:17px;letter-spacing:-0.5px" id="tax-wht-paid">$0</div>
             </div>
           </div>
-          <div class="hero-divider" style="margin-top:16px"></div>
+          <div id="tax-profit-line" style="font-size:11px;color:var(--t3);margin-top:10px;line-height:1.4"></div>
+          <div class="hero-divider" style="margin-top:12px"></div>
           <!-- hidden elements still needed by JS -->
           <span id="tax-on-income" style="display:none"></span>
           <span id="tax-monthly" style="display:none"></span>
@@ -1532,7 +1533,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.8.3';
+var APP_VERSION = '1.8.4';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -2712,7 +2713,7 @@ function renderIncomeTab(){
 
   var itEl=document.getElementById('inc-tax-total'); if(itEl) itEl.textContent=fmt(incTax.total);
   var itSub=document.getElementById('inc-tax-sub'); if(itSub) itSub.textContent=residualInc>0?'Set aside '+fmt(monthlyInc)+'/mo to cover what\u2019s owed':'Covered by W/H tax so far';
-  var itGross=document.getElementById('inc-tax-gross'); if(itGross) itGross.textContent=fmt(pos.netProfit);
+  var itGross=document.getElementById('inc-tax-gross'); if(itGross) itGross.textContent=fmt(pos.income);   // before expenses
   var itRes=document.getElementById('inc-tax-residual'); if(itRes) itRes.textContent=fmt(pos.whtPaid);
   var itMo=document.getElementById('inc-tax-monthly'); if(itMo) itMo.textContent=fmt(residualInc);
 
@@ -3889,7 +3890,10 @@ function _renderTaxTabInner(){
   // Update hero
   // ── Income tax display ──
   // tax-income-total removed — use inc-tax-total instead
-  $el('tax-gross').textContent=fmt(pos.netProfit);
+  $el('tax-gross').textContent=fmt(pos.income);   // before expenses (Sam's choice); tax is still on profit
+  var tpl=document.getElementById('tax-profit-line');
+  if(tpl) tpl.textContent='Tax is worked out on profit of '+fmt(pos.netProfit)+' = income '+fmt(pos.income)
+    +' \u2212 expenses '+fmt(pos.expenses)+(pos.depr?' \u2212 depreciation '+fmt(pos.depr):'');
   $el('tax-on-income').textContent=fmt(tax.total);
   $el('tax-wht-paid').textContent=fmt(whtPaid);
   $el('tax-still-owe').textContent=fmt(stillOwe);
