@@ -786,16 +786,19 @@ body{
         </div>
         <div id="acc-warning" style="display:none;margin:4px 0 8px;padding:10px 12px;background:rgba(255,149,0,.1);border-radius:10px;font-size:11px;color:var(--t2);line-height:1.5"></div>
         <div class="tax-sc-divider"></div>
-        <div class="g-row" style="padding:2px 0">
-          <div class="g-icon" style="background:rgba(175,82,222,0.12)">🏗️</div>
-          <span class="g-lbl">Work levy rate<br><a href="https://www.businessdescription.co.nz" target="_blank" rel="noopener" style="font-size:10px;color:var(--blue);font-weight:400;text-decoration:none">Look up your CU code &#x2197;</a></span>
-          <select class="g-select" id="acc-rate" onchange="saveSettings();renderTaxTab()">
-            <option value="0.53">0.53% — Video/Film</option>
-            <option value="0.39">0.39% — IT / Tech</option>
-            <option value="0.63">0.63% — Media</option>
-            <option value="1.21">1.21% — Photography</option>
-            <option value="0.28">0.28% — Business</option>
-          </select>
+        <div style="padding:6px 0 8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <span style="font-size:13px;font-weight:600;color:var(--t1)">Work levy rate</span>
+            <input id="acc-rate" type="number" inputmode="decimal" step="0.01" min="0" max="20" style="width:72px;font-family:inherit;font-size:14px;font-weight:600;color:var(--t1);text-align:right;background:var(--fill);border:none;border-radius:8px;padding:6px 8px;font-variant-numeric:tabular-nums" onchange="saveSettings();renderTaxTab()">
+          </div>
+          <div style="font-size:11px;color:var(--t3);margin-top:3px;line-height:1.4">$ per $100 of earnings, excl GST. Film &amp; video production (CU 91110) is 0.37 for 2026/27 &#x2014; it&#x2019;s on your ACC invoice. <a href="https://www.businessdescription.co.nz" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">Find your CU &#x2197;</a></div>
+        </div>
+        <div style="padding:8px 0 4px;border-top:0.5px solid var(--sep)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <span style="font-size:13px;font-weight:600;color:var(--t1)">ACC levies paid this tax year</span>
+            <input id="acc-paid" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" style="width:96px;font-family:inherit;font-size:14px;font-weight:600;color:var(--t1);text-align:right;background:var(--fill);border:none;border-radius:8px;padding:6px 8px;font-variant-numeric:tabular-nums" onchange="saveAccPaid();renderTaxTab()">
+          </div>
+          <div id="acc-paid-sub" style="font-size:11px;color:var(--t3);margin-top:3px;line-height:1.4">Work + Working Safer levies (excl GST)</div>
         </div>
       </div>
 
@@ -1533,7 +1536,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.8.4';
+var APP_VERSION = '1.8.5';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -1563,12 +1566,45 @@ var ACC_RATES = {
   2024: {earner:0.0160, safer:0.0008, maxLiable:142283, minLiable:44250},
   2025: {earner:0.0167, safer:0.0008, maxLiable:152790, minLiable:47692},
   2026: {earner:0.0175, safer:0.0008, maxLiable:156641, minLiable:50501},
-  2027: {earner:0.0175, safer:0.0008, maxLiable:160244, minLiable:50501}
+  2027: {earner:0.0183, safer:0.0008, maxLiable:160244, minLiable:50501}
 };
 function accRatesFor(year){
   return ACC_RATES[year] || ACC_RATES[2026];
 }
 var TAX_RATES_CHECKED = '21 Jul 2026';
+// earner = IRD's published rate (GST incl, e.g. 1.75% = $1.52 + GST). safer and work levy rates are
+// ACC's GST-exclusive figures; GST is added when estimating the invoice.
+var ACC_WORK_RATE_DEFAULT = '0.37';   // CU 91110 Motion picture & video production, 2026/27 (ACC Levy Guidebook), excl GST
+var ACC_RX_RE = /\bACC\b|accident comp/i;
+function isAccReceipt(r){ return ACC_RX_RE.test(((r&&r.vendor)||'')+' '+((r&&r.notes)||'')); }
+function migrateAccRate(){
+  // ≤1.8.4 defaulted to 0.53 ("Video/Film") — not a current ACC rate
+  if(!settings.accRateV2){ if(!settings.accRate||settings.accRate==='0.53') settings.accRate=ACC_WORK_RATE_DEFAULT; settings.accRateV2='1'; }
+}
+function accWorkRate(){ migrateAccRate(); var v=parseFloat(settings.accRate); return (isNaN(v)||v<0||v>20)?parseFloat(ACC_WORK_RATE_DEFAULT):v; }
+function accPaidKey(){ return 'accPaid_'+FY.startYear; }
+function receiptExGst(r){
+  var amt=parseFloat(r.amount)||0;
+  return amt-(r.gst==='no'?0:r.gst==='partial'?amt*3/23*0.5:amt*3/23);
+}
+function getFYAccReceipts(){
+  var raw=[]; try{ raw=JSON.parse(localStorage.getItem('nzrt5_r')||'[]'); }catch(e){}
+  var list=(Array.isArray(raw)?raw:[]).filter(function(r){
+    var d=parseDate(r.date||r.created_at||'1970-01-01'); return d>=FY.start&&d<=FY.end&&isAccReceipt(r);
+  });
+  return {count:list.length, total:Math.round(list.reduce(function(s,r){return s+receiptExGst(r);},0)*100)/100};
+}
+// Work + Working Safer levies PAID in this tax year are deductible (the earners' levy is not).
+// Exact figure from the ACC invoice if entered; otherwise estimated from an ACC payment in Receipts NZ.
+function calcAccDeduction(){
+  var rx=getFYAccReceipts(), manual=parseFloat(settings[accPaidKey()]);
+  if(!isNaN(manual)&&manual>=0) return {amount:Math.round(manual*100)/100, source:'manual', rx:rx};
+  if(rx.count){
+    var y=accRatesFor(FY.startYear), earnEx=y.earner/1.15, ws=accWorkRate()/100+y.safer;
+    return {amount:Math.round(rx.total*ws/(earnEx+ws)*100)/100, source:'estimate', rx:rx};
+  }
+  return {amount:0, source:'none', rx:rx};
+}
 
 var LS_TOKEN='nzin_token', LS_USER='nzin_username', LS_ROLE='nzin_role';
 var LS_SECRET='nzin_secret', LS_ETOKEN='nzin_etoken';
@@ -3311,10 +3347,11 @@ function calcFYTaxPosition(){
     depr+=(r.depr||0)+(r.lossOnSale||0)-(r.depreciationRecovered||0);
   });
   depr=Math.round(depr*100)/100;
+  var acc=calcAccDeduction();
   return {
     income:Math.round(income*100)/100, whtPaid:Math.round(whtPaid*100)/100,
-    expenses:exp.total, expAvailable:exp.available, depr:depr,
-    netProfit:Math.max(0,Math.round((income-exp.total-depr)*100)/100)
+    expenses:exp.total, expAvailable:exp.available, depr:depr, accDed:acc.amount, accSource:acc.source, accRx:acc.rx,
+    netProfit:Math.max(0,Math.round((income-exp.total-depr-acc.amount)*100)/100)
   };
 }
 
@@ -3349,7 +3386,7 @@ function getFYExpenses(){
   if(!Array.isArray(raw) || !raw.length) return {total:0, available:false};
   var total = raw.filter(function(r){
     var d = parseDate(r.date || r.created_at || '1970-01-01');
-    return d >= FY.start && d <= FY.end;
+    return d >= FY.start && d <= FY.end && !isAccReceipt(r);   // ACC: only the work levies count — see calcAccDeduction
   }).reduce(function(s,r){
     var amt = parseFloat(r.amount)||0;
     // Deductible cost is ex-GST (GST is claimed back separately), apportioned
@@ -3893,7 +3930,8 @@ function _renderTaxTabInner(){
   $el('tax-gross').textContent=fmt(pos.income);   // before expenses (Sam's choice); tax is still on profit
   var tpl=document.getElementById('tax-profit-line');
   if(tpl) tpl.textContent='Tax is worked out on profit of '+fmt(pos.netProfit)+' = income '+fmt(pos.income)
-    +' \u2212 expenses '+fmt(pos.expenses)+(pos.depr?' \u2212 depreciation '+fmt(pos.depr):'');
+    +' \u2212 expenses '+fmt(pos.expenses)+(pos.depr?' \u2212 depreciation '+fmt(pos.depr):'')
+    +(pos.accDed?' \u2212 ACC work levies '+fmt(pos.accDed):'');
   $el('tax-on-income').textContent=fmt(tax.total);
   $el('tax-wht-paid').textContent=fmt(whtPaid);
   $el('tax-still-owe').textContent=fmt(stillOwe);
@@ -3950,8 +3988,9 @@ function _renderTaxTabInner(){
   //   Work levy       - work injuries, rate depends on your CU code
   //   Working Safer   - funds WorkSafe NZ, flat rate
   // ACC assesses liable earnings on NET PROFIT from your IR3, not gross income.
+  migrateAccRate();
   var accY = accRatesFor(FY.startYear);
-  var workRate = parseFloat(settings.accRate||0.53)/100;
+  var workRate = accWorkRate()/100;
 
   var exp = {total:pos.expenses, available:pos.expAvailable};
   var deprThisFY = pos.depr;
@@ -3959,8 +3998,8 @@ function _renderTaxTabInner(){
 
   var liableEarnings = Math.min(netProfit, accY.maxLiable);
   var accEarner  = Math.round(liableEarnings * accY.earner * 100)/100;
-  var accWorking = Math.round(liableEarnings * workRate * 100)/100;
-  var accSafer   = Math.round(liableEarnings * accY.safer * 100)/100;
+  var accWorking = Math.round(liableEarnings * workRate * 1.15 * 100)/100;   // + GST
+  var accSafer   = Math.round(liableEarnings * accY.safer * 1.15 * 100)/100;
   var accTotal   = Math.round((accEarner + accWorking + accSafer) * 100)/100;
 
   $el('acc-earner').textContent  = fmt(accEarner);
@@ -3975,11 +4014,11 @@ function _renderTaxTabInner(){
     basis = 'Based on ' + fmt(grossIncome) + ' income' + (deprThisFY > 0 ? ' less ' + fmt(deprThisFY) + ' depreciation' : '') + ' \u2014 link Receipts NZ to deduct expenses';
   } else {
     basis = fmt(grossIncome) + ' income less ' + fmt(exp.total) + ' expenses'
-          + (deprThisFY > 0 ? ' and ' + fmt(deprThisFY) + ' depreciation' : '');
+          + (deprThisFY > 0 ? ', ' + fmt(deprThisFY) + ' depreciation' : '')
+          + (pos.accDed > 0 ? ', ' + fmt(pos.accDed) + ' ACC work levies' : '');
   }
   $el('acc-liable-sub').textContent = basis;
-  $el('acc-working-sub').textContent =
-    (settings.accRate||'0.53') + '% work levy \u00b7 ' + (accY.earner*100).toFixed(2) + '% earner\u2019s';
+  $el('acc-working-sub').textContent = 'On this year\u2019s profit \u00b7 invoiced next year \u00b7 incl GST';
 
   // Warnings
   var accWarn = document.getElementById('acc-warning');
@@ -3997,9 +4036,21 @@ function _renderTaxTabInner(){
       accWarn.style.display = 'none';
     }
   }
-  if(settings.accRate){
-    var sel=document.getElementById('acc-rate');
-    if(sel){for(var o=0;o<sel.options.length;o++){if(parseFloat(sel.options[o].value)===parseFloat(settings.accRate)){sel.selectedIndex=o;break;}}}
+  var arIn=document.getElementById('acc-rate');
+  if(arIn&&document.activeElement!==arIn) arIn.value=String(accWorkRate());
+  var apIn=document.getElementById('acc-paid'), apSub=document.getElementById('acc-paid-sub');
+  if(apIn&&document.activeElement!==apIn){
+    var apv=settings[accPaidKey()];
+    apIn.value=(apv!=null&&apv!=='')?apv:'';
+    apIn.placeholder=pos.accSource==='estimate'?pos.accDed.toFixed(2):'0.00';
+  }
+  if(apSub){
+    var rxNote=pos.accRx&&pos.accRx.count?' Your '+fmt(pos.accRx.total)+' ACC payment in Receipts NZ isn\u2019t counted as an ordinary expense.':'';
+    apSub.textContent=(pos.accSource==='estimate'
+        ? 'Estimated '+fmt(pos.accDed)+' from your ACC payment \u2014 type the exact Work + Working Safer amount from the invoice.'
+        : pos.accSource==='manual'
+        ? 'Deducted from profit. The earners\u2019 levy isn\u2019t deductible.'
+        : 'Work + Working Safer levies on the ACC invoice you paid this tax year (excl GST). The earners\u2019 levy isn\u2019t deductible.')+rxNote;
   }
 
   // ── GST — payments basis, period selector ──
@@ -5427,8 +5478,16 @@ function runAutoMatch(){
 function saveSettings(){
   var gf=document.getElementById('gst-freq'); if(gf) settings.gstFreq=gf.value;
   var gn=document.getElementById('gst-num'); if(gn) settings.gstNum=gn.value.trim();
-  var ar=document.getElementById('acc-rate'); if(ar) settings.accRate=ar.value;
+  var ar=document.getElementById('acc-rate'); if(ar){ var v=parseFloat(ar.value); settings.accRate=(isNaN(v)||v<0)?ACC_WORK_RATE_DEFAULT:String(v); settings.accRateV2='1'; }
   var pt=document.getElementById('prov-toggle'); if(pt) settings.provTax=pt.value;
+  save();
+}
+
+function saveAccPaid(){
+  var el=document.getElementById('acc-paid'); if(!el) return;
+  var v=parseFloat(el.value);
+  if(el.value.trim()===''||isNaN(v)||v<0) settings[accPaidKey()]='';   // '' (not delete) so the NAS copy is cleared too
+  else settings[accPaidKey()]=String(Math.round(v*100)/100);
   save();
 }
 
@@ -5752,7 +5811,7 @@ function loadDemoData(){
     {id:'t26',date:dt(2026,4,18),amount:-89,description:'ADOBE CC',reference:'',matched_invoice_id:null,source:'anz',imported_at:dt(2026,4,18)},
   ];
 
-  settings={gstFreq:'2monthly',gstNum:'123-456-789',defaultWHT:'0',accRate:'0.53'};
+  settings={gstFreq:'2monthly',gstNum:'123-456-789',defaultWHT:'0',accRate:'0.37',accRateV2:'1'};
 }
 
 
