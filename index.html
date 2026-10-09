@@ -662,15 +662,35 @@ body{
             <div id="tax-brackets-mini"></div>
           </div>
           <div class="hero-divider" style="margin-top:8px"></div>
+          <!-- Independent earner tax credit -->
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0 8px">
+            <div style="min-width:0">
+              <div style="font-size:12px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px">Independent earner credit</div>
+              <div id="ietc-sub" style="font-size:11px;color:var(--t3);margin-top:2px;line-height:1.35">Up to $520 when income is $24k&#x2013;$70k. Not if you or a partner get Working for Families, a benefit or NZ Super.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+              <span id="ietc-amt" style="font-size:14px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums"></span>
+              <select class="g-select" id="ietc-toggle" style="font-size:12px;width:auto" onchange="saveSettings();renderTaxTab()">
+                <option value="yes">On</option>
+                <option value="no">Off</option>
+              </select>
+            </div>
+          </div>
+          <div class="hero-divider" style="margin:0 0 4px"></div>
           <!-- Provisional tax toggle -->
           <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
             <div style="font-size:12px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px">Provisional tax</div>
             <select class="g-select" id="prov-toggle" style="font-size:12px;width:auto" onchange="saveSettings();renderTaxTab()">
               <option value="no">Off</option>
-              <option value="yes">On · Estimation method</option>
+              <option value="yes">On</option>
             </select>
           </div>
           <div id="prov-section" style="display:none">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0">
+              <span style="font-size:13px;font-weight:600;color:var(--t1)">Last year&#x2019;s residual income tax</span>
+              <input id="prov-last-rit" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" style="width:110px;font-family:inherit;font-size:14px;font-weight:600;color:var(--t1);text-align:right;background:var(--fill);border:none;border-radius:8px;padding:6px 8px" onchange="saveProvLastRIT();renderTaxTab()">
+            </div>
+            <div id="prov-note" style="font-size:11px;color:var(--t3);line-height:1.4;padding:0 0 6px"></div>
             <div class="tax-prov-row"><span class="tax-prov-date">28 Aug <span id="prov-yr1"></span></span><span class="tax-prov-lbl">Instalment 1</span><span class="tax-prov-val c-orange" id="prov-1">—</span></div>
             <div class="tax-prov-row" style="border-top:0.5px solid var(--sep)"><span class="tax-prov-date">15 Jan <span id="prov-yr2"></span></span><span class="tax-prov-lbl">Instalment 2</span><span class="tax-prov-val c-orange" id="prov-2">—</span></div>
             <div class="tax-prov-row" style="border-top:0.5px solid var(--sep)"><span class="tax-prov-date">7 May <span id="prov-yr3"></span></span><span class="tax-prov-lbl">Instalment 3</span><span class="tax-prov-val c-orange" id="prov-3">—</span></div>
@@ -1537,7 +1557,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.8.8';
+var APP_VERSION = '1.8.9';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -2343,7 +2363,8 @@ function exportPLReport(){
   var _ed=getFYExpenses(), _acc=calcAccDeduction();
   var rxClaimable=_ed.rxClaimable||0, gstBackPL=_ed.gstBack||0, accNonDed=Math.max(0,(_ed.accAll||0)-_acc.amount);
   var netExpenses=Math.round(((_ed.total||0)+_acc.amount)*100)/100;
-  var netProfit=netIncome-netExpenses;
+  var deprPL=calcFYTaxPosition().depr||0;   // asset register, same as the Tax tab
+  var netProfit=netIncome-netExpenses-deprPL;
 
   // Month-by-month arrays
   var months=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
@@ -2441,6 +2462,11 @@ function exportPLReport(){
     doc.text('Net expenses (ex-GST)',M+2,y); doc.text(fmt(netExpenses),W-M,y,{align:'right'}); y+=8;
   }
 
+  if(deprPL){
+    if(y>250){doc.addPage();y=18;}
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('Depreciation (asset register)',M+2,y); doc.text(fmt(deprPL),W-M,y,{align:'right'}); y+=8;
+  }
   // ── NET PROFIT ──
   doc.setFillColor(netProfit>=0?15:255, netProfit>=0?157:59, netProfit>=0?79:48);
   doc.roundedRect(M,y,cw,12,2,2,'F');
@@ -3397,7 +3423,15 @@ function calcIncomeTax(income){
     breakdown.push({min:b.min,max:b.max,rate:b.rate,taxable:taxable,tax:tax});
     total+=tax;
   });
-  return{total:total,breakdown:breakdown};
+  var ietc=settings.ietc==='no'?0:Math.min(total,calcIETC(income));
+  return{total:Math.max(0,total-ietc), gross:total, ietc:ietc, breakdown:breakdown};
+}
+// Independent earner tax credit (IRD): $520 a year for income $24,000–$66,000, reducing by
+// 13c per $1 over $66,000 to nil at $70,000. Not available if you or your partner get Working
+// for Families, an income-tested benefit or NZ Super (Sam turns it off in the Tax tab if so).
+function calcIETC(income){
+  if(!(income>=24000)||income>=70000) return 0;
+  return Math.max(0, Math.round((520-Math.max(0,income-66000)*0.13)*100)/100);
 }
 
 
@@ -4033,17 +4067,44 @@ function _renderTaxTabInner(){
   var provSection = document.getElementById('prov-section');
   if(provSection) provSection.style.display = provOn ? 'block' : 'none';
   if(provOn) {
-    // Residual income tax (after W/H already deducted) is what provisional covers
-    var instalment=Math.max(0,tax.total-whtPaid)/3;
+    // You're a provisional taxpayer for this year if LAST year's residual income tax (tax after
+    // W/H and credits) was over $5,000. Standard method (IRD default): last year's RIT + 5%,
+    // in 3 instalments. Without last year's figure we show this year's estimate instead.
     var fyYear=FY.startYear;
-    $el('prov-1').textContent=fmt(instalment);
-    $el('prov-2').textContent=fmt(instalment);
-    $el('prov-3').textContent=fmt(instalment);
+    var thisRIT=Math.max(0,tax.total-whtPaid);
+    var lastRIT=parseFloat(settings['provLastRIT_'+fyYear]);
+    var instalment, note;
+    var plr=document.getElementById('prov-last-rit');
+    if(plr&&document.activeElement!==plr) plr.value=isNaN(lastRIT)?'':String(lastRIT);
+    if(!isNaN(lastRIT)&&lastRIT<=5000){
+      instalment=0;
+      note='Last year\u2019s residual tax was $5,000 or less, so no provisional tax is due this year. This year\u2019s tax ('+fmt(thisRIT)+' so far) is due 7 Feb '+(fyYear+2)+' (7 Apr with a tax agent like Hnry).';
+    } else if(!isNaN(lastRIT)){
+      instalment=Math.round(lastRIT*1.05/3*100)/100;
+      note='Standard method: last year\u2019s '+fmt(lastRIT)+' + 5% = '+fmt(lastRIT*1.05)+', in three instalments. Any difference from this year\u2019s actual tax ('+fmt(thisRIT)+' so far) is settled after you file.';
+    } else {
+      instalment=thisRIT/3;
+      note='Estimate from this year\u2019s figures ('+fmt(thisRIT)+'). Enter last year\u2019s residual income tax (on your IR3 or from Hnry) to use IRD\u2019s standard method. If it was $5,000 or less you don\u2019t pay provisional tax this year.';
+    }
+    $el('prov-1').textContent=instalment?fmt(instalment):'\u2014';
+    $el('prov-2').textContent=instalment?fmt(instalment):'\u2014';
+    $el('prov-3').textContent=instalment?fmt(instalment):'\u2014';
+    var pn=document.getElementById('prov-note'); if(pn) pn.textContent=note;
     var yr1=document.getElementById('prov-yr1'),yr2=document.getElementById('prov-yr2'),yr3=document.getElementById('prov-yr3');
     if(yr1)yr1.textContent=fyYear;
     if(yr2)yr2.textContent=fyYear+1;
     if(yr3)yr3.textContent=fyYear+1;
   }
+
+  // IETC row
+  var ietcT=document.getElementById('ietc-toggle'); if(ietcT) ietcT.value=settings.ietc==='no'?'no':'yes';
+  var ietcA=document.getElementById('ietc-amt');
+  if(ietcA){
+    var potential=calcIETC(pos.netProfit);
+    ietcA.textContent=settings.ietc==='no'?'':(tax.ietc>0?'\u2212'+fmt(tax.ietc):'$0.00');
+    ietcA.title=potential?'':'Income outside $24,000\u2013$70,000';
+  }
+
 
   // ── ACC levies ──
   // Self-employed pay three levies, all on the same liable earnings:
@@ -4545,7 +4606,7 @@ function scanInvoiceForm(){
     if(parsed.notes) $el('f-notes').value=parsed.notes;
     resultEl.className='ai-inv-result-ok';
     resultEl.style.display='block';
-    resultEl.innerHTML='&#x2713; Found: <strong>'+(parsed.client||'invoice')+'</strong>'+(parsed.amount?' &middot; $'+parsed.amount:'')+(parsed.invoice_number?' &middot; #'+parsed.invoice_number:'');
+    resultEl.innerHTML='&#x2713; Found: <strong>'+esc(parsed.client||'invoice')+'</strong>'+(parsed.amount?' &middot; $'+esc(parsed.amount):'')+(parsed.invoice_number?' &middot; #'+esc(parsed.invoice_number):'');
   })
   .catch(function(e){
     if(e.message!=='401'){
@@ -5590,9 +5651,16 @@ function saveSettings(){
   var gn=document.getElementById('gst-num'); if(gn) settings.gstNum=gn.value.trim();
   var ar=document.getElementById('acc-rate'); if(ar){ var v=parseFloat(ar.value); settings.accRate=(isNaN(v)||v<0)?ACC_WORK_RATE_DEFAULT:String(v); settings.accRateV2='1'; }
   var pt=document.getElementById('prov-toggle'); if(pt) settings.provTax=pt.value;
+  var it=document.getElementById('ietc-toggle'); if(it) settings.ietc=it.value;
   save();
 }
 
+function saveProvLastRIT(){
+  var el=document.getElementById('prov-last-rit'); if(!el) return;
+  var v=parseFloat(el.value);
+  settings['provLastRIT_'+FY.startYear]=(el.value.trim()===''||isNaN(v)||v<0)?'':String(Math.round(v*100)/100);
+  save();
+}
 function saveAccPaid(){
   var el=document.getElementById('acc-paid'); if(!el) return;
   var v=parseFloat(el.value);
