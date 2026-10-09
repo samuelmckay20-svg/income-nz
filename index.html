@@ -1536,7 +1536,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.8.5';
+var APP_VERSION = '1.8.6';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -2123,8 +2123,17 @@ function getReceiptsNZData(){
 }
 
 var RECEIPTS_ENT_CATS=['meals'];
+// Share of an ACC invoice that is Work + Working Safer levy (business). The earners' levy is
+// personal: no GST claim on it and it isn't a purchase for Box 11.
+function accWorkShare(r){
+  var d=parseDate((r&&(r.date||r.created_at))||''), y=isNaN(d)?FY.startYear:(d.getMonth()>=3?d.getFullYear():d.getFullYear()-1);
+  var rates=accRatesFor(y), ws=accWorkRate()/100+rates.safer, earnEx=rates.earner/1.15;
+  return ws/(earnEx+ws);
+}
+function receiptBizShare(r){ return isAccReceipt(r)?accWorkShare(r):1; }
 function gstForReceiptsItem(r){
   if(!r||r.gst==='no') return 0;
+  if(isAccReceipt(r)) return (parseFloat(r.amount)||0)*(3/23)*accWorkShare(r);
   var amount=parseFloat(r.amount)||0;
   var claimPct=1;
   if(r.claimPct!=null&&r.claimPct>=0&&r.claimPct<=100) claimPct=r.claimPct/100;
@@ -2140,7 +2149,7 @@ function calcInputGST(receipts,start,end){
     return d>=start&&d<=end;
   });
   var inputGST=periodR.reduce(function(s,r){return s+gstForReceiptsItem(r);},0);
-  var totalExpenses=periodR.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
+  var totalExpenses=periodR.reduce(function(s,r){return s+(parseFloat(r.amount)||0)*receiptBizShare(r);},0);
   return {inputGST:inputGST,totalExpenses:totalExpenses,count:periodR.length,available:periodR.length>0,linked:true};
 }
 
@@ -3079,6 +3088,7 @@ function renderInvoices(){
     });
   }
   fil.sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  window._dupInvIds=dupInvNumIds();
   // Pre-build matched invoice ID set for O(1) verified badge lookup
   window._matchedInvIds=new Set(bankTxns.filter(function(t){return t.matched_invoice_id;}).map(function(t){return String(t.matched_invoice_id);}));
   var listEl=document.getElementById('invoices-list');
@@ -3124,6 +3134,8 @@ function invCard(inv){
   var whtBadge=wr>0?'<span class="badge" style="background:rgba(175,82,222,0.12);color:var(--purple)">W/H '+wr+'%</span>':'';
   var isVerified=window._matchedInvIds?window._matchedInvIds.has(String(inv.id)):bankTxns.some(function(t){return t.matched_invoice_id&&String(t.matched_invoice_id)===String(inv.id);});
   var verifiedBadge=isVerified?'<span class="badge" style="background:rgba(15,157,79,.12);color:var(--green)">&#x2713; Verified</span>':'';
+  var isDupNum=window._dupInvIds&&window._dupInvIds.has(String(inv.id));
+  if(isDupNum) verifiedBadge+='<span class="badge" style="background:rgba(255,149,0,.14);color:var(--orange)">&#x26A0; Duplicate #</span>';
   var grossSub=inv.status==='paid'&&whtAmt>0?'<div style="font-size:11px;color:var(--t3);text-align:right">of '+fmt(amt)+'</div>':'';
   var html='<div class="r-card" data-iid="'+esc(String(inv.id))+'">';
   html+='<div class="r-bar" style="background:'+c+'"></div>';
@@ -4227,6 +4239,14 @@ function saveInvoice(){
     }
     saveInvoice._dupeOverride=false;
   }
+  if(num){
+    var numClash=findInvNumClashes(num, editingId);
+    if(numClash.length&&saveInvoice._numOverride!==num){
+      showErr('inv-err',invNumClashText(num,numClash)+'. Change the number, or tap Save again to keep it.');
+      saveInvoice._numOverride=num; return;
+    }
+  }
+  saveInvoice._numOverride=null;
   var targetInv;
   if(editingId){
     targetInv=invoices.find(function(i){return i.id===editingId;});
@@ -5124,7 +5144,8 @@ function createMultiRemittance(){
   if(!created){showToast('No usable invoice lines found');return;}
   closePaidModal();          // also removes the blank stub the modal opened with
   save(); renderAll();
-  showToast(created+' invoices saved from '+payer);
+  var dupIds=dupInvNumIds(), dupNew=invoices.slice(0,created).filter(function(i){return dupIds.has(String(i.id));}).length;
+  showToast(created+' invoices saved from '+payer+(dupNew?' \u2014 \u26A0 '+dupNew+' number'+(dupNew===1?' is':'s are')+' already used (marked \u201cDuplicate #\u201d)':''));
   window._lastRemittanceScan=null;
   checkNewClient(payer, scan);
 }
@@ -5149,6 +5170,14 @@ function confirmMarkPaid(){
     inv.amount=round2(gross);
     inv.gst=$el('paid-gst').value||'yes';
     var num=($el('paid-inv-num').value||'').trim();
+    if(num){
+      var pClash=findInvNumClashes(num, inv.id);
+      if(pClash.length&&confirmMarkPaid._numOverride!==num){
+        showToast('\u26A0 '+invNumClashText(num,pClash)+' \u2014 tap Save again to keep it');
+        confirmMarkPaid._numOverride=num; return;
+      }
+    }
+    confirmMarkPaid._numOverride=null;
     inv.invoice_number=num||null;
     inv.date=dateVal;
   }
@@ -5220,6 +5249,36 @@ function checkExGstRemittances(){
     {label:'Show the list (Debug tab)',fn:function(){ closeModal('modal-account'); switchTab('debug'); }},
     {label:'Cancel',cls:'cancel'}
   ]);
+}
+
+/* ── Duplicate invoice numbers ──────────────────────────────────────
+   A number may hold several ("SKY-0527, SKY-0627"). Compared per number,
+   ignoring case, spaces and a leading '#'. Binned invoices don't count. */
+function invNumTokens(num){
+  if(num==null) return [];
+  return String(num).split(/[,;&\/]|\band\b/i).map(function(t){
+    return t.replace(/^\s*#/,'').replace(/\s+/g,'').toLowerCase();
+  }).filter(function(t){return t.length>=2;});
+}
+function findInvNumClashes(num, excludeId){
+  var toks=invNumTokens(num); if(!toks.length) return [];
+  return invoices.filter(function(i){
+    if(excludeId!=null&&String(i.id)===String(excludeId)) return false;
+    var o=invNumTokens(i.invoice_number);
+    return o.some(function(t){return toks.indexOf(t)!==-1;});
+  });
+}
+function invNumClashText(num, clashes){
+  var c=clashes[0];
+  return 'Invoice #'+String(num).trim()+' is already used by '+(c.client||'another invoice')+' ('+fmtDate(c.date)+')'
+    +(clashes.length>1?' and '+(clashes.length-1)+' more':'');
+}
+// ids of every invoice whose number is shared with another invoice
+function dupInvNumIds(){
+  var byTok={}, ids=new Set();
+  invoices.forEach(function(i){ invNumTokens(i.invoice_number).forEach(function(t){ (byTok[t]=byTok[t]||[]).push(String(i.id)); }); });
+  Object.keys(byTok).forEach(function(t){ var l=byTok[t]; if(l.length>1) l.forEach(function(id){ids.add(id);}); });
+  return ids;
 }
 
 /* ── Bank CSV ── */
