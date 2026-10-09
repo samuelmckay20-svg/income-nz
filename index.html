@@ -650,6 +650,7 @@ body{
             </div>
           </div>
           <div id="tax-profit-line" style="font-size:11px;color:var(--t3);margin-top:10px;line-height:1.4"></div>
+          <div id="tax-rx-line" style="font-size:11px;color:var(--t3);margin-top:6px;line-height:1.4;display:none"></div>
           <div class="hero-divider" style="margin-top:12px"></div>
           <!-- hidden elements still needed by JS -->
           <span id="tax-on-income" style="display:none"></span>
@@ -1536,7 +1537,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.8.6';
+var APP_VERSION = '1.8.7';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -1656,7 +1657,7 @@ function authHeaders(){
 function clearAuth(){ [LS_TOKEN,LS_USER,LS_ROLE,LS_SECRET,LS_ETOKEN].forEach(function(k){ LS.del(k); }); _serverHydrated=false; }
 function wipeLocalData(){
   LS.keys().forEach(function(k){ if(k.startsWith('nzin_'))LS.del(k); });
-  LS.del('nzrt5_r');
+  LS.del('nzrt5_r'); LS.del('nzrt5_m');
   invoices=[]; bankTxns=[]; settings={}; invBin=[]; clientProfiles={}; assets=[]; invPurge=[];
   _imgCache.clear(); _remCache.clear();
 }
@@ -2096,10 +2097,14 @@ function refreshReceipts(manual){
       return false;
     }
     _rxGSTAuthFailed=false;
-    try{ localStorage.setItem('nzrt5_r',JSON.stringify(d.receipts)); }
+    try{
+      localStorage.setItem('nzrt5_r',JSON.stringify(d.receipts));
+      localStorage.setItem('nzrt5_m',JSON.stringify(Array.isArray(d.mileage)?d.mileage:[]));
+      if(d.mileRates) localStorage.setItem('nzin_mrates',JSON.stringify(d.mileRates));
+    }
     catch(e){ if(manual) showToast('Phone storage is full — expenses not saved'); return false; }
     var at=d.at?Date.parse(d.at):NaN;
-    setRxMeta({at:isNaN(at)?Date.now():at, count:d.receipts.length, stale:!!d.stale,
+    setRxMeta({v:2, at:isNaN(at)?Date.now():at, count:d.receipts.length, stale:!!d.stale,
                error:d.stale?String(d.error||'').slice(0,140):null, checked:Date.now()});
     if(manual) showToast(d.stale
       ? 'Receipts NZ is offline — using the NAS copy from '+_rxAgo(isNaN(at)?Date.now():at)
@@ -2158,7 +2163,8 @@ function fetchReceiptsGST(start,end,callback){
   var res=calcInputGST(getReceiptsNZData().receipts,start,end);
   // First run on this device (or after an update from ≤1.8.2): fetch once in
   // the background; refreshReceipts re-renders the Tax tab when it lands.
-  if(!getRxMeta()&&!_rxAutoTried&&LS.get(LS_TOKEN)) refreshReceipts(false);
+  var _m=getRxMeta();
+  if((!_m||!_m.v)&&!_rxAutoTried&&LS.get(LS_TOKEN)) refreshReceipts(false);   // v2 = mileage kept too
   callback(res);
 }
 
@@ -2333,7 +2339,10 @@ function exportPLReport(){
   var fyExp=expenses.filter(function(r){var d=parseDate(r.date||r.created_at||'1970-01-01');return d>=FY.start&&d<=FY.end;});
   var totalExpenses=fyExp.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
   var totalExpGST=fyExp.reduce(function(s,r){if(r.gst==='no') return s; var a=parseFloat(r.amount)||0; var cp=r.claimPct!=null?r.claimPct/100:1; return s+Math.round(a*3/23*cp*100)/100;},0);
-  var netExpenses=totalExpenses-totalExpGST;
+  // Same basis as the Tax tab: receipts ex GST (claim %), mileage, ACC work levies only
+  var _ed=getFYExpenses(), _acc=calcAccDeduction();
+  var rxClaimable=_ed.rxClaimable||0, gstBackPL=_ed.gstBack||0, accNonDed=Math.max(0,(_ed.accAll||0)-_acc.amount);
+  var netExpenses=Math.round(((_ed.total||0)+_acc.amount)*100)/100;
   var netProfit=netIncome-netExpenses;
 
   // Month-by-month arrays
@@ -2416,7 +2425,8 @@ function exportPLReport(){
   } else {
     // Group expenses by category
     var byCategory={};
-    fyExp.forEach(function(r){var cat=r.category||'Uncategorised';byCategory[cat]=(byCategory[cat]||0)+(parseFloat(r.amount)||0);});
+    fyExp.forEach(function(r){var cat=isAccReceipt(r)?'ACC levies':(r.category||'Uncategorised');byCategory[cat]=(byCategory[cat]||0)+(parseFloat(r.amount)||0)*receiptClaimPct(r);});
+    if(_ed.mileage&&_ed.mileage.value>0) byCategory['Mileage ('+_ed.mileage.km+' km)']=_ed.mileage.value;
     Object.entries(byCategory).sort(function(a,b){return b[1]-a[1];}).forEach(function(pair){
       doc.setFont('helvetica','normal'); doc.setFontSize(9);
       doc.text(pair[0],M+2,y);
@@ -2425,8 +2435,9 @@ function exportPLReport(){
     });
     doc.setDrawColor(200,200,200); doc.line(M,y,W-M,y); y+=5;
     doc.setFont('helvetica','bold'); doc.setFontSize(9);
-    doc.text('Total expenses (inc GST)',M+2,y); doc.text(fmt(totalExpenses),W-M,y,{align:'right'}); y+=6;
-    doc.text('Less: GST claimable',M+2,y); doc.text('('+fmt(totalExpGST)+')',W-M,y,{align:'right'}); y+=6;
+    doc.text('Claimable in Receipts NZ (inc GST'+(_ed.mileage&&_ed.mileage.value>0?', mileage':'')+')',M+2,y); doc.text(fmt(rxClaimable),W-M,y,{align:'right'}); y+=6;
+    doc.text('Less: GST claimed back',M+2,y); doc.text('('+fmt(gstBackPL)+')',W-M,y,{align:'right'}); y+=6;
+    if(accNonDed>0){ doc.text('Less: ACC earners\u2019 levy (not deductible)',M+2,y); doc.text('('+fmt(accNonDed)+')',W-M,y,{align:'right'}); y+=6; }
     doc.text('Net expenses (ex-GST)',M+2,y); doc.text(fmt(netExpenses),W-M,y,{align:'right'}); y+=8;
   }
 
@@ -3362,7 +3373,7 @@ function calcFYTaxPosition(){
   var acc=calcAccDeduction();
   return {
     income:Math.round(income*100)/100, whtPaid:Math.round(whtPaid*100)/100,
-    expenses:exp.total, expAvailable:exp.available, depr:depr, accDed:acc.amount, accSource:acc.source, accRx:acc.rx,
+    expenses:exp.total, expAvailable:exp.available, expDetail:exp, depr:depr, accDed:acc.amount, accSource:acc.source, accRx:acc.rx,
     netProfit:Math.max(0,Math.round((income-exp.total-depr-acc.amount)*100)/100)
   };
 }
@@ -3392,24 +3403,51 @@ function calcIncomeTax(income){
 
 
 /* ── Business expenses for the current FY (from Receipts NZ) ── */
+function receiptClaimPct(r){
+  if(r.claimPct!=null && r.claimPct>=0 && r.claimPct<=100) return r.claimPct/100;
+  return RECEIPTS_ENT_CATS.indexOf(r.category)!==-1 ? 0.5 : 1;
+}
+// Mileage logged in Receipts NZ, valued the same way it does: IRD tier 1 rate for the
+// first 14,000 km of the tax year, tier 2 after (rates from Receipts NZ's settings).
+function getFYMileage(){
+  var list=[], rates={t1:1.17,t2:0.37};
+  try{ list=JSON.parse(localStorage.getItem('nzrt5_m')||'[]'); }catch(e){}
+  try{ var mr=JSON.parse(localStorage.getItem('nzin_mrates')||'null'); if(mr){ if(parseFloat(mr.t1)>0) rates.t1=parseFloat(mr.t1); if(parseFloat(mr.t2)>=0&&mr.t2!=null) rates.t2=parseFloat(mr.t2); } }catch(e){}
+  if(!Array.isArray(list)) list=[];
+  var fyM=list.filter(function(m){ var d=parseDate(m.date||''); return d>=FY.start&&d<=FY.end&&parseFloat(m.km)>0; })
+              .sort(function(a,b){ return String(a.date).localeCompare(String(b.date)); });
+  var cum=0, value=0, km=0;
+  fyM.forEach(function(m){
+    var k=parseFloat(m.km)||0, t1km=Math.max(0,Math.min(cum+k,14000)-cum);
+    value+=t1km*rates.t1+(k-t1km)*rates.t2; cum+=k; km+=k;
+  });
+  return {value:Math.round(value*100)/100, km:Math.round(km*10)/10, trips:fyM.length};
+}
 function getFYExpenses(){
   var raw = [];
   try{ raw = JSON.parse(localStorage.getItem('nzrt5_r')||'[]'); }catch(e){ return {total:0, available:false}; }
   if(!Array.isArray(raw) || !raw.length) return {total:0, available:false};
-  var total = raw.filter(function(r){
+  var fyR = raw.filter(function(r){
     var d = parseDate(r.date || r.created_at || '1970-01-01');
-    return d >= FY.start && d <= FY.end && !isAccReceipt(r);   // ACC: only the work levies count — see calcAccDeduction
-  }).reduce(function(s,r){
-    var amt = parseFloat(r.amount)||0;
+    return d >= FY.start && d <= FY.end;
+  });
+  var exGstTotal=0, gstBack=0, accAll=0;
+  fyR.forEach(function(r){
+    var amt = parseFloat(r.amount)||0, claim = receiptClaimPct(r);
+    if(isAccReceipt(r)){ accAll += amt*claim; return; }   // ACC: only the work levies count — see calcAccDeduction
     // Deductible cost is ex-GST (GST is claimed back separately), apportioned
     // by the same claim % as the GST claim — e.g. 50% for entertainment.
-    var exGst = amt - (r.gst==='no' ? 0 : r.gst==='partial' ? amt*3/23*0.5 : amt*3/23);
-    var claim = 1;
-    if(r.claimPct!=null && r.claimPct>=0 && r.claimPct<=100) claim = r.claimPct/100;
-    else if(RECEIPTS_ENT_CATS.indexOf(r.category)!==-1) claim = 0.5;
-    return s + exGst*claim;
-  }, 0);
-  return {total: Math.round(total*100)/100, available: true};
+    var exGst = receiptExGst(r);
+    exGstTotal += exGst*claim; gstBack += (amt-exGst)*claim;
+  });
+  var mile = getFYMileage();
+  var r2=function(x){return Math.round(x*100)/100;};
+  return {
+    total: r2(exGstTotal + mile.value), available: true,
+    receiptsExGst: r2(exGstTotal), gstBack: r2(gstBack), accAll: r2(accAll), mileage: mile,
+    // what Receipts NZ calls "Claimable": GST-inclusive, everything, plus mileage
+    rxClaimable: r2(exGstTotal + gstBack + accAll + mile.value)
+  };
 }
 
 /* ── Asset Depreciation ── */
@@ -3944,6 +3982,19 @@ function _renderTaxTabInner(){
   if(tpl) tpl.textContent='Tax is worked out on profit of '+fmt(pos.netProfit)+' = income '+fmt(pos.income)
     +' \u2212 expenses '+fmt(pos.expenses)+(pos.depr?' \u2212 depreciation '+fmt(pos.depr):'')
     +(pos.accDed?' \u2212 ACC work levies '+fmt(pos.accDed):'');
+  var trl=document.getElementById('tax-rx-line'), ed=pos.expDetail||{};
+  if(trl){
+    if(ed.available&&ed.rxClaimable>0){
+      var parts=[fmt(ed.receiptsExGst)+' receipts ex GST'];
+      if(ed.mileage&&ed.mileage.value>0) parts.push(fmt(ed.mileage.value)+' mileage ('+ed.mileage.km+' km)');
+      var outs=[];
+      if(ed.gstBack>0) outs.push(fmt(ed.gstBack)+' GST you claim back in your GST returns');
+      if(ed.accAll>0) outs.push(fmt(ed.accAll)+' ACC payment (only the work levies, '+fmt(pos.accDed)+', are deductible)');
+      trl.textContent='Receipts NZ \u201cClaimable\u201d '+fmt(ed.rxClaimable)+' = expenses '+fmt(pos.expenses)+' ('+parts.join(' + ')+')'
+        +(outs.length?' + '+outs.join(' + '):'')+'.';
+      trl.style.display='';
+    } else trl.style.display='none';
+  }
   $el('tax-on-income').textContent=fmt(tax.total);
   $el('tax-wht-paid').textContent=fmt(whtPaid);
   $el('tax-still-owe').textContent=fmt(stillOwe);
