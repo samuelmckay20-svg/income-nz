@@ -629,7 +629,7 @@ body{
 
       <div class="hero-wrap" style="padding-bottom:4px">
         <div class="hero-card" style="border-image:linear-gradient(90deg,var(--red),var(--orange)) 1">
-          <div class="hero-lbl">Tax still owed</div>
+          <div class="hero-lbl" id="tax-still-owe-lbl">Tax still owed</div>
           <div class="hero-amount c-red" id="tax-still-owe">$0</div>
           <div class="hero-period" id="tax-total-sub">This financial year</div>
           <div class="hero-divider"></div>
@@ -718,12 +718,12 @@ body{
           </div>
         </div>
         <div style="padding:20px 16px 16px;text-align:center;border-bottom:0.5px solid var(--sep)">
-          <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Net GST to pay IRD</div>
+          <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px" id="gst-box15-lbl">Net GST to pay IRD</div>
           <div style="font-size:42px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--orange)" id="gst-box15">$0</div>
           <div style="font-size:12px;color:var(--t3);margin-top:4px" id="gst-box15-sub">Output minus input</div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
-          <div><div style="font-size:13px;font-weight:600;color:var(--t1)">Total sales</div><div style="font-size:11px;color:var(--t3);margin-top:1px">GST-inclusive income received</div></div>
+          <div><div style="font-size:13px;font-weight:600;color:var(--t1)">Total sales</div><div style="font-size:11px;color:var(--t3);margin-top:1px" id="gst-box5-sub">GST-inclusive income received</div></div>
           <div style="font-size:17px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums" id="gst-box5">$0</div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep);background:rgba(255,59,48,.04)">
@@ -731,7 +731,7 @@ body{
           <div style="font-size:17px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums" id="gst-box7">$0</div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep)">
-          <div><div style="font-size:13px;font-weight:600;color:var(--t1)">Total purchases</div><div style="font-size:11px;color:var(--t3);margin-top:1px">GST-inclusive expenses paid</div></div>
+          <div><div style="font-size:13px;font-weight:600;color:var(--t1)">Total purchases</div><div style="font-size:11px;color:var(--t3);margin-top:1px">GST-inclusive, the part you claim GST on</div></div>
           <div style="font-size:17px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums" id="gst-box11">—</div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:0.5px solid var(--sep);background:rgba(15,157,79,.04)">
@@ -739,16 +739,16 @@ body{
           <div style="font-size:17px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums" id="gst-box13">—</div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(0,122,255,.06)">
-          <div><div style="font-size:13px;font-weight:700;color:var(--blue)">Amount to pay IRD</div><div style="font-size:11px;color:var(--t3);margin-top:1px">Output minus input</div></div>
+          <div><div style="font-size:13px;font-weight:700;color:var(--blue)" id="gst-box15b-lbl">Amount to pay IRD</div><div style="font-size:11px;color:var(--t3);margin-top:1px">Output minus input</div></div>
           <div style="font-size:17px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums" id="gst-box15b">$0</div>
         </div>
         <div style="padding:12px 16px;border-top:0.5px solid var(--sep);display:flex;flex-direction:column;gap:10px">
           <div style="display:flex;align-items:center;justify-content:space-between">
             <span style="font-size:13px;color:var(--t3)">Filing frequency</span>
             <select class="g-select" id="gst-freq" onchange="saveSettings();renderTaxTab()" style="font-size:13px">
-              <option value="2monthly">2-monthly</option>
+              <option value="2monthly">Every two months</option>
               <option value="1monthly">Monthly</option>
-              <option value="6monthly">6-monthly</option>
+              <option value="6monthly">Every six months</option>
             </select>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between">
@@ -1557,7 +1557,7 @@ function missingElements(){
 }
 
 /* ── Config ── */
-var APP_VERSION = '1.8.9';
+var APP_VERSION = '1.9.1';
 var API_BASE    = 'https://samuelreceipts.synology.me:3458/api';
 var GMAIL       = 'Receipts2026@gmail.com';
 
@@ -2344,14 +2344,14 @@ function exportPLReport(){
   var fyLabel='FY '+FY.start.getFullYear()+'–'+FY.end.getFullYear();
 
   // Get FY invoices
-  var fyInv=invoices.filter(function(i){var d=parseDate(i.date);return d>=FY.start&&d<=FY.end&&i.status==='paid';});
+  var fyInv=fyIncomeInvoices();   // same rules as the Tax tab (schedular by date paid, other income when invoiced)
 
   // Income
   var totalIncome=fyInv.reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
   var totalGST=fyInv.filter(function(i){return i.gst==='yes';}).reduce(function(s,i){return s+Math.round((parseFloat(i.amount)||0)*3/23*100)/100;},0);
   var totalWHT=fyInv.reduce(function(s,i){var w=invWHT(i);return s+w;},0);
   var netIncome=totalIncome-totalGST;
-  var received=fyInv.reduce(function(s,i){return s+(i.paid_amount!=null&&i.paid_amount!==''?parseFloat(i.paid_amount):(parseFloat(i.amount)||0)-((parseFloat(i.wht_amount)||0)));},0);
+  var received=fyInv.filter(function(i){return i.status==='paid';}).reduce(function(s,i){return s+(i.paid_amount!=null&&i.paid_amount!==''?parseFloat(i.paid_amount):(parseFloat(i.amount)||0)-((parseFloat(i.wht_amount)||0)));},0);
 
   // Expenses from Receipts NZ localStorage
   var expenses=[];
@@ -2513,6 +2513,32 @@ function exportPLReport(){
   showToast('P&L report downloaded');
 }
 
+// GST101A layout (myIR): 5 sales incl GST, 6 zero-rated, 7 = 5-6, 8 = 7x3/23, 9 adjustments,
+// 10 = 8+9, 11 purchases incl GST, 12 = 11x3/23, 13 credit adjustments, 14 = 12+13, 15 = 10-14.
+function gstReturnLines(){
+  var g=window._gstReturn||{}, nl="\n", f=function(n){return n==null?"— (Receipts NZ not loaded)":fmt(n);};
+  var b5=g.b5||0, b6=g.b6||0, b8=g.b7||0, b11=g.b11, b12=g.b12, b15=b8-(b12||0);
+  var row=function(n,l,v){ return ("Box "+n).padEnd(7)+(l+":").padEnd(36)+v+nl; };
+  return row(5,"Total sales and income (incl GST)",fmt(b5))
+    +row(6,"Zero-rated supplies",fmt(b6))
+    +row(7,"Box 5 minus Box 6",fmt(b5-b6))
+    +row(8,"GST on sales (Box 7 × 3/23)",fmt(b8))
+    +row(9,"Adjustments",fmt(0))
+    +row(10,"Total GST collected",fmt(b8))
+    +row(11,"Purchases & expenses (incl GST)",f(b11))
+    +row(12,"GST on purchases (Box 11 × 3/23)",f(b12))
+    +row(13,"Credit adjustments",fmt(0))
+    +row(14,"Total GST credit",f(b12))
+    +row(15,"Difference (Box 10 − Box 14)",fmt(Math.abs(b15))+(b15<0?" REFUND":" TO PAY"))
+    +nl+"You enter Boxes 5, 6, 9, 11 and 13 — myIR works out the rest."+nl;
+}
+function setGstResult(v){
+  var refund=v<0, e1=document.getElementById('gst-box15'), e2=document.getElementById('gst-box15b');
+  [e1,e2].forEach(function(e){ if(e){ e.textContent=fmt(Math.abs(v)); e.style.color=refund?'var(--green)':'var(--orange)'; } });
+  var l1=document.getElementById('gst-box15-lbl'), l2=document.getElementById('gst-box15b-lbl');
+  if(l1) l1.textContent=refund?'GST refund due to you':'Net GST to pay IRD';
+  if(l2) l2.textContent=refund?'Refund from IRD':'Amount to pay IRD';
+}
 function copyForMyIR(){
   var gstNum=(settings.gstNum||"").trim()||"[your GST number]";
   var period=document.getElementById("gst-period-label");
@@ -2529,13 +2555,7 @@ function copyForMyIR(){
     +"Period: "+(period?period.textContent:"")+nl
     +"Due: "+(due?due.textContent.replace(/^\d+ days \u2014 /,"").replace(/^Due today! /,"").replace(/^Overdue \u2014 /,""):"")+nl
     +nl
-    +"Box 5  Total sales and income:   "+(b5?b5.textContent:"")+nl
-    +"Box 6  Zero-rated supplies:      $0.00"+nl
-    +"Box 7  GST collected on sales:   "+(b7?b7.textContent:"")+nl
-    +"Box 11 Total purchases/expenses: "+(b11&&b11.textContent.indexOf("$")===0?b11.textContent:"—")+nl
-    +"Box 13 GST claimed on purchases: "+(b13&&b13.textContent.indexOf("$")===0?b13.textContent:"$0.00")+nl
-    +"Box 15 Resident withholding tax: $0.00"+nl
-    +"Box 16 Amount to pay/refund:     "+(b15?b15.textContent:"")+nl
+    +gstReturnLines()
     +nl
     +"Accounting basis: Payments basis"+nl
     +"Generated by Income NZ on "+new Date().toLocaleDateString("en-NZ",{day:"numeric",month:"long",year:"numeric"});
@@ -2789,15 +2809,18 @@ function renderIncomeTab(){
   // ── Income tax on income tab ── (same basis as the Tax tab)
   var pos=calcFYTaxPosition();
   var incTax=calcIncomeTax(pos.netProfit);
-  var residualInc=Math.max(0,incTax.total-pos.whtPaid);
+  var incDiff=Math.round((incTax.total-pos.whtPaid)*100)/100;
+  var residualInc=Math.max(0,incDiff);
   var monthsLeftInc=Math.max(1,Math.ceil((FY.end-new Date())/(30.5*24*3600*1000)));
   var monthlyInc=residualInc/monthsLeftInc;
 
   var itEl=document.getElementById('inc-tax-total'); if(itEl) itEl.textContent=fmt(incTax.total);
-  var itSub=document.getElementById('inc-tax-sub'); if(itSub) itSub.textContent=residualInc>0?'Set aside '+fmt(monthlyInc)+'/mo to cover what\u2019s owed':'Covered by W/H tax so far';
+  var itSub=document.getElementById('inc-tax-sub'); if(itSub) itSub.textContent=residualInc>0?'Set aside '+fmt(monthlyInc)+'/mo to cover what\u2019s owed':(incDiff<0?'W/H already covers it \u2014 about '+fmt(-incDiff)+' back when you file':'Covered by W/H tax so far');
   var itGross=document.getElementById('inc-tax-gross'); if(itGross) itGross.textContent=fmt(pos.income);   // before expenses
   var itRes=document.getElementById('inc-tax-residual'); if(itRes) itRes.textContent=fmt(pos.whtPaid);
-  var itMo=document.getElementById('inc-tax-monthly'); if(itMo) itMo.textContent=fmt(residualInc);
+  var itMo=document.getElementById('inc-tax-monthly');
+  if(itMo){ itMo.textContent=fmt(Math.abs(incDiff)); itMo.classList.toggle('c-red',incDiff>=0); itMo.classList.toggle('c-green',incDiff<0);
+    var itMoL=itMo.previousElementSibling; if(itMoL) itMoL.textContent=incDiff<0?'Refund due':'Still owe IRD'; }
 
   // Bracket breakdown mini
   var maxTaxInc=Math.max.apply(null,incTax.breakdown.map(function(b){return b.tax;}))||1;
@@ -3385,10 +3408,30 @@ function invWHT(i){
    on NET PROFIT — income (ex-GST) less deductible expenses and depreciation —
    not on gross income. Losses on sale are deductible; depreciation recovered
    on sale is taxable. */
+/* Which tax year an invoice belongs to (what IRD will see):
+   - Schedular payments (tax withheld): the payer reports the payment and the W/H to IRD on the
+     date they pay you, and IRD prefills your IR3 from that — so these count by DATE PAID, and only
+     once paid. The W/H credit belongs to the same year.
+   - Other business income: counts when you invoice it (earned), paid or not — an invoice still
+     unpaid at 31 March is income of that year.
+   Drafts and unconfirmed scans ('review') don't count. */
+function isSchedularInv(i){ return invWHT(i)>0||(parseFloat(i.wht_rate)||0)>0; }
+function countsForIncomeTax(i){
+  if(i.status==='draft'||i.status==='review') return false;
+  return isSchedularInv(i) ? i.status==='paid' : true;
+}
+function incomeTaxDate(i){
+  return parseDate(isSchedularInv(i) ? (i.paid_date||i.date) : i.date);
+}
+function fyIncomeInvoices(){
+  return invoices.filter(function(i){ if(!countsForIncomeTax(i)) return false; var d=incomeTaxDate(i); return d>=FY.start&&d<=FY.end; });
+}
 function calcFYTaxPosition(){
-  var paid=invoices.filter(function(i){ var d=parseDate(i.date); return i.status==='paid'&&d>=FY.start&&d<=FY.end; });
-  var income=paid.reduce(function(s,i){ var a=parseFloat(i.amount)||0; return s+(i.gst==='yes'?a/1.15:a); },0);
-  var whtPaid=paid.reduce(function(s,i){ return s+invWHT(i); },0);
+  var counted=fyIncomeInvoices();
+  var exGstOf=function(i){ var a=parseFloat(i.amount)||0; return i.gst==='yes'?a/1.15:a; };
+  var income=counted.reduce(function(s,i){ return s+exGstOf(i); },0);
+  var unpaidInc=counted.filter(function(i){return i.status!=='paid';}).reduce(function(s,i){ return s+exGstOf(i); },0);
+  var whtPaid=counted.filter(function(i){return i.status==='paid';}).reduce(function(s,i){ return s+invWHT(i); },0);
   var exp=getFYExpenses();
   var depr=0;
   (assets||[]).forEach(function(a){
@@ -3398,7 +3441,7 @@ function calcFYTaxPosition(){
   depr=Math.round(depr*100)/100;
   var acc=calcAccDeduction();
   return {
-    income:Math.round(income*100)/100, whtPaid:Math.round(whtPaid*100)/100,
+    income:Math.round(income*100)/100, whtPaid:Math.round(whtPaid*100)/100, unpaidIncome:Math.round(unpaidInc*100)/100,
     expenses:exp.total, expAvailable:exp.available, expDetail:exp, depr:depr, accDed:acc.amount, accSource:acc.source, accRx:acc.rx,
     netProfit:Math.max(0,Math.round((income-exp.total-depr-acc.amount)*100)/100)
   };
@@ -3970,7 +4013,8 @@ function renderSetAside(grossIncome, tax, whtPaid, accTotal, gstCurrentPeriod){
   var gs = function(id, val){ var e=document.getElementById(id); if(e) e.textContent=val; };
   gs('setaside-total', fmt(total));
   gs('setaside-tax', fmt(residualTax));
-  gs('setaside-tax-sub', 'After W/H credit of ' + fmt(whtPaid));
+  var refundDue = Math.max(0, whtPaid - tax.total);
+  gs('setaside-tax-sub', refundDue>0 ? 'W/H covers it \u2014 about ' + fmt(refundDue) + ' refund after you file' : 'After W/H credit of ' + fmt(whtPaid));
   gs('setaside-gst', fmt(gstCurrentPeriod));
   gs('setaside-acc', fmt(accTotal));
 
@@ -4008,7 +4052,8 @@ function _renderTaxTabInner(){
 
   // Income tax
   var tax=calcIncomeTax(pos.netProfit);
-  var stillOwe=Math.max(0,tax.total-whtPaid);
+  var taxDiff=Math.round((tax.total-whtPaid)*100)/100;   // negative = W/H already exceeds tax → refund
+  var stillOwe=Math.max(0,taxDiff);
 
   // Update hero
   // ── Income tax display ──
@@ -4017,7 +4062,8 @@ function _renderTaxTabInner(){
   var tpl=document.getElementById('tax-profit-line');
   if(tpl) tpl.textContent='Tax is worked out on profit of '+fmt(pos.netProfit)+' = income '+fmt(pos.income)
     +' \u2212 expenses '+fmt(pos.expenses)+(pos.depr?' \u2212 depreciation '+fmt(pos.depr):'')
-    +(pos.accDed?' \u2212 ACC work levies '+fmt(pos.accDed):'');
+    +(pos.accDed?' \u2212 ACC work levies '+fmt(pos.accDed):'')
+    +(pos.unpaidIncome>0?'. Income includes '+fmt(pos.unpaidIncome)+' invoiced but not yet paid (taxed when invoiced). Jobs with tax withheld count when paid.':'');
   var trl=document.getElementById('tax-rx-line'), ed=pos.expDetail||{};
   if(trl){
     if(ed.available&&ed.rxClaimable>0){
@@ -4031,7 +4077,10 @@ function _renderTaxTabInner(){
   }
   $el('tax-on-income').textContent=fmt(tax.total);
   $el('tax-wht-paid').textContent=fmt(whtPaid);
-  $el('tax-still-owe').textContent=fmt(stillOwe);
+  $el('tax-still-owe').textContent=fmt(Math.abs(taxDiff));
+  var tso=$el('tax-still-owe'), tsl=document.getElementById('tax-still-owe-lbl');
+  tso.classList.toggle('c-red',taxDiff>=0); tso.classList.toggle('c-green',taxDiff<0);
+  if(tsl) tsl.textContent=taxDiff<0?'Tax refund due':'Tax still owed';
   $el('tax-residual').textContent=fmt(stillOwe);
 
   var now=new Date();
@@ -4187,7 +4236,14 @@ function _renderTaxTabInner(){
     var pd=parseDate(i.paid_date||i.date);
     return pd>=gstPer.start&&pd<=gstPer.end&&i.gst==='yes';
   });
-  var box5=paidInPeriod.reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
+  var box5=paidInPeriod.reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);   // GST-inclusive taxable sales
+  // No-GST sales while registered (e.g. services to overseas clients) are zero-rated: they go in
+  // Box 5 AND Box 6, so no GST is added but IRD sees the full turnover.
+  var box6=invoices.filter(function(i){
+    if(i.status!=='paid'||i.gst==='yes') return false;
+    var pd=parseDate(i.paid_date||i.date); return pd>=gstPer.start&&pd<=gstPer.end;
+  }).reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
+  box6=Math.round(box6*100)/100;
   var box7=Math.round(box5*3/23*100)/100;
 
   // Period label + due date
@@ -4206,10 +4262,9 @@ function _renderTaxTabInner(){
   if(banner) banner.style.background=overdue?'rgba(255,59,48,.06)':daysUntilDue<=7?'rgba(255,149,0,.06)':'';
 
   var gset=function(id,val){var e=document.getElementById(id);if(e)e.textContent=val;};
-  gset('gst-box5',fmt(box5));
+  gset('gst-box5',fmt(box5+box6));
   gset('gst-box7',fmt(box7));
-  gset('gst-box15',fmt(box7));
-  gset('gst-box15b',fmt(box7));
+  setGstResult(box7);
   gset('gst-box15-sub','Output '+fmt(box7)+' minus input (loading…)');
   // legacy compat
   gset('gst-period-lbl',periodLabel+' · Due: '+dueLabel);
@@ -4220,18 +4275,25 @@ function _renderTaxTabInner(){
   if(settings.gstNum){var gn=document.getElementById('gst-num');if(gn)gn.value=settings.gstNum;}
 
   // Fetch input tax from Receipts NZ
-  var _box7snap=box7, _perSnap=gstPer;
+  var _box7snap=box7, _box5snap=Math.round((box5+box6)*100)/100, _box6snap=box6, _perSnap=gstPer;
+  window._gstReturn={b5:_box5snap,b6:box6,b7:box7,b11:null,b12:null,b15:box7};
+  gset('gst-box5',fmt(_box5snap));
+  gset('gst-box5-sub',box6>0?'Incl. '+fmt(box6)+' zero-rated (no GST, e.g. overseas clients)':'GST-inclusive income received');
   gset('gst-box11','…'); gset('gst-box13','…');
   fetchReceiptsGST(gstPer.start, gstPer.end, function(rxData){
     _rxPeriodCount=rxData&&rxData.linked?rxData.count:null;
     if(rxData&&rxData.linked){
       // Expenses are stored — a period with no receipts is genuinely $0 input tax
-      var box13=rxData.inputGST||0, box11=rxData.totalExpenses||0;
+      // myIR works out Box 12 (GST on purchases) as Box 11 × 3/23, so Box 11 must be the
+      // GST-inclusive value of exactly what's being claimed: claim %, 50% entertainment and the
+      // ACC work-levy share applied, and no-GST purchases left out.
+      var box13=Math.round((rxData.inputGST||0)*100)/100;
+      var box11=Math.round(box13*23/3*100)/100;
       var box15=Math.round((_box7snap-box13)*100)/100; // can be negative (refund)
       gset('gst-box11',box11>0?fmt(box11):'—');
       gset('gst-box13',fmt(box13));
-      gset('gst-box15',fmt(box15));
-      gset('gst-box15b',fmt(box15));
+      setGstResult(box15);
+      window._gstReturn={b5:_box5snap,b6:_box6snap,b7:_box7snap,b11:box11,b12:box13,b15:box15};
       gset('gst-box15-sub','Output '+fmt(_box7snap)+' minus input '+fmt(box13)+(rxData.count?'':' (no receipts this period)'));
       gset('gst-input',fmt(box13));
     } else {
@@ -4239,6 +4301,7 @@ function _renderTaxTabInner(){
       gset('gst-box11', rxMsg);
       gset('gst-box13', rxMsg);
       gset('gst-box15-sub','Output '+fmt(_box7snap)+' minus input (expenses not loaded)');
+      window._gstReturn={b5:_box5snap,b6:_box6snap,b7:_box7snap,b11:null,b12:null,b15:_box7snap};
       gset('gst-input', _rxRefreshing ? 'Loading…' : (_rxGSTAuthFailed ? 'Sign in again' : 'Not loaded'));
     }
     renderRxStatus();
